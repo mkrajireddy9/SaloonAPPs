@@ -1,0 +1,14 @@
+{
+  "name": "halo-consultation-studio",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --workspace frontend",
+    "dev:all": "concurrently \"npm run dev --workspace backend\" \"npm run dev --workspace frontend\"",
+    "build": "npm run build --workspace backend && npm run build --workspace frontend",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "install:all": "npm install --workspaces"
+  },
+  "devDependencies": { "concurrently": "^9.1.2" },
+  "workspaces": ["backend", "frontend"]
+}
