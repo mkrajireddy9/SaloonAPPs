@@ -72,6 +72,8 @@ The current release is a React UI MVP with API-backed authentication, appointmen
 - TypeORM initial migration with startup migration execution.
 - Refresh-token rotation and logout token revocation.
 - Appointment ownership boundaries and stylist time-slot conflict validation.
+- Dedicated AI module with Ollama provider abstraction and deterministic fallback.
+- Protected AI analysis, image-quality, and virtual try-on API endpoints.
 - Shared component and screen structure in React.
 - Production builds passing for frontend and backend.
 
@@ -86,12 +88,12 @@ The current release is a React UI MVP with API-backed authentication, appointmen
 
 ### Real AI and Image Processing
 
-- Replace dummy report data with a real face-analysis provider.
+- Run Ollama with a vision model such as `llama3.2-vision` for local image analysis.
 - Add face landmarks and face-shape confidence scoring.
 - Add hair segmentation and visible hair-condition analysis.
 - Add automated image-quality checks for lighting, blur, angle, face visibility, and hair visibility.
 - Add retake guidance based on failed quality checks.
-- Connect a real virtual try-on provider.
+- Connect a real generative virtual try-on provider; the current endpoint returns a local preview response.
 - Add asynchronous generation progress, retry handling, quotas, and failure states.
 - Add a provider abstraction so AI vendors can be changed later.
 

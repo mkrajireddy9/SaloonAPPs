@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateConsultationDto, CaptureViewDto } from './consultation.dto';
 import { Consultation } from './consultation.entity';
+import { AiService } from '../ai/ai.service';
 
 const fallback = (c: Consultation) => ({
   faceShape: 'Soft oval', texture: c.texture, length: c.length, density: 'Medium-full', movement: 'Natural wave', visibleCondition: 'Moderate',
@@ -13,19 +14,12 @@ const fallback = (c: Consultation) => ({
 
 @Injectable()
 export class ConsultationService {
-  constructor(@InjectRepository(Consultation) private readonly repo: Repository<Consultation>) {}
+  constructor(@InjectRepository(Consultation) private readonly repo: Repository<Consultation>, private readonly ai: AiService) {}
   list() { return this.repo.find({ order: { createdAt: 'DESC' } }); }
   async create(dto: CreateConsultationDto) { const c = this.repo.create({ ...dto, report: null, status: 'draft' }); return this.repo.save(c); }
   async capture(id: string, dto: CaptureViewDto) { const c = await this.get(id); const views = new Set(c.capturedViews.split(',').filter(Boolean)); views.add(dto.view); c.capturedViews = [...views].join(','); return this.repo.save(c); }
   async analyze(id: string) {
-    const c = await this.get(id); let report = fallback(c);
-    try {
-      const response = await fetch(`${process.env.OLLAMA_URL || 'http://localhost:11434'}/api/generate`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: process.env.OLLAMA_MODEL || 'llama3.2', stream: false, format: 'json', prompt: `Return JSON matching this exact structure: ${JSON.stringify(report)}. Guest goal: ${c.goal}; texture: ${c.texture}; length: ${c.length}. Keep it stylist-safe and never diagnose health conditions.` }) });
-      if (response.ok) {
-        const payload = await response.json() as { response?: string };
-        if (payload.response) report = { ...report, ...JSON.parse(payload.response) };
-      }
-    } catch { /* Local fallback keeps the MVP usable without Ollama. */ }
+    const c = await this.get(id); const report = await this.ai.analyze({ goal: c.goal, texture: c.texture, length: c.length });
     c.report = report; c.status = 'complete'; return this.repo.save(c);
   }
   async get(id: string) { const c = await this.repo.findOne({ where: { id } }); if (!c) throw new NotFoundException('Consultation not found'); return c; }
