@@ -3,7 +3,7 @@ import { Check, MapPin, Plus, Scissors, Trash2, UserRound } from 'lucide-react';
 import { ShellTitle } from '../components/ShellTitle';
 import type { SalonConfig } from '../types';
 
-export function SalonSetupScreen({ config, onSave }: { config: SalonConfig; onSave: (config: SalonConfig) => void }) {
+export function SalonSetupScreen({ config, onBack, onSave }: { config: SalonConfig; onBack: () => void; onSave: (config: SalonConfig) => void }) {
   const [draft, setDraft] = useState(config);
   const [service, setService] = useState('');
   const [stylist, setStylist] = useState('');
