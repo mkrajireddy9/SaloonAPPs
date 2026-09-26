@@ -1,11 +1,9 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { Bell, BookOpen, CalendarDays, CircleHelp, Home, LogOut, MapPin, Menu, Palette, Plus, Sparkles, X } from 'lucide-react';
 import type { Role } from '../types';
+import { defaultTheme, type ThemeConfig } from '../theme';
 
 export type View = 'today' | 'new' | 'scan' | 'report' | 'passport' | 'appointments';
-type ThemeConfig = { brandName: string; logoMark: string; logoUrl: string; primary: string; sidebar: string; surface: string; ink: string };
-const defaultTheme: ThemeConfig = { brandName: 'halo', logoMark: 'h', logoUrl: '', primary: '#b9533a', sidebar: '#20352d', surface: '#f7f5f0', ink: '#25372f' };
-
 export function StudioLayout({ view, setView, role, onLogout, children }: { view: View; setView: (view: View) => void; role: Role; onLogout: () => void; children: ReactNode }) {
   const [mobileNav, setMobileNav] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -17,7 +15,7 @@ export function StudioLayout({ view, setView, role, onLogout, children }: { view
 }
 function Nav({ active, icon, label, badge, onClick }: { active: boolean; icon: ReactNode; label: string; badge?: string; onClick: () => void }) { return <button className={active ? 'nav-item active' : 'nav-item'} onClick={onClick}>{icon}<span>{label}</span>{badge && <em>{badge}</em>}</button>; }
 
-function ThemePanel({ theme, onChange, onClose }: { theme: ThemeConfig; onChange: (theme: ThemeConfig) => void; onClose: () => void }) {
+export function ThemePanel({ theme, onChange, onClose }: { theme: ThemeConfig; onChange: (theme: ThemeConfig) => void; onClose: () => void }) {
   const update = (key: keyof ThemeConfig, value: string) => onChange({ ...theme, [key]: value });
   return <aside className="theme-panel"><div className="theme-panel-head"><div><label>STUDIO CUSTOMIZATION</label><h2>Make it yours</h2></div><button className="icon-button" onClick={onClose} title="Close customization"><X size={17}/></button></div><label className="theme-field-label">Brand name</label><input value={theme.brandName} onChange={e => update('brandName', e.target.value)} placeholder="Your studio name"/><label className="theme-field-label">Logo image URL</label><input value={theme.logoUrl} onChange={e => update('logoUrl', e.target.value)} placeholder="https://... (optional)"/><div className="theme-inline"><div><label className="theme-field-label">Logo mark</label><input maxLength={2} value={theme.logoMark} onChange={e => update('logoMark', e.target.value)} /></div><div><label className="theme-field-label">Primary</label><input className="color-input" type="color" value={theme.primary} onChange={e => update('primary', e.target.value)} /></div></div><div className="theme-inline"><div><label className="theme-field-label">Sidebar</label><input className="color-input" type="color" value={theme.sidebar} onChange={e => update('sidebar', e.target.value)} /></div><div><label className="theme-field-label">Surface</label><input className="color-input" type="color" value={theme.surface} onChange={e => update('surface', e.target.value)} /></div></div><button className="theme-reset" onClick={() => onChange(defaultTheme)}>Reset to Halo theme</button></aside>;
 }
