@@ -2,7 +2,7 @@
 
 ## Current Status
 
-The current release is a React UI MVP using local dummy data. The NestJS backend and PostgreSQL setup are scaffolded, but the React application is not connected to them yet.
+The current release is a React UI MVP with API-backed authentication, appointments, consultations, and salon catalog data. PostgreSQL is used for the connected flows, with local dummy-data fallback where a service is unavailable.
 
 ## Completed
 
@@ -63,6 +63,9 @@ The current release is a React UI MVP using local dummy data. The NestJS backend
 - User and admin roles with admin invite-code protection.
 - Bearer-token authentication and role authorization guards.
 - Protected appointment and consultation API routes.
+- PostgreSQL-backed salon profile, services, and stylist catalog API.
+- Demo salon data seeded on first authenticated salon read.
+- React salon setup and guest booking flows connected to the salon API.
 - Shared component and screen structure in React.
 - Production builds passing for frontend and backend.
 
@@ -70,8 +73,8 @@ The current release is a React UI MVP using local dummy data. The NestJS backend
 
 ### Backend and Database
 
-- Connect React to the NestJS API.
-- Persist users, roles, appointments, consultations, reports, passports, styles, services, and notes in PostgreSQL.
+- Connect remaining React flows, including Hair Passport, to the NestJS API.
+- Persist passports, styles, reports, and notes in PostgreSQL.
 - Add migrations instead of development-only schema synchronization.
 - Add refresh-token/session rotation and production identity-provider integration.
 - Add appointment availability and conflict validation.
@@ -104,7 +107,7 @@ The current release is a React UI MVP using local dummy data. The NestJS backend
 - Save recommended and completed services.
 - Link favorites and successful previous styles to future recommendations.
 - Add complete customer profile and consultation history views.
-- Make service catalog data editable and persistent.
+- Add multi-salon ownership to the editable service catalog.
 - Replace dashboard metrics with real database queries.
 
 ### Privacy and Safety

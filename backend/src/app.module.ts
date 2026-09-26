@@ -7,8 +7,10 @@ import { Appointment } from './appointments/appointment.entity';
 import { AppointmentModule } from './appointments/appointment.module';
 import { AuthModule } from './auth/auth.module';
 import { User } from './auth/user.entity';
+import { Salon } from './salon/salon.entity';
+import { SalonModule } from './salon/salon.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), TypeOrmModule.forRoot({ type: 'postgres', url: process.env.DATABASE_URL, entities: [Consultation, Appointment, User], autoLoadEntities: true, synchronize: true }), ConsultationModule, AppointmentModule, AuthModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), TypeOrmModule.forRoot({ type: 'postgres', url: process.env.DATABASE_URL, entities: [Consultation, Appointment, User, Salon], autoLoadEntities: true, synchronize: true }), ConsultationModule, AppointmentModule, AuthModule, SalonModule],
 })
 export class AppModule {}
