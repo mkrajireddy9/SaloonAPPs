@@ -8,9 +8,9 @@ export const demoGuests = [
 ];
 
 export const passportStyles = [
-  { name: 'Soft textured lob', meta: 'Saved today · 92 match', tone: 'blush' },
-  { name: 'Air-dried movement', meta: 'Saved 14 May · daily style', tone: 'sage' },
-  { name: 'Warm espresso gloss', meta: 'Saved 22 Feb · colour note', tone: 'butter' },
+  { name: 'Soft textured lob', meta: 'Saved today · 92 match', tone: 'blush', image: '/images/hair-lob.svg' },
+  { name: 'Air-dried movement', meta: 'Saved 14 May · daily style', tone: 'sage', image: '/images/hair-airy.svg' },
+  { name: 'Warm espresso gloss', meta: 'Saved 22 Feb · colour note', tone: 'butter', image: '/images/hair-gloss.svg' },
 ];
 
 export const dummyReport: Report = {
