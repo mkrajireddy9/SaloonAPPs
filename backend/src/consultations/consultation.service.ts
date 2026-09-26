@@ -5,9 +5,10 @@ import { CreateConsultationDto, CaptureViewDto } from './consultation.dto';
 import { Consultation } from './consultation.entity';
 
 const fallback = (c: Consultation) => ({
-  faceShape: 'Soft oval', texture: c.texture, length: c.length, density: 'Medium-full', movement: 'Natural wave',
+  faceShape: 'Soft oval', texture: c.texture, length: c.length, density: 'Medium-full', movement: 'Natural wave', visibleCondition: 'Moderate',
   signals: [{ label: 'Dryness at ends', level: 'Mild', note: 'A nourishing finish may help the shape sit better.' }, { label: 'Humidity sensitivity', level: 'Noticeable', note: 'Suggest a light anti-frizz routine for Bengaluru weather.' }, { label: 'Scalp visibility', level: 'Balanced', note: 'No unusual visual signal in this estimate.' }],
   recommendations: [{ name: 'Soft textured lob', score: 92, tag: 'Best match', description: 'Keeps the shoulder-grazing ease while letting natural wave do a little work.', chips: ['Low effort', 'Movement'] }, { name: 'Airy collarbone layers', score: 87, tag: 'Close match', description: 'A little more shape through the ends, with a soft frame around the face.', chips: ['Face framing', 'Versatile'] }, { name: 'Long side-swept fringe', score: 76, tag: 'Try if curious', description: 'A gentle change without committing to a shorter overall length.', chips: ['Fresh feel', 'Grow-out friendly'] }],
+  services: [{ name: 'Conditioning finish', reason: 'Supports the mild dryness visible at the ends.' }, { name: 'Anti-frizz treatment', reason: 'A lighter routine may help with Bengaluru humidity.' }, { name: 'Signature cut', reason: 'Creates the movement and shape discussed above.' }],
 });
 
 @Injectable()
