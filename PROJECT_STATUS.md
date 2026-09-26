@@ -66,6 +66,9 @@ The current release is a React UI MVP with API-backed authentication, appointmen
 - PostgreSQL-backed salon profile, services, and stylist catalog API.
 - Demo salon data seeded on first authenticated salon read.
 - React salon setup and guest booking flows connected to the salon API.
+- PostgreSQL-backed Hair Passport API with notes and service history.
+- PostgreSQL-backed admin dashboard summary API.
+- Swagger documentation for all current API modules.
 - Shared component and screen structure in React.
 - Production builds passing for frontend and backend.
 
@@ -73,8 +76,8 @@ The current release is a React UI MVP with API-backed authentication, appointmen
 
 ### Backend and Database
 
-- Connect remaining React flows, including Hair Passport, to the NestJS API.
-- Persist passports, styles, reports, and notes in PostgreSQL.
+- Connect remaining report, media, and final-look flows to the NestJS API.
+- Persist generated reports and image metadata in PostgreSQL.
 - Add migrations instead of development-only schema synchronization.
 - Add refresh-token/session rotation and production identity-provider integration.
 - Add appointment availability and conflict validation.
@@ -102,13 +105,12 @@ The current release is a React UI MVP with API-backed authentication, appointmen
 
 ### Hair Passport and Salon Operations
 
-- Persist passport history across sessions and devices.
-- Save consultation decisions and stylist overrides.
+- Save consultation decisions and stylist overrides as structured records.
 - Save recommended and completed services.
 - Link favorites and successful previous styles to future recommendations.
 - Add complete customer profile and consultation history views.
 - Add multi-salon ownership to the editable service catalog.
-- Replace dashboard metrics with real database queries.
+- Add richer dashboard filters and date-range database queries.
 
 ### Privacy and Safety
 
@@ -153,7 +155,7 @@ The product document recommends not building these in the first MVP:
 
 ## Recommended Next Phase
 
-1. Connect the React login, appointments, consultation, and passport flows to NestJS.
+1. Connect report, media, and final-look flows to NestJS.
 2. Add PostgreSQL migrations and refresh-token/session hardening.
 3. Add secure image storage and consent.
 4. Integrate image-quality validation and one real AI provider.

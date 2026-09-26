@@ -3,3 +3,5 @@ export type Report = { faceShape: string; texture: string; length: string; densi
 export type Role = 'admin' | 'user';
 export type Appointment = { id: string; guestName?: string; guestEmail?: string; service: string; date: string; time: string; stylist: string; status: 'Confirmed' | 'Requested'; notes: string };
 export type SalonConfig = { name: string; location: string; services: string[]; stylists: string[] };
+export type Passport = { id: string; ownerEmail: string; guestName: string; location: string; texture: string; length: string; preferredStylist: string; preferences: string[]; notes: string; styles: { name: string; meta: string; tone: string; image: string }[]; history: { date: string; service: string; detail: string }[]; beforeImage: string; afterImage: string };
+export type DashboardSummary = { consultations: number; serviceConversion: number; averageVisitValue: number; customers: { name: string; profile: string; last: string; visits: number }[]; services: { name: string; bookings: number; revenue: string }[] };
