@@ -7,6 +7,8 @@ export class Salon {
   @Column({ default: 'Indiranagar, Bengaluru' }) location!: string;
   @Column({ type: 'jsonb', default: '[]' }) services!: string[];
   @Column({ type: 'jsonb', default: '[]' }) stylists!: string[];
+  @Column({ type: 'jsonb', default: '{"open":"09:00","close":"19:00"}' }) openingHours!: { open: string; close: string };
+  @Column({ type: 'jsonb', default: '[]' }) closedDays!: string[];
   @CreateDateColumn() createdAt!: Date;
   @UpdateDateColumn() updatedAt!: Date;
 }

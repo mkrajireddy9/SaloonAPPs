@@ -10,7 +10,7 @@ export class Appointment {
   @Column() time!: string;
   @Column({ default: 'Meera Nair' }) stylist!: string;
   @Column({ default: '' }) notes!: string;
-  @Column({ default: 'Requested' }) status!: 'Requested' | 'Confirmed';
+  @Column({ default: 'Requested' }) status!: 'Requested' | 'Confirmed' | 'Cancelled';
   @CreateDateColumn() createdAt!: Date;
   @UpdateDateColumn() updatedAt!: Date;
 }

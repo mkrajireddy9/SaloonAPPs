@@ -6,6 +6,8 @@ export const defaultSalonConfig: SalonConfig = {
   location: 'Indiranagar, Bengaluru',
   services: ['Signature cut', 'Texture refresh', 'Colour consultation', 'Gloss refresh'],
   stylists: ['Meera Nair', 'Arjun S.', 'Nidhi Rao'],
+  openingHours: { open: '09:00', close: '19:00' },
+  closedDays: ['Sunday'],
 };
 
 export const demoGuests = [

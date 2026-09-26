@@ -19,6 +19,13 @@ export class CreateAppointmentDto {
 }
 
 export class UpdateAppointmentStatusDto {
-  @ApiProperty({ enum: ['Requested', 'Confirmed'] })
-  @IsIn(['Requested', 'Confirmed']) status!: 'Requested' | 'Confirmed';
+  @ApiProperty({ enum: ['Requested', 'Confirmed', 'Cancelled'] })
+  @IsIn(['Requested', 'Confirmed', 'Cancelled']) status!: 'Requested' | 'Confirmed' | 'Cancelled';
+}
+
+export class RescheduleAppointmentDto {
+  @ApiProperty({ example: '2026-10-10' })
+  @IsNotEmpty() @IsString() date!: string;
+  @ApiProperty({ example: '11:15 AM' })
+  @IsNotEmpty() @IsString() time!: string;
 }
