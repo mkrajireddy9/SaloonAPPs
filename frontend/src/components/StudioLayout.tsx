@@ -1,10 +1,10 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
-import { BarChart3, Bell, BookOpen, CalendarDays, CircleHelp, Home, LogOut, MapPin, Menu, Palette, Plus, Sparkles, X } from 'lucide-react';
+import { BarChart3, Bell, BookOpen, CalendarDays, CircleHelp, Home, LogOut, MapPin, Menu, Palette, Plus, Settings2, Sparkles, X } from 'lucide-react';
 import type { Role } from '../types';
 import type { Appointment } from '../types';
 import { defaultTheme, type ThemeConfig } from '../theme';
 
-export type View = 'today' | 'new' | 'scan' | 'report' | 'passport' | 'appointments' | 'studio';
+export type View = 'today' | 'new' | 'scan' | 'report' | 'passport' | 'appointments' | 'studio' | 'salon';
 export function StudioLayout({ view, setView, role, onLogout, notifications, children }: { view: View; setView: (view: View) => void; role: Role; onLogout: () => void; notifications: Appointment[]; children: ReactNode }) {
   const [mobileNav, setMobileNav] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);

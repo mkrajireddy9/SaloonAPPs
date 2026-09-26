@@ -1,4 +1,12 @@
 import type { Report } from '../types';
+import type { SalonConfig } from '../types';
+
+export const defaultSalonConfig: SalonConfig = {
+  name: 'Halo Studio',
+  location: 'Indiranagar, Bengaluru',
+  services: ['Signature cut', 'Texture refresh', 'Colour consultation', 'Gloss refresh'],
+  stylists: ['Meera Nair', 'Arjun S.', 'Nidhi Rao'],
+};
 
 export const demoGuests = [
   { name: 'Ananya Rao', time: '10:30 AM', service: 'Signature cut', stylist: 'Meera Nair', state: 'Ready' },
