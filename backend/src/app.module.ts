@@ -13,9 +13,10 @@ import { Passport } from './passport/passport.entity';
 import { PassportModule } from './passport/passport.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { InitialSchema1710000000000 } from './database/migrations/1710000000000-InitialSchema';
+import { ConsultationImages1720000000000 } from './database/migrations/1720000000000-ConsultationImages';
 import { AiModule } from './ai/ai.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), TypeOrmModule.forRoot({ type: 'postgres', url: process.env.DATABASE_URL, entities: [Consultation, Appointment, User, Salon, Passport], migrations: [InitialSchema1710000000000], migrationsRun: true, synchronize: false }), ConsultationModule, AppointmentModule, AuthModule, SalonModule, PassportModule, DashboardModule, AiModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), TypeOrmModule.forRoot({ type: 'postgres', url: process.env.DATABASE_URL, entities: [Consultation, Appointment, User, Salon, Passport], migrations: [InitialSchema1710000000000, ConsultationImages1720000000000], migrationsRun: true, synchronize: false }), ConsultationModule, AppointmentModule, AuthModule, SalonModule, PassportModule, DashboardModule, AiModule],
 })
 export class AppModule {}

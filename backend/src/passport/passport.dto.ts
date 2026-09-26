@@ -8,4 +8,8 @@ export class UpdatePassportDto {
   @IsOptional() @IsArray() @IsString({ each: true }) preferences?: string[];
   @ApiPropertyOptional({ example: 'Meera Nair' })
   @IsOptional() @IsString() preferredStylist?: string;
+  @ApiPropertyOptional({ example: '/images/hair-before.svg' })
+  @IsOptional() @IsString() beforeImage?: string;
+  @ApiPropertyOptional({ example: '/images/hair-lob.svg' })
+  @IsOptional() @IsString() afterImage?: string;
 }

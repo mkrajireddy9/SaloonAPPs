@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CreateConsultationDto, CaptureViewDto } from './consultation.dto';
+import { CreateConsultationDto, CaptureViewDto, SaveConsultationDto } from './consultation.dto';
 import { Consultation } from './consultation.entity';
 import { AiService } from '../ai/ai.service';
 
@@ -20,7 +20,15 @@ export class ConsultationService {
   async capture(id: string, dto: CaptureViewDto) { const c = await this.get(id); const views = new Set(c.capturedViews.split(',').filter(Boolean)); views.add(dto.view); c.capturedViews = [...views].join(','); return this.repo.save(c); }
   async analyze(id: string, imageBase64?: string) {
     const c = await this.get(id); const report = await this.ai.analyze({ goal: c.goal, texture: c.texture, length: c.length, imageBase64 });
-    c.report = report; c.status = 'complete'; return this.repo.save(c);
+    c.report = report; c.beforeImage = imageBase64 || null; c.status = 'complete'; return this.repo.save(c);
+  }
+  async saveResult(id: string, dto: SaveConsultationDto) {
+    const c = await this.get(id);
+    if (dto.selectedStyle !== undefined) c.selectedStyle = dto.selectedStyle;
+    if (dto.selectedServices !== undefined) c.selectedServices = dto.selectedServices;
+    if (dto.afterImage !== undefined) c.afterImage = dto.afterImage;
+    c.status = 'saved';
+    return this.repo.save(c);
   }
   async get(id: string) { const c = await this.repo.findOne({ where: { id } }); if (!c) throw new NotFoundException('Consultation not found'); return c; }
 }

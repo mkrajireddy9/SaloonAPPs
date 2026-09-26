@@ -11,6 +11,10 @@ export class Consultation {
   @Column({ default: 'Wavy' }) texture!: string;
   @Column({ default: 'front,left,right' }) capturedViews!: string;
   @Column({ type: 'jsonb', nullable: true }) report!: Record<string, unknown> | null;
+  @Column({ type: 'text', nullable: true }) beforeImage!: string | null;
+  @Column({ type: 'text', nullable: true }) afterImage!: string | null;
+  @Column({ default: '' }) selectedStyle!: string;
+  @Column({ type: 'jsonb', default: '[]' }) selectedServices!: string[];
   @Column({ default: 'draft' }) status!: string;
   @CreateDateColumn() createdAt!: Date;
   @UpdateDateColumn() updatedAt!: Date;

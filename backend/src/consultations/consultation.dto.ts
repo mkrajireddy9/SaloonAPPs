@@ -1,4 +1,4 @@
-import { IsBase64, IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBase64, IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateConsultationDto {
@@ -24,4 +24,13 @@ export class CaptureViewDto {
 export class AnalyzeConsultationDto {
   @ApiPropertyOptional({ description: 'Optional base64 image without the data URL prefix.' })
   @IsOptional() @IsBase64() imageBase64?: string;
+}
+
+export class SaveConsultationDto {
+  @ApiPropertyOptional({ example: 'Soft textured lob' })
+  @IsOptional() @IsString() selectedStyle?: string;
+  @ApiPropertyOptional({ example: ['Signature cut', 'Conditioning finish'] })
+  @IsOptional() @IsArray() @IsString({ each: true }) selectedServices?: string[];
+  @ApiPropertyOptional({ example: '/images/hair-lob.svg' })
+  @IsOptional() @IsString() afterImage?: string;
 }

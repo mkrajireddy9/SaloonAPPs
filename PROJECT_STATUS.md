@@ -26,6 +26,9 @@ The current release is a React UI MVP with API-backed authentication, appointmen
 - Camera capture option on supported mobile browsers.
 - Protected AI image-quality check before analysis.
 - Selected image forwarded to consultation analysis.
+- Consultation result save action with selected services and hairstyle.
+- Before image and generated after-look reference persisted in PostgreSQL.
+- Saved before-and-after images shown in the Hair Passport.
 - Scan progress state and capture checklist.
 - Dummy consultation report.
 - Face-shape estimate.
