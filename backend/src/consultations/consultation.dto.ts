@@ -1,4 +1,4 @@
-import { IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsBase64, IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateConsultationDto {
@@ -19,4 +19,9 @@ export class CreateConsultationDto {
 export class CaptureViewDto {
   @ApiProperty({ enum: ['front', 'left', 'right'] })
   @IsIn(['front', 'left', 'right']) view!: 'front' | 'left' | 'right';
+}
+
+export class AnalyzeConsultationDto {
+  @ApiPropertyOptional({ description: 'Optional base64 image without the data URL prefix.' })
+  @IsOptional() @IsBase64() imageBase64?: string;
 }

@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { ConsultationService } from './consultation.service';
-import { CaptureViewDto, CreateConsultationDto } from './consultation.dto';
+import { AnalyzeConsultationDto, CaptureViewDto, CreateConsultationDto } from './consultation.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/auth.guard';
@@ -19,5 +19,5 @@ export class ConsultationController {
   @Post() @ApiOperation({ summary: 'Create a consultation' }) create(@Body() dto: CreateConsultationDto) { return this.service.create(dto); }
   @Get(':id') @ApiOperation({ summary: 'Get a consultation' }) get(@Param('id') id: string) { return this.service.get(id); }
   @Post(':id/capture') @ApiOperation({ summary: 'Capture a scan view' }) capture(@Param('id') id: string, @Body() dto: CaptureViewDto) { return this.service.capture(id, dto); }
-  @Post(':id/analyze') @ApiOperation({ summary: 'Generate a consultation report' }) analyze(@Param('id') id: string) { return this.service.analyze(id); }
+  @Post(':id/analyze') @ApiOperation({ summary: 'Generate a consultation report from an optional image' }) analyze(@Param('id') id: string, @Body() dto: AnalyzeConsultationDto) { return this.service.analyze(id, dto.imageBase64); }
 }

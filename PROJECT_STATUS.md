@@ -22,6 +22,10 @@ The current release is a React UI MVP with API-backed authentication, appointmen
 - Preferred length and hair texture selection.
 - Guided front, left, and right scan flow.
 - Optional back-of-head scan.
+- Upload image option with preview.
+- Camera capture option on supported mobile browsers.
+- Protected AI image-quality check before analysis.
+- Selected image forwarded to consultation analysis.
 - Scan progress state and capture checklist.
 - Dummy consultation report.
 - Face-shape estimate.
