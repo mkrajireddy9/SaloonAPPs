@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, OnModuleInit, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
@@ -7,8 +7,20 @@ import { LoginDto, RegisterDto } from './auth.dto';
 import { User, UserRole } from './user.entity';
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
   constructor(@InjectRepository(User) private readonly users: Repository<User>, private readonly jwt: JwtService) {}
+
+  async onModuleInit() {
+    const demoUsers = [
+      { name: 'Meera Nair', email: 'admin@halo.local', role: UserRole.ADMIN },
+      { name: 'Ananya Rao', email: 'guest@halo.local', role: UserRole.USER },
+    ];
+    for (const demo of demoUsers) {
+      if (!await this.users.findOne({ where: { email: demo.email } })) {
+        await this.users.save(this.users.create({ ...demo, passwordHash: await bcrypt.hash('password123', 12) }));
+      }
+    }
+  }
 
   async register(dto: RegisterDto) {
     const email = dto.email.toLowerCase().trim();
