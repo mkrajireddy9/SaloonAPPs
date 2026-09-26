@@ -8,6 +8,7 @@ export class User {
   @Column() name!: string;
   @Column({ unique: true }) email!: string;
   @Column({ select: false }) passwordHash!: string;
+  @Column({ type: 'varchar', nullable: true, select: false }) refreshTokenHash!: string | null;
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER }) role!: UserRole;
   @CreateDateColumn() createdAt!: Date;
 }

@@ -1,17 +1,21 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { CreateAppointmentDto, UpdateAppointmentStatusDto } from './appointment.dto';
 import { Appointment } from './appointment.entity';
+import { UserRole } from '../auth/user.entity';
 
 @Injectable()
 export class AppointmentService {
   constructor(@InjectRepository(Appointment) private readonly repo: Repository<Appointment>) {}
 
-  findAll() { return this.repo.find({ order: { createdAt: 'DESC' } }); }
+  findAll(user: { email: string; role: UserRole }) { return this.repo.find({ where: user.role === UserRole.ADMIN ? {} : { guestEmail: user.email }, order: { createdAt: 'DESC' } }); }
 
-  create(dto: CreateAppointmentDto) {
-    return this.repo.save(this.repo.create({ ...dto, guestName: dto.guestName || 'Ananya Rao', stylist: dto.stylist || 'Meera Nair', status: 'Requested' }));
+  async create(dto: CreateAppointmentDto, user: { email: string; name: string; role: UserRole }) {
+    const stylist = dto.stylist || 'Meera Nair';
+    const conflict = await this.repo.findOne({ where: { date: dto.date, time: dto.time, stylist, status: In(['Requested', 'Confirmed']) } });
+    if (conflict) throw new ConflictException('That stylist is already requested for this time');
+    return this.repo.save(this.repo.create({ ...dto, guestName: user.role === UserRole.USER ? user.name : (dto.guestName || 'Ananya Rao'), guestEmail: user.role === UserRole.USER ? user.email : (dto.guestEmail || ''), stylist, status: 'Requested' }));
   }
 
   async updateStatus(id: string, dto: UpdateAppointmentStatusDto) {

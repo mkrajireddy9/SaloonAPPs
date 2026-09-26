@@ -21,3 +21,8 @@ export class LoginDto {
   @ApiProperty({ example: 'strong-password' })
   @IsNotEmpty() @IsString() password!: string;
 }
+
+export class RefreshTokenDto {
+  @ApiProperty({ example: 'refresh-token-from-login' })
+  @IsNotEmpty() @IsString() refreshToken!: string;
+}

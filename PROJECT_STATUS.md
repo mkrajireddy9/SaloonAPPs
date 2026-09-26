@@ -69,6 +69,9 @@ The current release is a React UI MVP with API-backed authentication, appointmen
 - PostgreSQL-backed Hair Passport API with notes and service history.
 - PostgreSQL-backed admin dashboard summary API.
 - Swagger documentation for all current API modules.
+- TypeORM initial migration with startup migration execution.
+- Refresh-token rotation and logout token revocation.
+- Appointment ownership boundaries and stylist time-slot conflict validation.
 - Shared component and screen structure in React.
 - Production builds passing for frontend and backend.
 
@@ -78,10 +81,8 @@ The current release is a React UI MVP with API-backed authentication, appointmen
 
 - Connect remaining report, media, and final-look flows to the NestJS API.
 - Persist generated reports and image metadata in PostgreSQL.
-- Add migrations instead of development-only schema synchronization.
-- Add refresh-token/session rotation and production identity-provider integration.
-- Add appointment availability and conflict validation.
-- Add customer and stylist ownership boundaries.
+- Add production identity-provider integration and secure token storage strategy.
+- Add configurable working hours and appointment availability rules.
 
 ### Real AI and Image Processing
 
@@ -156,8 +157,7 @@ The product document recommends not building these in the first MVP:
 ## Recommended Next Phase
 
 1. Connect report, media, and final-look flows to NestJS.
-2. Add PostgreSQL migrations and refresh-token/session hardening.
-3. Add secure image storage and consent.
-4. Integrate image-quality validation and one real AI provider.
-5. Connect a virtual try-on provider behind an async job endpoint.
-6. Run a pilot with 5–10 salons and collect stylist feedback.
+2. Add secure image storage and consent.
+3. Integrate image-quality validation and one real AI provider.
+4. Connect a virtual try-on provider behind an async job endpoint.
+5. Run a pilot with 5–10 salons and collect stylist feedback.
