@@ -1,10 +1,18 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { ConsultationService } from './consultation.service';
 import { CaptureViewDto, CreateConsultationDto } from './consultation.dto';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/auth.guard';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { UserRole } from '../auth/user.entity';
 
 @Controller('consultations')
 @ApiTags('consultations')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
 export class ConsultationController {
   constructor(private readonly service: ConsultationService) {}
   @Get() @ApiOperation({ summary: 'List consultations' }) list() { return this.service.list(); }

@@ -59,6 +59,10 @@ The current release is a React UI MVP using local dummy data. The NestJS backend
 - PostgreSQL Docker Compose configuration.
 - Consultation entity, DTOs, controller, and service scaffold.
 - Optional Ollama integration with a deterministic fallback.
+- JWT authentication API with bcrypt password hashing.
+- User and admin roles with admin invite-code protection.
+- Bearer-token authentication and role authorization guards.
+- Protected appointment and consultation API routes.
 - Shared component and screen structure in React.
 - Production builds passing for frontend and backend.
 
@@ -69,7 +73,7 @@ The current release is a React UI MVP using local dummy data. The NestJS backend
 - Connect React to the NestJS API.
 - Persist users, roles, appointments, consultations, reports, passports, styles, services, and notes in PostgreSQL.
 - Add migrations instead of development-only schema synchronization.
-- Add real authentication, password hashing, sessions or JWT, and role guards.
+- Add refresh-token/session rotation and production identity-provider integration.
 - Add appointment availability and conflict validation.
 - Add customer and stylist ownership boundaries.
 
@@ -147,7 +151,7 @@ The product document recommends not building these in the first MVP:
 ## Recommended Next Phase
 
 1. Connect the React login, appointments, consultation, and passport flows to NestJS.
-2. Add PostgreSQL migrations and real role-based authentication.
+2. Add PostgreSQL migrations and refresh-token/session hardening.
 3. Add secure image storage and consent.
 4. Integrate image-quality validation and one real AI provider.
 5. Connect a virtual try-on provider behind an async job endpoint.
