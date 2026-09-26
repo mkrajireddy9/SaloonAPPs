@@ -18,11 +18,12 @@ export function App() {
   const [role, setRole] = useState<Role | null>(null);
   const [consultation, setConsultation] = useState<Consultation | null>(null);
   const [report, setReport] = useState<Report | null>(null);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>(() => { try { return JSON.parse(localStorage.getItem('halo-appointments') || '[]') as Appointment[]; } catch { return []; } });
   const [salon, setSalon] = useState<SalonConfig>(() => { try { return { ...defaultSalonConfig, ...JSON.parse(localStorage.getItem('halo-salon') || '{}') }; } catch { return defaultSalonConfig; } });
   const refreshAppointments = async () => { try { setAppointments(await request<Appointment[]>('/appointments')); } catch { /* Keep local dummy data while the API/database is unavailable. */ } };
   useEffect(() => { if (role) void refreshAppointments(); }, [role]);
   useEffect(() => { localStorage.setItem('halo-salon', JSON.stringify(salon)); }, [salon]);
+  useEffect(() => { localStorage.setItem('halo-appointments', JSON.stringify(appointments)); }, [appointments]);
   const authenticate = async (email: string, password: string, selectedRole: Role) => { try { const result = await request<{ accessToken: string; user: { role: Role } }>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }); setAuthToken(result.accessToken); setRole(result.user.role); setView(result.user.role === 'admin' ? 'today' : 'appointments'); } catch { clearAuthToken(); setRole(selectedRole); setView(selectedRole === 'admin' ? 'today' : 'appointments'); } };
   const startConsultation = async (data: Partial<Consultation>) => { const draft = { id: `demo-${Date.now()}`, guestName: data.guestName || 'New guest', phone: data.phone || '', stylist: data.stylist || 'Meera Nair', goal: data.goal || 'A cut that feels like me', length: data.length || 'Shoulder length', texture: data.texture || 'Wavy', capturedViews: '', report: null, status: 'draft' } as Consultation; try { setConsultation(await request<Consultation>('/consultations', { method: 'POST', body: JSON.stringify(data) })); } catch { setConsultation(draft); } setView('scan'); };
   const captureConsultationView = async (viewName: string) => { if (!consultation || viewName === 'back') return; try { setConsultation(await request<Consultation>(`/consultations/${consultation.id}/capture`, { method: 'POST', body: JSON.stringify({ view: viewName }) })); } catch { /* The local scan state remains the fallback. */ } };
