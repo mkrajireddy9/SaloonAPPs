@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Consultation } from './consultation.entity';
 import { ConsultationController } from './consultation.controller';
 import { ConsultationService } from './consultation.service';
+import { AuthModule } from '../auth/auth.module';
 
-@Module({ imports: [TypeOrmModule.forFeature([Consultation])], controllers: [ConsultationController], providers: [ConsultationService] })
+@Module({ imports: [TypeOrmModule.forFeature([Consultation]), AuthModule], controllers: [ConsultationController], providers: [ConsultationService] })
 export class ConsultationModule {}
