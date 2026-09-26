@@ -20,7 +20,9 @@ export class ConsultationService {
   async capture(id: string, dto: CaptureViewDto) { const c = await this.get(id); const views = new Set(c.capturedViews.split(',').filter(Boolean)); views.add(dto.view); c.capturedViews = [...views].join(','); return this.repo.save(c); }
   async analyze(id: string, imageBase64?: string) {
     const c = await this.get(id); const report = await this.ai.analyze({ goal: c.goal, texture: c.texture, length: c.length, imageBase64 });
-    c.report = report; c.beforeImage = imageBase64 || null; c.status = 'complete'; return this.repo.save(c);
+    const recommendedStyle = report.recommendations?.[0]?.name || 'Soft textured lob';
+    const preview = await this.ai.tryOn({ styleName: recommendedStyle, imageBase64 });
+    c.report = report; c.beforeImage = imageBase64 || null; c.afterImage = preview.previewImage; c.selectedStyle = recommendedStyle; c.status = 'complete'; return this.repo.save(c);
   }
   async saveResult(id: string, dto: SaveConsultationDto) {
     const c = await this.get(id);
@@ -30,5 +32,5 @@ export class ConsultationService {
     c.status = 'saved';
     return this.repo.save(c);
   }
-  async get(id: string) { const c = await this.repo.findOne({ where: { id } }); if (!c) throw new NotFoundException('Consultation not found'); return c; }
+  async get(id: string) { const c = await this.repo.findOne({ where: { id } }); if (!c) throw new NotFoundException('Consultation not found'); if (!c.afterImage && c.report) { const recommendations = c.report.recommendations as { name?: string }[] | undefined; const first = recommendations?.[0]?.name; c.afterImage = first === 'Airy collarbone layers' ? '/images/hair-airy.svg' : first === 'Long side-swept fringe' ? '/images/hair-gloss.svg' : '/images/hair-lob.svg'; await this.repo.save(c); } return c; }
 }
