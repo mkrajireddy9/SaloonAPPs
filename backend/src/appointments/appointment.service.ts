@@ -4,12 +4,13 @@ import { In, Repository } from 'typeorm';
 import { CreateAppointmentDto, RescheduleAppointmentDto, UpdateAppointmentStatusDto } from './appointment.dto';
 import { Appointment } from './appointment.entity';
 import { UserRole } from '../auth/user.entity';
+import { User } from '../auth/user.entity';
 import { Salon } from '../salon/salon.entity';
 import { NotificationService } from '../notifications/notification.service';
 
 @Injectable()
 export class AppointmentService {
-  constructor(@InjectRepository(Appointment) private readonly repo: Repository<Appointment>, @InjectRepository(Salon) private readonly salons: Repository<Salon>, private readonly notifications: NotificationService) {}
+  constructor(@InjectRepository(Appointment) private readonly repo: Repository<Appointment>, @InjectRepository(Salon) private readonly salons: Repository<Salon>, @InjectRepository(User) private readonly users: Repository<User>, private readonly notifications: NotificationService) {}
 
   private getBranch(salon: Salon, branchId?: string) {
     const branches = salon.branches || [];
@@ -31,9 +32,12 @@ export class AppointmentService {
     return { salon, branch, requested, open, close };
   }
 
-  findAll(user: { email: string; role: UserRole }) { return this.repo.find({ where: user.role === UserRole.ADMIN ? {} : { guestEmail: user.email }, order: { createdAt: 'DESC' } }); }
+  findAll(user: { id?: string; email: string; role: UserRole }) { return this.repo.find({ where: user.role === UserRole.ADMIN ? {} : user.id ? { customerId: user.id } : { guestEmail: user.email }, order: { createdAt: 'DESC' } }); }
 
-  async create(dto: CreateAppointmentDto, user: { email: string; name: string; role: UserRole }) {
+  async create(dto: CreateAppointmentDto, user: { id?: string; email: string; name: string; role: UserRole }) {
+    const account = user.id ? await this.users.findOne({ where: { id: user.id } }) : undefined;
+    const accountName = account?.name || user.name;
+    const accountEmail = account?.email || user.email;
     const stylist = dto.stylist || 'Meera Nair';
     if (new Date(`${dto.date}T00:00:00`).getTime() < new Date(new Date().toDateString()).getTime()) throw new ConflictException('Appointments must be scheduled for today or a future date');
     const salon = await this.salons.findOne({ where: {} });
@@ -50,7 +54,7 @@ export class AppointmentService {
     if (schedule && (!schedule.workingDays.includes(weekday) || schedule.leaveDates.includes(dto.date))) throw new ConflictException(`${stylist} is unavailable on this date`);
     const conflict = await this.repo.findOne({ where: { date: dto.date, time: dto.time, stylist, status: In(['Requested', 'Confirmed']) } });
     if (conflict) throw new ConflictException('That stylist is already requested for this time');
-    const saved = await this.repo.save(this.repo.create({ ...dto, branchId: branch.id, guestName: user.role === UserRole.USER ? user.name : (dto.guestName || 'Ananya Rao'), guestEmail: user.role === UserRole.USER ? user.email : (dto.guestEmail || ''), stylist, durationMinutes: detail?.durationMinutes || 60, price: detail?.price || 0, status: 'Requested' }));
+    const saved = await this.repo.save(this.repo.create({ ...dto, branchId: branch.id, customerId: user.role === UserRole.USER ? user.id || null : null, guestName: user.role === UserRole.USER ? accountName : (dto.guestName || 'Ananya Rao'), guestEmail: user.role === UserRole.USER ? accountEmail : (dto.guestEmail || ''), stylist, durationMinutes: detail?.durationMinutes || 60, price: detail?.price || 0, status: 'Requested' }));
     await this.notifications.queueForAppointment(saved, 'appointment.created');
     return saved;
   }
@@ -64,8 +68,8 @@ export class AppointmentService {
     return saved;
   }
 
-  async cancel(id: string, user: { email: string; role: UserRole }) {
-    const appointment = await this.repo.findOne({ where: user.role === UserRole.ADMIN ? { id } : { id, guestEmail: user.email } });
+  async cancel(id: string, user: { id?: string; email: string; role: UserRole }) {
+    const appointment = await this.repo.findOne({ where: user.role === UserRole.ADMIN ? { id } : user.id ? { id, customerId: user.id } : { id, guestEmail: user.email } });
     if (!appointment) throw new NotFoundException('Appointment not found');
     if (appointment.status === 'Cancelled') return appointment;
     appointment.status = 'Cancelled';
@@ -74,8 +78,8 @@ export class AppointmentService {
     return saved;
   }
 
-  async reschedule(id: string, dto: RescheduleAppointmentDto, user: { email: string; role: UserRole }) {
-    const appointment = await this.repo.findOne({ where: user.role === UserRole.ADMIN ? { id } : { id, guestEmail: user.email } });
+  async reschedule(id: string, dto: RescheduleAppointmentDto, user: { id?: string; email: string; role: UserRole }) {
+    const appointment = await this.repo.findOne({ where: user.role === UserRole.ADMIN ? { id } : user.id ? { id, customerId: user.id } : { id, guestEmail: user.email } });
     if (!appointment) throw new NotFoundException('Appointment not found');
     if (appointment.status === 'Cancelled') throw new ConflictException('Cancelled appointments cannot be rescheduled');
     if (new Date(`${dto.date}T00:00:00`).getTime() < new Date(new Date().toDateString()).getTime()) throw new ConflictException('Appointments must be scheduled for today or a future date');

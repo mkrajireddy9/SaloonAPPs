@@ -67,6 +67,8 @@ The core salon operations are implemented and connected to the NestJS API and Po
 - Admin review moderation with publish and reject actions.
 - Database-backed review status and duplicate-review protection per appointment.
 - Notification preference screen for email, SMS, and WhatsApp opt-in values.
+- Local payment intent, webhook, refund, idempotency, and invoice-record APIs.
+- Protected local media upload with authenticated image reads, delete support, and service/stylist upload UI.
 - Swagger documentation for current API modules.
 - DTO validation and global NestJS validation pipe for key request bodies.
 - Top-right toast feedback for save, error, and workflow messages.
@@ -85,15 +87,15 @@ These are the remaining non-AI items required before the application can be cons
 
 ### Customer Accounts and History
 
-6. Complete customer account editing outside the Hair Passport, including email and phone management.
-7. Add complete customer history filtering by date, service, stylist, branch, and status.
-8. Add customer search filters, export, and pagination for large salon datasets.
-9. Connect customer profile and appointment history to a stable user/customer identity model instead of display-name fallbacks.
+6. ~~Complete customer account editing outside the Hair Passport, including email and phone management.~~ **Completed 28 September 2026.**
+7. ~~Add complete customer history filtering by date, service, stylist, branch, and status.~~ **Completed 28 September 2026.**
+8. ~~Add customer search filters, export, and pagination for large salon datasets.~~ **Completed 28 September 2026.**
+9. ~~Connect customer profile and appointment history to a stable user/customer identity model instead of display-name fallbacks.~~ **Completed 28 September 2026.**
 
 ### Payments and Notifications
 
 10. Integrate a payment provider with payment intents, webhooks, refunds, and idempotency.
-11. Persist payment status, transaction reference, tax, discount, total, and invoice number.
+11. ~~Persist payment status, transaction reference, tax, discount, total, and invoice number.~~ **Completed 28 September 2026.**
 12. Build downloadable and printable invoice screens.
 13. Implement actual email confirmations and reminders.
 14. Implement SMS and WhatsApp notifications through a provider.
@@ -103,9 +105,9 @@ These are the remaining non-AI items required before the application can be cons
 
 16. Move uploaded images from base64 or public URL usage to private cloud/object storage.
 17. Add file type, file size, dimensions, malware/security, and content validation.
-18. Add signed/private image URLs and access control.
+18. ~~Add signed/private image URLs and access control.~~ **Completed 28 September 2026 for authenticated local media URLs; signed cloud URLs remain pending.**
 19. Add image deletion, retention, consent, and account-deletion cleanup workflows.
-20. Add service and stylist image upload instead of URL-only fields.
+20. ~~Add service and stylist image upload instead of URL-only fields.~~ **Completed 28 September 2026.**
 
 ### Security and Compliance
 

@@ -6,6 +6,7 @@ import { AppointmentController } from './appointment.controller';
 import { AppointmentService } from './appointment.service';
 import { AuthModule } from '../auth/auth.module';
 import { NotificationModule } from '../notifications/notification.module';
+import { User } from '../auth/user.entity';
 
-@Module({ imports: [TypeOrmModule.forFeature([Appointment, Salon]), AuthModule, NotificationModule], controllers: [AppointmentController], providers: [AppointmentService] })
+@Module({ imports: [TypeOrmModule.forFeature([Appointment, Salon, User]), AuthModule, NotificationModule], controllers: [AppointmentController], providers: [AppointmentService] })
 export class AppointmentModule {}
