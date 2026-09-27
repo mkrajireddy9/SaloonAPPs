@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Check, MapPin, Plus, Scissors, Trash2, UserRound } from 'lucide-react';
 import { ShellTitle } from '../components/ShellTitle';
+import { useToast } from '../components/Toast';
 import type { SalonConfig } from '../types';
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const emptyDetail = (name: string) => ({ name, durationMinutes: 60, price: 0, imageUrl: '' });
 const emptyBranch = (name: string, location: string) => ({ id: `${Date.now()}`, name, location, openingHours: { open: '09:00', close: '19:00' }, closedDays: ['Sunday'] });
 
-export function SalonSetupScreen({ config, onBack, onSave }: { config: SalonConfig; onBack: () => void; onSave: (config: SalonConfig) => void }) {
+export function SalonSetupScreen({ config, onBack, onSave }: { config: SalonConfig; onBack: () => void; onSave: (config: SalonConfig) => void | Promise<void> }) {
   const [draft, setDraft] = useState(config); const [service, setService] = useState(''); const [stylist, setStylist] = useState(''); const [leaveDates, setLeaveDates] = useState<Record<string, string>>({});
+  const { showToast } = useToast();
   useEffect(() => setDraft(config), [config]);
   const details = draft.serviceDetails || draft.services.map(emptyDetail); const schedules = draft.stylistSchedules || {}; const profiles = draft.stylistProfiles || {};
-  const save = () => { const next = { ...draft, serviceDetails: details, branches: draft.branches?.length ? draft.branches : [emptyBranch(draft.name, draft.location)], stylistProfiles: profiles, services: draft.services.length ? draft.services : ['Consultation'], stylists: draft.stylists.length ? draft.stylists : ['Any available stylist'] }; localStorage.setItem('halo-salon', JSON.stringify(next)); onSave(next); };
+  const save = () => { const next = { ...draft, serviceDetails: details, branches: draft.branches?.length ? draft.branches : [emptyBranch(draft.name, draft.location)], stylistProfiles: profiles, services: draft.services.length ? draft.services : ['Consultation'], stylists: draft.stylists.length ? draft.stylists : ['Any available stylist'] }; void Promise.resolve(onSave(next)).then(() => showToast('Salon details saved.')).catch(error => showToast(error instanceof Error ? error.message : 'Could not save salon details.', 'error')); };
   const toggle = (key: 'closedDays', value: string) => setDraft(current => ({ ...current, [key]: current[key].includes(value) ? current[key].filter(item => item !== value) : [...current[key], value] }));
   const addService = () => { const name = service.trim(); if (!name || draft.services.includes(name)) return; setDraft(current => ({ ...current, services: [...current.services, name], serviceDetails: [...(current.serviceDetails || current.services.map(emptyDetail)), emptyDetail(name)] })); setService(''); };
   const addStylist = () => { const name = stylist.trim(); if (!name || draft.stylists.includes(name)) return; setDraft(current => ({ ...current, stylists: [...current.stylists, name] })); setStylist(''); };

@@ -20,4 +20,6 @@ export class UpdatePassportDto {
   @IsOptional() @IsString() beforeImage?: string;
   @ApiPropertyOptional({ example: '/images/hair-lob.svg' })
   @IsOptional() @IsString() afterImage?: string;
+  @ApiPropertyOptional({ example: [{ name: 'Soft textured lob', meta: 'Saved today', tone: 'blush', image: '/images/hair-lob.svg' }] })
+  @IsOptional() @IsArray() styles?: Record<string, string>[];
 }

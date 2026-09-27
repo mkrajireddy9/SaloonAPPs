@@ -10,5 +10,6 @@ export class User {
   @Column({ select: false }) passwordHash!: string;
   @Column({ type: 'varchar', nullable: true, select: false }) refreshTokenHash!: string | null;
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER }) role!: UserRole;
+  @Column({ type: 'jsonb', default: '{"email":true,"sms":false,"whatsapp":false}' }) notificationPreferences!: { email: boolean; sms: boolean; whatsapp: boolean };
   @CreateDateColumn() createdAt!: Date;
 }

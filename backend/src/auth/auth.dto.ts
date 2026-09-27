@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsBoolean, IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
 import { UserRole } from './user.entity';
 
 export class RegisterDto {
@@ -25,4 +25,10 @@ export class LoginDto {
 export class RefreshTokenDto {
   @ApiProperty({ example: 'refresh-token-from-login' })
   @IsNotEmpty() @IsString() refreshToken!: string;
+}
+
+export class NotificationPreferencesDto {
+  @ApiPropertyOptional({ default: true }) @IsOptional() @IsBoolean() email?: boolean;
+  @ApiPropertyOptional({ default: false }) @IsOptional() @IsBoolean() sms?: boolean;
+  @ApiPropertyOptional({ default: false }) @IsOptional() @IsBoolean() whatsapp?: boolean;
 }

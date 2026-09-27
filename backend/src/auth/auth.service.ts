@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
-import { LoginDto, RefreshTokenDto, RegisterDto } from './auth.dto';
+import { LoginDto, NotificationPreferencesDto, RefreshTokenDto, RegisterDto } from './auth.dto';
 import { User, UserRole } from './user.entity';
 
 @Injectable()
@@ -47,6 +47,19 @@ export class AuthService implements OnModuleInit {
   }
 
   async logout(userId: string) { await this.users.update(userId, { refreshTokenHash: null }); return { success: true }; }
+
+  async getNotificationPreferences(email: string) {
+    const user = await this.users.findOne({ where: { email } });
+    return user?.notificationPreferences || { email: true, sms: false, whatsapp: false };
+  }
+
+  async updateNotificationPreferences(email: string, dto: NotificationPreferencesDto) {
+    const user = await this.users.findOne({ where: { email } });
+    if (!user) throw new UnauthorizedException('User not found');
+    user.notificationPreferences = { ...{ email: true, sms: false, whatsapp: false }, ...dto };
+    await this.users.save(user);
+    return user.notificationPreferences;
+  }
 
   issueToken(user: User) {
     const payload = { sub: user.id, email: user.email, role: user.role, name: user.name, type: 'access' };
