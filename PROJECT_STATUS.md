@@ -247,3 +247,126 @@ The product document recommends not building these in the first MVP:
 3. Integrate image-quality validation and one real AI provider.
 4. Connect a virtual try-on provider behind an async job endpoint.
 5. Run a pilot with 5–10 salons and collect stylist feedback.
+
+## Audited Pending Items (2026-09-27)
+
+The following items remain before the app can be considered production-ready. The frontend and backend production builds currently pass.
+
+### Immediate Production Blockers
+
+1. Complete and test Google login configuration.
+2. Commit the currently uncommitted Google login changes.
+3. Remove local role-access fallback when authentication API calls fail.
+4. Replace placeholder JWT secrets and admin invite codes.
+5. Replace query-string token delivery with a secure OAuth callback/session strategy.
+6. Configure production CORS domains.
+7. Add password reset.
+8. Add email verification.
+9. Add user account deletion.
+
+### Customer Features
+
+10. Complete customer profile editing.
+11. Add a dedicated full appointment history screen.
+12. Enforce appointment ownership on every customer operation.
+13. Allow reviews only for completed appointments.
+14. Enforce one review per completed appointment.
+15. Add a before-and-after comparison slider.
+16. Add customer image deletion and retention controls.
+17. Connect saved and completed styles to future recommendations.
+
+### Salon Operations
+
+18. Finish branch management UI.
+19. Add branch selection during booking.
+20. Move services from JSON catalog storage to relational database records.
+21. Add service image upload and display.
+22. Finish stylist profile management and photo upload.
+23. Add database-backed stylist availability and leave management.
+24. Add timezone-aware booking validation and race-condition protection.
+25. Add edge-case tests for opening hours and closed days.
+
+### Payments
+
+26. Integrate a payment gateway.
+27. Add payment transactions and payment intent persistence.
+28. Add payment webhook handling.
+29. Add refunds and cancellation payment handling.
+30. Add invoice screens backed by payment records.
+31. Store payment status in the appointment workflow.
+
+### Notifications
+
+32. Add email confirmations and reminders.
+33. Add SMS notifications.
+34. Add WhatsApp notifications.
+35. Persist notification preferences in PostgreSQL.
+36. Track notification delivery status and retries.
+37. Add a background job scheduler for reminders.
+
+### Branding and Customization
+
+38. Persist logo and theme customization in PostgreSQL.
+39. Add logo upload.
+40. Support salon- or branch-specific branding.
+
+### Admin and Analytics
+
+41. Calculate revenue from real payment records.
+42. Add date-range analytics.
+43. Add booking, cancellation, and conversion reports.
+44. Add staff performance analytics.
+45. Add customer export.
+46. Add advanced customer filtering.
+47. Add audit logs for staff access and customer-data changes.
+
+### Images and AI
+
+48. Add cloud storage for uploaded images.
+49. Validate image type, MIME type, size, and content.
+50. Add private image access control.
+51. Add image cleanup and retention policies.
+52. Add real face landmarks and confidence scoring.
+53. Add real hair segmentation and condition analysis.
+54. Add real after-image generation.
+55. Add AI queues, retries, quotas, and failure states.
+56. Add explicit image-processing consent records.
+
+### Security
+
+57. Add API rate limiting.
+58. Add security headers.
+59. Add structured production logging.
+60. Add a health-check endpoint.
+61. Encrypt sensitive data and private media appropriately.
+62. Move refresh tokens to a secure cookie-based production strategy.
+63. Add file privacy and authorization controls.
+
+### Testing
+
+64. Add backend unit tests.
+65. Add backend API integration tests.
+66. Add frontend component tests.
+67. Add end-to-end booking tests.
+68. Add authentication and authorization tests.
+69. Add payment webhook tests.
+70. Add notification delivery tests.
+
+### Deployment and Operations
+
+71. Deploy production PostgreSQL.
+72. Deploy the frontend.
+73. Deploy the backend.
+74. Configure a domain and HTTPS.
+75. Add a production database migration pipeline.
+76. Add CI/CD.
+77. Create a staging environment.
+78. Add monitoring and error tracking.
+79. Configure database backups and restore procedures.
+80. Complete load testing and disaster-recovery planning.
+
+### Development Limitation to Resolve Before Production
+
+81. Remove silent dummy-data fallback from `frontend/src/App.tsx` for production builds.
+82. Show explicit API error states instead of presenting failed saves as successful.
+83. Prevent authentication failures from granting local access.
