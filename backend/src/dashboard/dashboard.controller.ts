@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -13,5 +13,5 @@ import { DashboardService } from './dashboard.service';
 @Roles(UserRole.ADMIN)
 export class DashboardController {
   constructor(private readonly service: DashboardService) {}
-  @Get('summary') @ApiOperation({ summary: 'Get admin dashboard metrics and records' }) summary() { return this.service.summary(); }
+  @Get('summary') @ApiOperation({ summary: 'Get filterable admin dashboard metrics, revenue, and operational reports' }) summary(@Query() query: { dateFrom?: string; dateTo?: string; branchId?: string; service?: string; stylist?: string; status?: string }) { return this.service.summary(query); }
 }

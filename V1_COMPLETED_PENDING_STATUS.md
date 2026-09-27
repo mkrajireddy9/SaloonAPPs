@@ -122,8 +122,8 @@ These are the remaining non-AI items required before the application can be cons
 
 ### Reporting, Quality, and Delivery
 
-29. Expand dashboard analytics to revenue by date, branch, service, stylist, booking status, and cancellation.
-30. Add staff performance metrics and operational reports.
+29. ~~Expand dashboard analytics to revenue by date, branch, service, stylist, booking status, and cancellation.~~ **Completed 28 September 2026.**
+30. ~~Add staff performance metrics and operational reports.~~ **Completed 28 September 2026.**
 31. Add backend unit tests and API integration tests.
 32. Add frontend component tests and end-to-end booking/authentication tests.
 33. Add webhook, authorization, validation, and appointment-conflict test coverage.
