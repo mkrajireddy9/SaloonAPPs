@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Clock3, Percent, Plus, Save, Tag, Trash2 } from 'lucide-react';
+import { Clock3, Percent, Plus, Save, Search, Tag, Trash2 } from 'lucide-react';
 import { ShellTitle } from '../components/ShellTitle';
 import { useToast } from '../components/Toast';
 import type { PriceListItem, Role } from '../types';
@@ -10,6 +10,8 @@ export function PriceListScreen({ role, items, onBack, onSave }: { role: Role; i
   const [draft, setDraft] = useState(items);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [query, setQuery] = useState('');
+  const [category, setCategory] = useState('All');
   const { showToast } = useToast();
   useEffect(() => setDraft(items), [items]);
   const update = (index: number, changes: Partial<PriceListItem>) => setDraft(current => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...changes } : item));
@@ -23,12 +25,18 @@ export function PriceListScreen({ role, items, onBack, onSave }: { role: Role; i
     finally { setSaving(false); }
   };
   const published = items.filter(item => item.active !== false);
+  const categories = ['All', 'Hair', 'Nails & spa', 'Other'];
+  const getCategory = (item: PriceListItem) => { const name = item.name.toLowerCase(); if (name.includes('eyelash') || name.includes('eyebrow')) return 'Other'; if (name.includes('manicure') || name.includes('pedicure') || name.includes('nail') || name.includes('massage') || name.includes('foot')) return 'Nails & spa'; return 'Hair'; };
+  const matches = (item: PriceListItem) => (!query.trim() || item.name.toLowerCase().includes(query.trim().toLowerCase()) || item.offerText?.toLowerCase().includes(query.trim().toLowerCase())) && (category === 'All' || getCategory(item) === category);
+  const visibleDraft = draft.filter(matches);
+  const visiblePublished = published.filter(matches);
   return <section className="page price-list">
     <ShellTitle eyebrow={role === 'admin' ? 'STUDIO CATALOG' : 'SALON MENU'} title={role === 'admin' ? 'Prices and offers, kept current.' : 'Choose what feels right for you.'} copy={role === 'admin' ? 'Add services, set prices, and publish discounts for guests.' : 'Browse the salon services, durations, and current offers.'} back={role === 'admin' ? 'Back to studio data' : 'Back to appointments'} onBack={onBack} action={role === 'admin' ? <button className="primary" disabled={saving} onClick={() => void save()}><Save size={16}/>{saving ? 'Saving...' : 'Save price list'}</button> : <span className="guest-pill">CURRENT PRICES</span>}/>
     {message && <p className="save-error passport-message">{message}</p>}
+    <div className="catalog-filters"><label className="catalog-search"><Search size={16}/><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search services or offers"/></label><label className="catalog-category"><span>Category</span><select value={category} onChange={event => setCategory(event.target.value)}>{categories.map(item => <option key={item}>{item}</option>)}</select></label>{(query || category !== 'All') && <button className="text-button" onClick={() => { setQuery(''); setCategory('All'); }}>Clear filters</button>}</div>
     {role === 'admin' ? <section className="panel form-panel price-editor">
       <div className="section-label"><span className="round-icon peach"><Tag size={16}/></span><div><b>Services and discounts</b><small>Only active services appear in the guest menu.</small></div></div>
-      {draft.map((item, index) => <div className="price-editor-row" key={`${item.name}-${index}`}>
+      {visibleDraft.map(item => { const index = draft.indexOf(item); return <div className="price-editor-row" key={`${item.name}-${index}`}>
         <div className="price-editor-main">
           <input value={item.name} placeholder="Service name" onChange={event => update(index, { name: event.target.value })}/>
           <label><span>Duration</span><div className="input-with-icon"><Clock3 size={14}/><input type="number" min="1" value={item.durationMinutes} onChange={event => update(index, { durationMinutes: Number(event.target.value) })}/><small>min</small></div></label>
@@ -39,18 +47,18 @@ export function PriceListScreen({ role, items, onBack, onSave }: { role: Role; i
           <label className="preference-row"><input type="checkbox" checked={item.active !== false} onChange={event => update(index, { active: event.target.checked })}/>Published for guests</label>
         </div>
         <button className="icon-button" title="Remove service" onClick={() => remove(index)}><Trash2 size={15}/></button>
-      </div>)}
+      </div>; })}
       <button className="soft" onClick={add}><Plus size={15}/>Add service</button>
-      {!draft.length && <p className="empty-appointments">No services yet. Add the first service to publish your menu.</p>}
+      {!draft.length && <p className="empty-appointments">No services yet. Add the first service to publish your menu.</p>}{draft.length > 0 && !visibleDraft.length && <p className="empty-appointments">No services match the selected filters.</p>}
     </section> : <section className="price-grid">
-      {published.map(item => { const hasOffer = Boolean(item.discountPrice && item.discountPrice > 0 && item.discountPrice < item.price); const displayPrice = hasOffer ? item.discountPrice || item.price : item.price; return <article className="panel price-card" key={item.name}>
+      {visiblePublished.map(item => { const hasOffer = Boolean(item.discountPrice && item.discountPrice > 0 && item.discountPrice < item.price); const displayPrice = hasOffer ? item.discountPrice || item.price : item.price; return <article className="panel price-card" key={item.name}>
         {item.imageUrl && <img className="price-card-image" src={item.imageUrl} alt={`${item.name} service`}/>} 
         <div className="price-card-top"><span className="round-icon sage"><Tag size={16}/></span>{hasOffer && <span className="offer-pill"><Percent size={13}/>{item.discountPercent ? `${item.discountPercent}% off` : 'Offer'}</span>}</div>
         <h2>{item.name}</h2><p><Clock3 size={14}/>{item.durationMinutes} minutes</p>
         <div className="price-values">{hasOffer && <del>₹{item.price.toLocaleString('en-IN')}</del>}<strong>₹{displayPrice.toLocaleString('en-IN')}</strong></div>
         {item.offerText && <small className="offer-text">{item.offerText}</small>}
       </article>; })}
-      {!published.length && <section className="panel empty-appointments"><Tag size={20}/><p>The salon has not published its price list yet.</p></section>}
+      {!published.length && <section className="panel empty-appointments"><Tag size={20}/><p>The salon has not published its price list yet.</p></section>}{published.length > 0 && !visiblePublished.length && <section className="panel empty-appointments"><Search size={20}/><p>No services match the selected filters.</p></section>}
     </section>}
   </section>;
 }

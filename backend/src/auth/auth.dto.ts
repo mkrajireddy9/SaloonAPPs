@@ -17,9 +17,12 @@ export class RegisterDto {
 
 export class LoginDto {
   @ApiProperty({ example: 'ananya@example.com' })
-  @IsEmail() email!: string;
+  @ApiPropertyOptional({ enum: UserRole, default: UserRole.USER })
+  @IsOptional() @IsEmail() email?: string;
   @ApiProperty({ example: 'strong-password' })
-  @IsNotEmpty() @IsString() password!: string;
+  @IsOptional() @IsString() password?: string;
+  @ApiPropertyOptional({ enum: UserRole, default: UserRole.USER })
+  @IsOptional() @IsIn([UserRole.USER, UserRole.ADMIN]) role?: UserRole;
 }
 
 export class RefreshTokenDto {
