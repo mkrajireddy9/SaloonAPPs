@@ -8,6 +8,8 @@ export class Appointment {
   @Column() service!: string;
   @Column() date!: string;
   @Column() time!: string;
+  @Column({ default: 60 }) durationMinutes!: number;
+  @Column({ type: 'int', default: 0 }) price!: number;
   @Column({ default: 'Meera Nair' }) stylist!: string;
   @Column({ default: '' }) notes!: string;
   @Column({ default: 'Requested' }) status!: 'Requested' | 'Confirmed' | 'Cancelled';

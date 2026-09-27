@@ -14,4 +14,8 @@ export class UpdateSalonDto {
   @IsOptional() @IsObject() openingHours?: { open: string; close: string };
   @ApiPropertyOptional({ example: ['Sunday'] })
   @IsOptional() @IsArray() @IsString({ each: true }) closedDays?: string[];
+  @ApiPropertyOptional({ example: [{ name: 'Signature cut', durationMinutes: 60, price: 1840 }] })
+  @IsOptional() @IsArray() serviceDetails?: { name: string; durationMinutes: number; price: number }[];
+  @ApiPropertyOptional({ example: { 'Meera Nair': { workingDays: ['Monday', 'Tuesday'], leaveDates: [] } } })
+  @IsOptional() @IsObject() stylistSchedules?: Record<string, { workingDays: string[]; leaveDates: string[] }>;
 }
