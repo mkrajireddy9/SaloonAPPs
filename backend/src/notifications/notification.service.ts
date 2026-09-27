@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../auth/user.entity';
@@ -6,15 +6,22 @@ import { Appointment } from '../appointments/appointment.entity';
 import { Notification, NotificationChannel } from './notification.entity';
 
 @Injectable()
-export class NotificationService {
+export class NotificationService implements OnModuleInit, OnModuleDestroy {
   constructor(@InjectRepository(Notification) private readonly repo: Repository<Notification>, @InjectRepository(User) private readonly users: Repository<User>) {}
+
+  private reminderTimer?: NodeJS.Timeout;
+  onModuleInit() { this.reminderTimer = setInterval(() => void this.queueUpcomingReminders(), 5 * 60 * 1000); }
+  onModuleDestroy() { if (this.reminderTimer) clearInterval(this.reminderTimer); }
 
   async queueForAppointment(appointment: Appointment, event: string) {
     if (!appointment.guestEmail) return [];
     const user = await this.users.findOne({ where: { email: appointment.guestEmail } });
     const preferences = user?.notificationPreferences || { email: true, sms: false, whatsapp: false };
     const channels = (Object.keys(preferences) as NotificationChannel[]).filter(channel => preferences[channel]);
-    const records = await Promise.all(channels.map(channel => this.repo.save(this.repo.create({ appointmentId: appointment.id, recipientEmail: appointment.guestEmail, channel, event, payload: { service: appointment.service, date: appointment.date, time: appointment.time, stylist: appointment.stylist, status: appointment.status }, status: 'Queued', attempts: 0, maxAttempts: 3, providerMessageId: null, lastError: null, scheduledAt: null, sentAt: null }))));
+    const records = await Promise.all(channels.map(async channel => {
+      const existing = await this.repo.findOne({ where: { appointmentId: appointment.id, event, channel } });
+      return existing || this.repo.save(this.repo.create({ appointmentId: appointment.id, recipientEmail: appointment.guestEmail, channel, event, payload: { service: appointment.service, date: appointment.date, time: appointment.time, stylist: appointment.stylist, status: appointment.status }, status: 'Queued', attempts: 0, maxAttempts: 3, providerMessageId: null, lastError: null, scheduledAt: null, sentAt: null }));
+    }));
     await Promise.all(records.map(record => this.deliver(record.id)));
     return records;
   }
@@ -27,7 +34,12 @@ export class NotificationService {
     item.attempts += 1;
     try {
       const webhook = process.env[`NOTIFICATION_${item.channel.toUpperCase()}_WEBHOOK_URL`];
-      if (webhook) {
+      if (item.channel === 'whatsapp' && process.env.WHATSAPP_ENABLED !== 'true') { item.status = 'Queued'; item.lastError = 'WhatsApp reminders are disabled'; return this.repo.save(item); }
+      if (item.channel === 'email' && process.env.EMAIL_REMINDERS_ENABLED !== 'false') {
+        if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) throw new Error('Resend email configuration is missing');
+        const response = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'content-type': 'application/json' }, body: JSON.stringify({ from: process.env.EMAIL_FROM, to: [item.recipientEmail], subject: `Halo Salon appointment ${item.event.replace('appointment.', '')}`, html: `<p>Your appointment for <strong>${String(item.payload.service || 'salon service')}</strong> is ${String(item.payload.status || 'scheduled')}.</p><p>${String(item.payload.date || '')} at ${String(item.payload.time || '')} with ${String(item.payload.stylist || 'your stylist')}.</p>` }) });
+        if (!response.ok) throw new Error(`Resend returned ${response.status}`);
+      } else if (webhook) {
         const response = await fetch(webhook, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ to: item.recipientEmail, channel: item.channel, event: item.event, payload: item.payload }) });
         if (!response.ok) throw new Error(`Notification provider returned ${response.status}`);
       }
@@ -40,5 +52,13 @@ export class NotificationService {
       item.lastError = error instanceof Error ? error.message : 'Notification provider failed';
     }
     return this.repo.save(item);
+  }
+
+  private async queueUpcomingReminders() {
+    if (process.env.EMAIL_REMINDERS_ENABLED === 'false') return;
+    const date = new Date();
+    const tomorrow = new Date(date.getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const appointments = await this.users.manager.getRepository(Appointment).find({ where: { date: tomorrow, status: 'Confirmed' } });
+    for (const appointment of appointments) await this.queueForAppointment(appointment, 'appointment.reminder');
   }
 }

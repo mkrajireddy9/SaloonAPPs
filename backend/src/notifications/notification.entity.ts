@@ -4,6 +4,7 @@ export type NotificationChannel = 'email' | 'sms' | 'whatsapp';
 export type NotificationStatus = 'Queued' | 'Sent' | 'Failed';
 
 @Entity('notifications')
+@Index(['appointmentId', 'event', 'channel'], { unique: true })
 export class Notification {
   @PrimaryGeneratedColumn('uuid') id!: string;
   @Index() @Column({ type: 'uuid', nullable: true }) appointmentId!: string | null;

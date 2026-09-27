@@ -35,3 +35,17 @@ export class NotificationPreferencesDto {
   @ApiPropertyOptional({ default: false }) @IsOptional() @IsBoolean() sms?: boolean;
   @ApiPropertyOptional({ default: false }) @IsOptional() @IsBoolean() whatsapp?: boolean;
 }
+
+export class ForgotPasswordDto {
+  @ApiProperty({ example: 'guest@example.com' })
+  @IsEmail() email!: string;
+}
+
+export class ResetPasswordDto {
+  @ApiProperty() @IsNotEmpty() @IsString() token!: string;
+  @ApiProperty() @MinLength(8) @IsString() password!: string;
+}
+
+export class VerifyEmailDto {
+  @ApiProperty() @IsNotEmpty() @IsString() token!: string;
+}

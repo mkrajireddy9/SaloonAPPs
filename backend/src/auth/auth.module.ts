@@ -17,7 +17,7 @@ import { User } from './user.entity';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.get<string>('JWT_SECRET') || (config.get<string>('NODE_ENV') === 'production' ? (() => { throw new Error('JWT_SECRET must be configured in production'); })() : 'local-development-only-change-me'),
-        signOptions: { expiresIn: '7d' },
+        signOptions: { expiresIn: (config.get<string>('JWT_EXPIRES_IN') || '7d') as any },
       }),
     }),
   ],

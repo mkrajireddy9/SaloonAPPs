@@ -16,5 +16,10 @@ export class User {
   @Column({ type: 'varchar', nullable: true }) length!: string | null;
   @Column({ type: 'varchar', nullable: true }) preferredStylist!: string | null;
   @Column({ type: 'jsonb', default: '{"email":true,"sms":false,"whatsapp":false}' }) notificationPreferences!: { email: boolean; sms: boolean; whatsapp: boolean };
+  @Column({ default: false }) emailVerified!: boolean;
+  @Column({ type: 'varchar', nullable: true, select: false }) passwordResetTokenHash!: string | null;
+  @Column({ type: 'timestamptz', nullable: true, select: false }) passwordResetExpiresAt!: Date | null;
+  @Column({ type: 'varchar', nullable: true, select: false }) emailVerificationTokenHash!: string | null;
+  @Column({ type: 'timestamptz', nullable: true, select: false }) emailVerificationExpiresAt!: Date | null;
   @CreateDateColumn() createdAt!: Date;
 }

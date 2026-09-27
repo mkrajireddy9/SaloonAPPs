@@ -8,6 +8,7 @@ export class Payment {
   @Index() @Column() appointmentId!: string;
   @Index() @Column() guestEmail!: string;
   @Column({ default: 'local' }) provider!: string;
+  @Column({ default: 'PAY_AT_SALON' }) paymentMethod!: 'PAY_AT_SALON' | 'ONLINE';
   @Column({ type: 'varchar', nullable: true }) providerPaymentId!: string | null;
   @Index({ unique: true }) @Column() idempotencyKey!: string;
   @Column({ default: 'INR' }) currency!: string;

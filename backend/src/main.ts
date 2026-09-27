@@ -3,10 +3,18 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { randomUUID } from 'crypto';
+import { HttpExceptionFilter } from './common/http-exception.filter';
 
 const json = require('express').json;
 
 const requestBuckets = new Map<string, { startedAt: number; count: number }>();
+
+function requestObservabilityMiddleware(request: any, response: any, next: () => void) {
+  const started = process.hrtime.bigint(); const requestId = String(request.headers['x-request-id'] || randomUUID()); request.requestId = requestId; response.setHeader('X-Request-Id', requestId);
+  response.on('finish', () => { const responseTimeMs = Number(process.hrtime.bigint() - started) / 1_000_000; process.stdout.write(`${JSON.stringify({ timestamp: new Date().toISOString(), level: response.statusCode >= 500 ? 'error' : response.statusCode >= 400 ? 'warn' : 'info', requestId, method: request.method, route: request.originalUrl, statusCode: response.statusCode, responseTimeMs: Math.round(responseTimeMs * 100) / 100, message: 'request completed' })}\n`); });
+  next();
+}
 
 function requestSecurityMiddleware(request: any, response: any, next: () => void) {
   const windowMs = Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000);
@@ -36,11 +44,13 @@ function requestSecurityMiddleware(request: any, response: any, next: () => void
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.use(requestObservabilityMiddleware);
   app.use(requestSecurityMiddleware);
   app.use(json({ limit: process.env.JSON_BODY_LIMIT || '10mb' }));
   const origins = (process.env.CORS_ORIGINS || 'http://localhost:5173').split(',').map(value => value.trim()).filter(Boolean);
   app.enableCors({ origin: origins, credentials: true });
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+  app.useGlobalFilters(new HttpExceptionFilter());
   const swaggerConfig = new DocumentBuilder().setTitle('Halo Salon API').setDescription('Consultations, appointments, and salon workspace APIs.').setVersion('1.0').addTag('consultations').addTag('appointments').build();
   SwaggerModule.setup('docs', app, SwaggerModule.createDocument(app, swaggerConfig));
   await app.listen(process.env.PORT || 3000);

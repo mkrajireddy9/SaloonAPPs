@@ -26,10 +26,13 @@ export class PaymentService {
     if (user.role !== UserRole.ADMIN && appointment.guestEmail !== user.email) throw new ForbiddenException('You cannot pay for this appointment');
     if (appointment.status === 'Cancelled') throw new ConflictException('Cancelled appointments cannot be paid');
     const subtotal = Math.max(0, Number(appointment.price || 0));
-    const discount = Math.min(subtotal, Math.max(0, Number(dto.discount || 0)));
+    // Discounts must come from the server-side appointment/catalog state, never from the client payload.
+    const discount = 0;
     const tax = Math.round((subtotal - discount) * Number(process.env.PAYMENT_TAX_RATE || 0));
     const total = subtotal - discount + tax;
-    const provider = process.env.PAYMENT_PROVIDER || 'local';
+    const paymentsEnabled = process.env.PAYMENTS_ENABLED === 'true';
+    const provider = paymentsEnabled ? (process.env.PAYMENT_PROVIDER || 'local') : 'pay_at_salon';
+    if (!paymentsEnabled) return this.payments.save(this.payments.create({ appointmentId: appointment.id, guestEmail: appointment.guestEmail, provider, paymentMethod: 'PAY_AT_SALON', providerPaymentId: null, idempotencyKey: dto.idempotencyKey, currency: 'INR', subtotal, discount, tax, total, status: 'Pending', invoiceNumber: `INV-${new Date().getFullYear()}-${Date.now().toString().slice(-8)}`, paidAt: null, refundedAt: null }));
     const localMode = provider === 'local';
     let providerPaymentId = `${localMode ? 'pi_local_' : 'pi_pending_'}${Date.now()}`;
     let paymentStatus: Payment['status'] = localMode ? 'Paid' : 'Pending';
@@ -40,7 +43,7 @@ export class PaymentService {
       providerPaymentId = result.id || providerPaymentId;
       paymentStatus = result.status === 'paid' ? 'Paid' : 'Pending';
     }
-    return this.payments.save(this.payments.create({ appointmentId: appointment.id, guestEmail: appointment.guestEmail, provider, providerPaymentId, idempotencyKey: dto.idempotencyKey, currency: 'INR', subtotal, discount, tax, total, status: paymentStatus, invoiceNumber: `INV-${new Date().getFullYear()}-${Date.now().toString().slice(-8)}`, paidAt: paymentStatus === 'Paid' ? new Date() : null, refundedAt: null }));
+    return this.payments.save(this.payments.create({ appointmentId: appointment.id, guestEmail: appointment.guestEmail, provider, paymentMethod: 'ONLINE', providerPaymentId, idempotencyKey: dto.idempotencyKey, currency: 'INR', subtotal, discount, tax, total, status: paymentStatus, invoiceNumber: `INV-${new Date().getFullYear()}-${Date.now().toString().slice(-8)}`, paidAt: paymentStatus === 'Paid' ? new Date() : null, refundedAt: null }));
   }
 
   async webhook(dto: PaymentWebhookDto, secret?: string) {
