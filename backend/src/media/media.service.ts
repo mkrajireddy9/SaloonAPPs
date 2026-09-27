@@ -12,7 +12,8 @@ export class MediaService {
 
   async validateAndSave(file: any, ownerEmail: string) {
     if (!file || !allowed.has(file.mimetype)) throw new BadRequestException('Only JPEG, PNG, and WebP images are supported');
-    if (file.size > 5 * 1024 * 1024) throw new BadRequestException('Images must be 5 MB or smaller');
+    const maxBytes = Number(process.env.MEDIA_MAX_BYTES || 5 * 1024 * 1024);
+    if (file.size > maxBytes) throw new BadRequestException(`Images must be ${Math.round(maxBytes / 1024 / 1024)} MB or smaller`);
     const bytes = await fs.readFile(file.path);
     const validSignature = (file.mimetype === 'image/jpeg' && bytes.subarray(0, 3).toString('hex') === 'ffd8ff') || (file.mimetype === 'image/png' && bytes.subarray(0, 8).toString('hex') === '89504e470d0a1a0a') || (file.mimetype === 'image/webp' && bytes.subarray(0, 4).toString() === 'RIFF' && bytes.subarray(8, 12).toString() === 'WEBP');
     if (!validSignature) { await fs.unlink(file.path).catch(() => undefined); throw new BadRequestException('The uploaded file is not a valid image'); }

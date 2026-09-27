@@ -68,7 +68,10 @@ The core salon operations are implemented and connected to the NestJS API and Po
 - Database-backed review status and duplicate-review protection per appointment.
 - Notification preference screen for email, SMS, and WhatsApp opt-in values.
 - Local payment intent, webhook, refund, idempotency, and invoice-record APIs.
+- Printable and downloadable invoice records.
 - Protected local media upload with authenticated image reads, delete support, and service/stylist upload UI.
+- Environment-configurable CORS origins, JSON body limit, and media upload size.
+- PostgreSQL-backed health/readiness endpoint at `/health`.
 - Swagger documentation for current API modules.
 - DTO validation and global NestJS validation pipe for key request bodies.
 - Top-right toast feedback for save, error, and workflow messages.
@@ -96,7 +99,7 @@ These are the remaining non-AI items required before the application can be cons
 
 10. Integrate a payment provider with payment intents, webhooks, refunds, and idempotency.
 11. ~~Persist payment status, transaction reference, tax, discount, total, and invoice number.~~ **Completed 28 September 2026.**
-12. Build downloadable and printable invoice screens.
+12. ~~Build downloadable and printable invoice screens.~~ **Completed 28 September 2026.**
 13. Implement actual email confirmations and reminders.
 14. Implement SMS and WhatsApp notifications through a provider.
 15. Add notification delivery status, retries, templates, and opt-out enforcement.
@@ -104,7 +107,7 @@ These are the remaining non-AI items required before the application can be cons
 ### Media and File Handling
 
 16. Move uploaded images from base64 or public URL usage to private cloud/object storage.
-17. Add file type, file size, dimensions, malware/security, and content validation.
+17. **Partially completed 28 September 2026:** file type, configured file-size, and basic JPEG/PNG/WebP signature validation are implemented. Dimensions, malware scanning, and deeper content validation remain pending.
 18. ~~Add signed/private image URLs and access control.~~ **Completed 28 September 2026 for authenticated local media URLs; signed cloud URLs remain pending.**
 19. Add image deletion, retention, consent, and account-deletion cleanup workflows.
 20. ~~Add service and stylist image upload instead of URL-only fields.~~ **Completed 28 September 2026.**
@@ -115,8 +118,8 @@ These are the remaining non-AI items required before the application can be cons
 22. Complete Google login only if that provider is brought back into scope.
 23. Add password reset and email verification.
 24. Replace development JWT secrets and invite codes with managed production secrets.
-25. Move CORS origins and upload limits to environment configuration.
-26. Add rate limiting, security headers, request size controls, and abuse protection.
+25. ~~Move CORS origins and upload limits to environment configuration.~~ **Completed 28 September 2026.**
+26. **Partially completed 28 September 2026:** added environment-configurable in-process rate limiting, security headers, JSON request-size controls, and 429 responses. A distributed limiter and edge/WAF protection are still required for multi-instance production deployment.
 27. Add audit logs for admin access, customer-record changes, appointment changes, moderation, and data deletion.
 28. Add explicit likeness/image-processing consent and privacy/retention messaging for stored customer images.
 
@@ -127,7 +130,7 @@ These are the remaining non-AI items required before the application can be cons
 31. Add backend unit tests and API integration tests.
 32. Add frontend component tests and end-to-end booking/authentication tests.
 33. Add webhook, authorization, validation, and appointment-conflict test coverage.
-34. Add structured logging, health checks, error monitoring, and alerting.
+34. **Partially completed 28 September 2026:** PostgreSQL-backed `/health` readiness checking is implemented. Structured logging, error monitoring, and alerting remain pending.
 35. Add separate development, staging, and production configuration.
 36. Deploy frontend, backend, and managed PostgreSQL.
 37. Configure domain, HTTPS, database backups, migration pipeline, CI/CD, and rollback procedure.
