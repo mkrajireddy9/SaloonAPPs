@@ -5,10 +5,11 @@ import { CreateAppointmentDto, RescheduleAppointmentDto, UpdateAppointmentStatus
 import { Appointment } from './appointment.entity';
 import { UserRole } from '../auth/user.entity';
 import { Salon } from '../salon/salon.entity';
+import { NotificationService } from '../notifications/notification.service';
 
 @Injectable()
 export class AppointmentService {
-  constructor(@InjectRepository(Appointment) private readonly repo: Repository<Appointment>, @InjectRepository(Salon) private readonly salons: Repository<Salon>) {}
+  constructor(@InjectRepository(Appointment) private readonly repo: Repository<Appointment>, @InjectRepository(Salon) private readonly salons: Repository<Salon>, private readonly notifications: NotificationService) {}
 
   private getBranch(salon: Salon, branchId?: string) {
     const branches = salon.branches || [];
@@ -49,14 +50,18 @@ export class AppointmentService {
     if (schedule && (!schedule.workingDays.includes(weekday) || schedule.leaveDates.includes(dto.date))) throw new ConflictException(`${stylist} is unavailable on this date`);
     const conflict = await this.repo.findOne({ where: { date: dto.date, time: dto.time, stylist, status: In(['Requested', 'Confirmed']) } });
     if (conflict) throw new ConflictException('That stylist is already requested for this time');
-    return this.repo.save(this.repo.create({ ...dto, branchId: branch.id, guestName: user.role === UserRole.USER ? user.name : (dto.guestName || 'Ananya Rao'), guestEmail: user.role === UserRole.USER ? user.email : (dto.guestEmail || ''), stylist, durationMinutes: detail?.durationMinutes || 60, price: detail?.price || 0, status: 'Requested' }));
+    const saved = await this.repo.save(this.repo.create({ ...dto, branchId: branch.id, guestName: user.role === UserRole.USER ? user.name : (dto.guestName || 'Ananya Rao'), guestEmail: user.role === UserRole.USER ? user.email : (dto.guestEmail || ''), stylist, durationMinutes: detail?.durationMinutes || 60, price: detail?.price || 0, status: 'Requested' }));
+    await this.notifications.queueForAppointment(saved, 'appointment.created');
+    return saved;
   }
 
   async updateStatus(id: string, dto: UpdateAppointmentStatusDto) {
     const appointment = await this.repo.findOne({ where: { id } });
     if (!appointment) throw new NotFoundException('Appointment not found');
     appointment.status = dto.status;
-    return this.repo.save(appointment);
+    const saved = await this.repo.save(appointment);
+    await this.notifications.queueForAppointment(saved, `appointment.${dto.status.toLowerCase()}`);
+    return saved;
   }
 
   async cancel(id: string, user: { email: string; role: UserRole }) {
@@ -64,7 +69,9 @@ export class AppointmentService {
     if (!appointment) throw new NotFoundException('Appointment not found');
     if (appointment.status === 'Cancelled') return appointment;
     appointment.status = 'Cancelled';
-    return this.repo.save(appointment);
+    const saved = await this.repo.save(appointment);
+    await this.notifications.queueForAppointment(saved, 'appointment.cancelled');
+    return saved;
   }
 
   async reschedule(id: string, dto: RescheduleAppointmentDto, user: { email: string; role: UserRole }) {
@@ -78,12 +85,14 @@ export class AppointmentService {
     const branch = salon ? this.getBranch(salon, appointment.branchId) : undefined;
     const schedule = salon?.stylistSchedules?.[appointment.stylist];
     if ((branch?.closedDays || salon?.closedDays || []).includes(weekday) || (schedule && (!schedule.workingDays.includes(weekday) || schedule.leaveDates.includes(dto.date)))) throw new ConflictException(`${appointment.stylist} is unavailable on this date`);
-    const conflict = await this.repo.findOne({ where: { date: dto.date, time: dto.time, stylist: appointment.stylist, status: In(['Requested', 'Confirmed']) } });
+    const conflict = await this.repo.findOne({ where: { date: dto.date, time: dto.time, branchId: appointment.branchId, stylist: appointment.stylist, status: In(['Requested', 'Confirmed']) } });
     if (conflict && conflict.id !== appointment.id) throw new ConflictException('That stylist is already requested for this time');
     appointment.date = dto.date;
     appointment.time = dto.time;
     appointment.status = 'Requested';
-    return this.repo.save(appointment);
+    const saved = await this.repo.save(appointment);
+    await this.notifications.queueForAppointment(saved, 'appointment.rescheduled');
+    return saved;
   }
 
   async slots(date: string, stylist?: string, service?: string, branchId?: string) {

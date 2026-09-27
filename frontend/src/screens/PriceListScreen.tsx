@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Clock3, Percent, Plus, Save, Search, Tag, Trash2 } from 'lucide-react';
 import { ShellTitle } from '../components/ShellTitle';
 import { useToast } from '../components/Toast';
+import { authenticatedImageUrl } from '../api';
 import type { PriceListItem, Role } from '../types';
 
 const blankItem = (): PriceListItem => ({ name: '', durationMinutes: 60, price: 0, discountPercent: 0, discountPrice: 0, offerText: '', active: true });
@@ -61,7 +62,7 @@ export function PriceListScreen({ role, items, onBack, onSave }: { role: Role; i
       {!draft.length && <p className="empty-appointments">No services yet. Add the first service to publish your menu.</p>}{draft.length > 0 && !visibleDraft.length && <p className="empty-appointments">No services match the selected filters.</p>}
     </section> : <section className="price-grid">
       {pageItems.map(item => { const hasOffer = Boolean(item.discountPrice && item.discountPrice > 0 && item.discountPrice < item.price); const displayPrice = hasOffer ? item.discountPrice || item.price : item.price; return <article className="panel price-card" key={item.name}>
-        {item.imageUrl && <img className="price-card-image" src={item.imageUrl} alt={`${item.name} service`}/>} 
+        {item.imageUrl && <img className="price-card-image" src={authenticatedImageUrl(item.imageUrl)} alt={`${item.name} service`}/>}
         <div className="price-card-top"><span className="round-icon sage"><Tag size={16}/></span>{hasOffer && <span className="offer-pill"><Percent size={13}/>{item.discountPercent ? `${item.discountPercent}% off` : 'Offer'}</span>}</div>
         <h2>{item.name}</h2><p><Clock3 size={14}/>{item.durationMinutes} minutes</p>
         <div className="price-values">{hasOffer && <del>₹{item.price.toLocaleString('en-IN')}</del>}<strong>₹{displayPrice.toLocaleString('en-IN')}</strong></div>

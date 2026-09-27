@@ -27,9 +27,17 @@ import { NotificationPreferences1790000000000 } from './database/migrations/1790
 import { SalonTheme1800000000000 } from './database/migrations/1800000000000-SalonTheme';
 import { FlorenceHairSalonPriceList1810000000000 } from './database/migrations/1810000000000-FlorenceHairSalonPriceList';
 import { AppointmentBranches1820000000000 } from './database/migrations/1820000000000-AppointmentBranches';
+import { Payment } from './payments/payment.entity';
+import { PaymentModule } from './payments/payment.module';
+import { Notification } from './notifications/notification.entity';
+import { NotificationModule } from './notifications/notification.module';
+import { PaymentsNotifications1830000000000 } from './database/migrations/1830000000000-PaymentsNotifications';
+import { MediaAsset } from './media/media.entity';
+import { MediaModule } from './media/media.module';
+import { MediaAssets1840000000000 } from './database/migrations/1840000000000-MediaAssets';
 import { resolve } from 'path';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true, envFilePath: [resolve(process.cwd(), '.env'), resolve(process.cwd(), '../.env')] }), TypeOrmModule.forRoot({ type: 'postgres', url: process.env.DATABASE_URL, entities: [Consultation, Appointment, User, Salon, Passport, Review], migrations: [InitialSchema1710000000000, ConsultationImages1720000000000, SalonHours1730000000000, BookingCatalog1740000000000, SeedServiceCatalog1750000000000, Reviews1760000000000, SalonBranches1770000000000, StylistProfiles1780000000000, NotificationPreferences1790000000000, SalonTheme1800000000000, FlorenceHairSalonPriceList1810000000000, AppointmentBranches1820000000000], migrationsRun: true, synchronize: false }), ConsultationModule, AppointmentModule, AuthModule, SalonModule, PassportModule, DashboardModule, AiModule, ReviewModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true, envFilePath: [resolve(process.cwd(), '.env'), resolve(process.cwd(), '../.env')] }), TypeOrmModule.forRoot({ type: 'postgres', url: process.env.DATABASE_URL, entities: [Consultation, Appointment, User, Salon, Passport, Review, Payment, Notification, MediaAsset], migrations: [InitialSchema1710000000000, ConsultationImages1720000000000, SalonHours1730000000000, BookingCatalog1740000000000, SeedServiceCatalog1750000000000, Reviews1760000000000, SalonBranches1770000000000, StylistProfiles1780000000000, NotificationPreferences1790000000000, SalonTheme1800000000000, FlorenceHairSalonPriceList1810000000000, AppointmentBranches1820000000000, PaymentsNotifications1830000000000, MediaAssets1840000000000], migrationsRun: true, synchronize: false }), ConsultationModule, AppointmentModule, AuthModule, SalonModule, PassportModule, DashboardModule, AiModule, ReviewModule, PaymentModule, NotificationModule, MediaModule],
 })
 export class AppModule {}
