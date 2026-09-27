@@ -1,10 +1,40 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UpdatePriceListDto, UpdateSalonDto, UpdateSalonThemeDto } from './salon.dto';
+import { SalonBranchDto, UpdatePriceListDto, UpdateSalonDto, UpdateSalonThemeDto } from './salon.dto';
 import { Salon } from './salon.entity';
 
-const demoSalon = { name: 'Halo Studio', location: 'Indiranagar, Bengaluru', services: ['Signature cut', 'Texture refresh', 'Colour consultation', 'Gloss refresh'], stylists: ['Meera Nair', 'Arjun S.', 'Nidhi Rao'], openingHours: { open: '09:00', close: '19:00' }, closedDays: ['Sunday'], serviceDetails: [{ name: 'Signature cut', durationMinutes: 60, price: 1840, active: true }, { name: 'Texture refresh', durationMinutes: 75, price: 2200, active: true }, { name: 'Colour consultation', durationMinutes: 45, price: 1200, active: true }, { name: 'Gloss refresh', durationMinutes: 60, price: 1600, active: true }], stylistSchedules: {}, branches: [{ id: 'main', name: 'Indiranagar', location: 'Indiranagar, Bengaluru', openingHours: { open: '09:00', close: '19:00' }, closedDays: ['Sunday'] }], theme: { brandName: 'halo', logoMark: 'h', logoUrl: '', primary: '#b9533a', sidebar: '#20352d', surface: '#f7f5f0', ink: '#25372f' } };
+const demoSalon = { name: 'Halo Studio', location: 'Indiranagar, Bengaluru', services: ['Signature cut', 'Texture refresh', 'Colour consultation', 'Gloss refresh'], stylists: ['Meera Nair', 'Arjun S.', 'Nidhi Rao'], openingHours: { open: '09:00', close: '19:00' }, closedDays: ['Sunday'], serviceDetails: [{ name: 'Signature cut', durationMinutes: 60, price: 1840, active: true }, { name: 'Texture refresh', durationMinutes: 75, price: 2200, active: true }, { name: 'Colour consultation', durationMinutes: 45, price: 1200, active: true }, { name: 'Gloss refresh', durationMinutes: 60, price: 1600, active: true }], stylistSchedules: {}, branches: [{ id: 'main', name: 'Indiranagar', location: 'Indiranagar, Bengaluru', contact: '', active: true, openingHours: { open: '09:00', close: '19:00' }, closedDays: ['Sunday'], services: ['Signature cut', 'Texture refresh', 'Colour consultation', 'Gloss refresh'], stylists: ['Meera Nair', 'Arjun S.', 'Nidhi Rao'] }], theme: { brandName: 'halo', logoMark: 'h', logoUrl: '', primary: '#b9533a', sidebar: '#20352d', surface: '#f7f5f0', ink: '#25372f' } };
+
+const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const timePattern = /^([01]?\d|2[0-3]):[0-5]\d$/;
+
+function minutes(value: string) {
+  const [hour, minute] = value.split(':').map(Number);
+  return hour * 60 + minute;
+}
+
+function validateHours(hours: { open: string; close: string }, label: string) {
+  if (!hours || !timePattern.test(hours.open) || !timePattern.test(hours.close) || minutes(hours.open) >= minutes(hours.close)) {
+    throw new BadRequestException(`${label} must have valid opening and closing times, with opening before closing`);
+  }
+}
+
+function validateBranches(branches: SalonBranchDto[], services: string[], stylists: string[]) {
+  const ids = new Set<string>();
+  const names = new Set<string>();
+  for (const branch of branches) {
+    const id = branch.id.trim(); const name = branch.name.trim();
+    if (ids.has(id) || names.has(name.toLowerCase())) throw new BadRequestException('Branch IDs and names must be unique');
+    ids.add(id); names.add(name.toLowerCase());
+    if (!id || !name || !branch.location.trim()) throw new BadRequestException('Each branch needs an ID, name, and location');
+    validateHours(branch.openingHours, `Branch ${name}`);
+    if (branch.closedDays.some(day => !days.includes(day))) throw new BadRequestException(`Branch ${name} has an invalid closed day`);
+    if (branch.services?.some(service => !services.includes(service))) throw new BadRequestException(`Branch ${name} contains an unknown service`);
+    if (branch.stylists?.some(stylist => !stylists.includes(stylist))) throw new BadRequestException(`Branch ${name} contains an unknown stylist`);
+  }
+  if (!branches.some(branch => branch.active !== false)) throw new BadRequestException('At least one branch must be active');
+}
 
 @Injectable()
 export class SalonService {
@@ -18,7 +48,16 @@ export class SalonService {
 
   async update(dto: UpdateSalonDto) {
     const salon = await this.get();
-    Object.assign(salon, { ...dto, name: dto.name?.trim() || salon.name, location: dto.location?.trim() || salon.location });
+    const name = dto.name?.trim() || salon.name;
+    const location = dto.location?.trim() || salon.location;
+    const services = dto.services || salon.services;
+    const stylists = dto.stylists || salon.stylists;
+    if (dto.openingHours) validateHours(dto.openingHours, 'Salon');
+    if (dto.closedDays?.some(day => !days.includes(day))) throw new BadRequestException('Salon has an invalid closed day');
+    const branches = (dto.branches || salon.branches || []).map(branch => ({ ...branch, id: branch.id.trim(), name: branch.name.trim(), location: branch.location.trim(), contact: branch.contact?.trim() || '', active: branch.active !== false, services: branch.services?.length ? branch.services : services, stylists: branch.stylists?.length ? branch.stylists : stylists }));
+    if (!branches.length) throw new BadRequestException('At least one branch is required');
+    validateBranches(branches, services, stylists);
+    Object.assign(salon, { ...dto, name, location, services, stylists, branches });
     return this.repo.save(salon);
   }
 

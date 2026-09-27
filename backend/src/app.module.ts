@@ -26,9 +26,10 @@ import { StylistProfiles1780000000000 } from './database/migrations/178000000000
 import { NotificationPreferences1790000000000 } from './database/migrations/1790000000000-NotificationPreferences';
 import { SalonTheme1800000000000 } from './database/migrations/1800000000000-SalonTheme';
 import { FlorenceHairSalonPriceList1810000000000 } from './database/migrations/1810000000000-FlorenceHairSalonPriceList';
+import { AppointmentBranches1820000000000 } from './database/migrations/1820000000000-AppointmentBranches';
 import { resolve } from 'path';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true, envFilePath: [resolve(process.cwd(), '.env'), resolve(process.cwd(), '../.env')] }), TypeOrmModule.forRoot({ type: 'postgres', url: process.env.DATABASE_URL, entities: [Consultation, Appointment, User, Salon, Passport, Review], migrations: [InitialSchema1710000000000, ConsultationImages1720000000000, SalonHours1730000000000, BookingCatalog1740000000000, SeedServiceCatalog1750000000000, Reviews1760000000000, SalonBranches1770000000000, StylistProfiles1780000000000, NotificationPreferences1790000000000, SalonTheme1800000000000, FlorenceHairSalonPriceList1810000000000], migrationsRun: true, synchronize: false }), ConsultationModule, AppointmentModule, AuthModule, SalonModule, PassportModule, DashboardModule, AiModule, ReviewModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true, envFilePath: [resolve(process.cwd(), '.env'), resolve(process.cwd(), '../.env')] }), TypeOrmModule.forRoot({ type: 'postgres', url: process.env.DATABASE_URL, entities: [Consultation, Appointment, User, Salon, Passport, Review], migrations: [InitialSchema1710000000000, ConsultationImages1720000000000, SalonHours1730000000000, BookingCatalog1740000000000, SeedServiceCatalog1750000000000, Reviews1760000000000, SalonBranches1770000000000, StylistProfiles1780000000000, NotificationPreferences1790000000000, SalonTheme1800000000000, FlorenceHairSalonPriceList1810000000000, AppointmentBranches1820000000000], migrationsRun: true, synchronize: false }), ConsultationModule, AppointmentModule, AuthModule, SalonModule, PassportModule, DashboardModule, AiModule, ReviewModule],
 })
 export class AppModule {}

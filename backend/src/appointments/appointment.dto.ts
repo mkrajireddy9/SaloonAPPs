@@ -8,6 +8,8 @@ export class CreateAppointmentDto {
   @IsOptional() @IsEmail() guestEmail?: string;
   @ApiProperty({ example: 'Signature cut' })
   @IsNotEmpty() @IsString() service!: string;
+  @ApiPropertyOptional({ example: 'main' })
+  @IsOptional() @IsString() @MinLength(1) branchId?: string;
   @ApiProperty({ example: '2026-10-03' })
   @IsNotEmpty() @Matches(/^\d{4}-\d{2}-\d{2}$/) date!: string;
   @ApiProperty({ example: '10:30 AM' })

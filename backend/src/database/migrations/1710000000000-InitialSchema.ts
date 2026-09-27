@@ -15,6 +15,7 @@ export class InitialSchema1710000000000 implements MigrationInterface {
     await queryRunner.query(`CREATE TABLE IF NOT EXISTS appointments (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(), "guestName" varchar NOT NULL DEFAULT 'Ananya Rao',
       "guestEmail" varchar NOT NULL DEFAULT '', service varchar NOT NULL, date varchar NOT NULL, time varchar NOT NULL,
+      "branchId" varchar NOT NULL DEFAULT 'main',
       stylist varchar NOT NULL DEFAULT 'Meera Nair', notes varchar NOT NULL DEFAULT '', status varchar NOT NULL DEFAULT 'Requested',
       "createdAt" timestamptz NOT NULL DEFAULT now(), "updatedAt" timestamptz NOT NULL DEFAULT now()
     )`);

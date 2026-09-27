@@ -1,11 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ArrayNotEmpty, IsArray, IsBoolean, IsNumber, IsObject, IsOptional, IsString, Max, Min, MinLength } from 'class-validator';
+import { ArrayNotEmpty, IsArray, IsBoolean, IsIn, IsNumber, IsObject, IsOptional, IsString, Matches, Max, Min, MinLength } from 'class-validator';
 
 export class UpdateSalonDto {
   @ApiPropertyOptional({ example: 'Halo Studio' })
-  @IsOptional() @IsString() name?: string;
+  @IsOptional() @IsString() @MinLength(2) name?: string;
   @ApiPropertyOptional({ example: 'Indiranagar, Bengaluru' })
-  @IsOptional() @IsString() location?: string;
+  @IsOptional() @IsString() @MinLength(2) location?: string;
   @ApiProperty({ example: ['Signature cut', 'Gloss refresh'] })
   @IsArray() @ArrayNotEmpty() @IsString({ each: true }) @MinLength(2, { each: true }) services!: string[];
   @ApiProperty({ example: ['Meera Nair', 'Arjun S.'] })
@@ -20,8 +20,20 @@ export class UpdateSalonDto {
   @IsOptional() @IsObject() stylistSchedules?: Record<string, { workingDays: string[]; leaveDates: string[] }>;
   @ApiPropertyOptional({ example: { 'Meera Nair': { bio: 'Specialises in textured cuts.', imageUrl: '/images/stylist-meera.jpg' } } })
   @IsOptional() @IsObject() stylistProfiles?: Record<string, { bio: string; imageUrl: string }>;
-  @ApiPropertyOptional({ example: [{ id: 'main', name: 'Indiranagar', location: 'Bengaluru', openingHours: { open: '09:00', close: '19:00' }, closedDays: ['Sunday'] }] })
-  @IsOptional() @IsArray() branches?: { id: string; name: string; location: string; openingHours: { open: string; close: string }; closedDays: string[] }[];
+  @ApiPropertyOptional({ type: [Object], example: [{ id: 'main', name: 'Indiranagar', location: 'Bengaluru', openingHours: { open: '09:00', close: '19:00' }, closedDays: ['Sunday'] }] })
+  @IsOptional() @IsArray() branches?: SalonBranchDto[];
+}
+
+export class SalonBranchDto {
+  @ApiProperty({ example: 'main' }) @IsString() @MinLength(1) id!: string;
+  @ApiProperty({ example: 'Indiranagar' }) @IsString() @MinLength(2) name!: string;
+  @ApiProperty({ example: 'Indiranagar, Bengaluru' }) @IsString() @MinLength(2) location!: string;
+  @ApiPropertyOptional({ example: '+91 98450 12345' }) @IsOptional() @IsString() contact?: string;
+  @ApiPropertyOptional({ example: true }) @IsOptional() @IsBoolean() active?: boolean;
+  @ApiProperty({ example: { open: '09:00', close: '19:00' } }) @IsObject() openingHours!: { open: string; close: string };
+  @ApiProperty({ example: ['Sunday'] }) @IsArray() @IsString({ each: true }) @IsIn(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'], { each: true }) closedDays!: string[];
+  @ApiPropertyOptional({ example: ['Signature cut'] }) @IsOptional() @IsArray() @IsString({ each: true }) services?: string[];
+  @ApiPropertyOptional({ example: ['Meera Nair'] }) @IsOptional() @IsArray() @IsString({ each: true }) stylists?: string[];
 }
 
 export class PriceListItemDto {

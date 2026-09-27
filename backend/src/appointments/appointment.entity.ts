@@ -6,6 +6,7 @@ export class Appointment {
   @Column({ default: 'Ananya Rao' }) guestName!: string;
   @Column({ default: '' }) guestEmail!: string;
   @Column() service!: string;
+  @Column({ default: 'main' }) branchId!: string;
   @Column() date!: string;
   @Column() time!: string;
   @Column({ default: 60 }) durationMinutes!: number;
