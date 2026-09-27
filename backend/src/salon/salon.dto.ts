@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ArrayNotEmpty, IsArray, IsObject, IsOptional, IsString } from 'class-validator';
+import { ArrayNotEmpty, IsArray, IsBoolean, IsNumber, IsObject, IsOptional, IsString, Max, Min, MinLength } from 'class-validator';
 
 export class UpdateSalonDto {
   @ApiPropertyOptional({ example: 'Halo Studio' })
@@ -7,9 +7,9 @@ export class UpdateSalonDto {
   @ApiPropertyOptional({ example: 'Indiranagar, Bengaluru' })
   @IsOptional() @IsString() location?: string;
   @ApiProperty({ example: ['Signature cut', 'Gloss refresh'] })
-  @IsArray() @ArrayNotEmpty() @IsString({ each: true }) services!: string[];
+  @IsArray() @ArrayNotEmpty() @IsString({ each: true }) @MinLength(2, { each: true }) services!: string[];
   @ApiProperty({ example: ['Meera Nair', 'Arjun S.'] })
-  @IsArray() @ArrayNotEmpty() @IsString({ each: true }) stylists!: string[];
+  @IsArray() @ArrayNotEmpty() @IsString({ each: true }) @MinLength(2, { each: true }) stylists!: string[];
   @ApiPropertyOptional({ example: { open: '09:00', close: '19:00' } })
   @IsOptional() @IsObject() openingHours?: { open: string; close: string };
   @ApiPropertyOptional({ example: ['Sunday'] })
@@ -25,13 +25,13 @@ export class UpdateSalonDto {
 }
 
 export class PriceListItemDto {
-  @ApiProperty({ example: 'Signature cut' }) @IsString() name!: string;
-  @ApiProperty({ example: 60 }) durationMinutes!: number;
-  @ApiProperty({ example: 1840 }) price!: number;
-  @ApiPropertyOptional({ example: 15 }) @IsOptional() discountPercent?: number;
-  @ApiPropertyOptional({ example: 1564 }) @IsOptional() discountPrice?: number;
+  @ApiProperty({ example: 'Signature cut' }) @IsString() @MinLength(2) name!: string;
+  @ApiProperty({ example: 60 }) @IsNumber() @Min(1) durationMinutes!: number;
+  @ApiProperty({ example: 1840 }) @IsNumber() @Min(0) price!: number;
+  @ApiPropertyOptional({ example: 15 }) @IsOptional() @IsNumber() @Min(0) @Max(100) discountPercent?: number;
+  @ApiPropertyOptional({ example: 1564 }) @IsOptional() @IsNumber() @Min(0) discountPrice?: number;
   @ApiPropertyOptional({ example: 'New guest offer' }) @IsOptional() @IsString() offerText?: string;
-  @ApiPropertyOptional({ example: true }) @IsOptional() active?: boolean;
+  @ApiPropertyOptional({ example: true }) @IsOptional() @IsBoolean() active?: boolean;
   @ApiPropertyOptional({ example: '/images/signature-cut.jpg' }) @IsOptional() @IsString() imageUrl?: string;
 }
 

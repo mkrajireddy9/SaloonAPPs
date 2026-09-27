@@ -1,11 +1,11 @@
-import { IsArray, IsBase64, IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBase64, IsIn, IsNotEmpty, IsOptional, IsString, Matches, MinLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateConsultationDto {
   @ApiProperty({ example: 'Ananya Rao' })
-  @IsNotEmpty() @IsString() guestName!: string;
+  @IsNotEmpty() @IsString() @MinLength(2) guestName!: string;
   @ApiPropertyOptional({ example: '+91 98450 12345' })
-  @IsOptional() @IsString() phone?: string;
+  @IsOptional() @Matches(/^\+?[0-9 ()-]{7,20}$/) phone?: string;
   @ApiPropertyOptional({ example: 'Meera Nair' })
   @IsOptional() @IsString() stylist?: string;
   @ApiPropertyOptional({ example: 'A cut that feels like me' })

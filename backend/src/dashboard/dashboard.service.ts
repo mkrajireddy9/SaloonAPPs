@@ -26,6 +26,7 @@ export class DashboardService {
       customers: customers.map(customer => ({ name: customer.name, profile: 'Guest profile', last: appointments.find(item => item.guestEmail === customer.email)?.date || 'No visits yet', visits: appointments.filter(item => item.guestEmail === customer.email).length })),
       services: (salon?.services || Object.keys(serviceCounts)).map(name => ({ name, bookings: serviceCounts[name] || 0, revenue: `₹${(serviceCounts[name] || 0) * 1840}` })),
       recentAppointments: appointments.slice(0, 5),
+      recentConsultations: consultations.slice(0, 8),
     };
   }
 }
