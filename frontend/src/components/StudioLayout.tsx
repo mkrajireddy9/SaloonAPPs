@@ -32,9 +32,13 @@ export function StudioLayout({ view, setView, role, onLogout, notifications, chi
         const data = await response.json() as { locality?: string; city?: string; principalSubdivision?: string };
         const area = data.locality;
         const city = data.city || data.principalSubdivision;
-        setCurrentLocation([area, city].filter(Boolean).join(', ') || `${coords.latitude.toFixed(3)}, ${coords.longitude.toFixed(3)}`);
+        const location = [area, city].filter(Boolean).join(', ') || `${coords.latitude.toFixed(3)}, ${coords.longitude.toFixed(3)}`;
+        setCurrentLocation(location);
+        if (role === 'user') void request('/customers/me', { method: 'PATCH', body: JSON.stringify({ location }) }).catch(() => undefined);
       } catch {
-        setCurrentLocation(`${coords.latitude.toFixed(3)}, ${coords.longitude.toFixed(3)}`);
+        const location = `${coords.latitude.toFixed(3)}, ${coords.longitude.toFixed(3)}`;
+        setCurrentLocation(location);
+        if (role === 'user') void request('/customers/me', { method: 'PATCH', body: JSON.stringify({ location }) }).catch(() => undefined);
       }
     }, () => setCurrentLocation('Location unavailable'), { enableHighAccuracy: false, maximumAge: 300000, timeout: 8000 });
   }, []);
