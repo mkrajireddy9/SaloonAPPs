@@ -58,6 +58,12 @@ The current release is a React UI MVP with API-backed authentication, appointmen
 - Basic consultation and conversion metrics.
 - Service catalog view.
 - Booking and revenue summary data.
+- Customer profile editing and appointment history view.
+- Service duration and pricing editor.
+- Stylist working-day and leave-date editor.
+- Calendar-style available booking slots.
+- Review and rating API with admin moderation statuses.
+- Multi-branch salon data model and migrations.
 
 ### Project Structure
 
@@ -148,6 +154,77 @@ The current release is a React UI MVP with API-backed authentication, appointmen
 - Add saved-style sharing with the stylist.
 - Add pilot analytics such as scan completion, retakes, time to result, recommendation engagement, and consultation-to-service conversion.
 - Create a stylist labeling and evaluation workflow for pilot salons.
+
+## Production Readiness Pending (2026-09-27)
+
+### UI and Product
+
+1. Review submission and rating screen.
+2. Admin review moderation screen.
+3. Branch management UI and branch selection during booking.
+4. Service image upload and display.
+5. Stylist profile editor with photos and bio.
+6. Payment status and invoice screens.
+7. Notification preferences screen.
+
+### Backend Integrations
+
+8. Email confirmations and reminders.
+9. SMS notifications.
+10. WhatsApp notifications.
+11. Payment gateway and webhook handling.
+12. Cloud image storage.
+13. Image upload validation and cleanup.
+14. PostgreSQL-backed logo and theme settings.
+
+### Admin
+
+15. Revenue analytics using actual service prices.
+16. Booking, cancellation, and conversion reports.
+17. Staff performance analytics.
+18. Customer export and advanced filters.
+19. Audit logs.
+
+### Security
+
+20. Rate limiting.
+21. Password reset.
+22. Email verification.
+23. Strong production JWT and refresh-token handling.
+24. CORS and security headers.
+25. Secret management and token rotation.
+26. File privacy and access control.
+
+### Testing
+
+27. Backend unit tests.
+28. API integration tests.
+29. Frontend component tests.
+30. End-to-end booking tests.
+31. Authentication and authorization tests.
+32. Payment and notification webhook tests.
+
+### Deployment
+
+33. Production PostgreSQL backups.
+34. Frontend deployment.
+35. Backend deployment.
+36. Domain and HTTPS.
+37. Production migration pipeline.
+38. CI/CD.
+39. Monitoring and error tracking.
+40. Staging environment.
+41. Load testing and recovery plan.
+
+### AI, Deferred
+
+42. Valid image-generation provider configuration.
+43. Real after-image generation.
+44. Face landmarks and confidence scoring.
+45. Hair segmentation and condition analysis.
+46. Advanced image-quality validation.
+47. AI retries, quotas, queues, and failure handling.
+48. Production virtual try-on workflow.
 
 ## Intentionally Deferred
 

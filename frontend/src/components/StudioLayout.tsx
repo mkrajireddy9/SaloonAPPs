@@ -4,7 +4,7 @@ import type { Role } from '../types';
 import type { Appointment } from '../types';
 import { defaultTheme, type ThemeConfig } from '../theme';
 
-export type View = 'today' | 'new' | 'scan' | 'report' | 'passport' | 'appointments' | 'studio' | 'salon';
+export type View = 'today' | 'new' | 'scan' | 'report' | 'passport' | 'appointments' | 'studio' | 'salon' | 'tools';
 export function StudioLayout({ view, setView, role, onLogout, notifications, children }: { view: View; setView: (view: View) => void; role: Role; onLogout: () => void; notifications: Appointment[]; children: ReactNode }) {
   const [mobileNav, setMobileNav] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
