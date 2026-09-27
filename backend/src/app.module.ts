@@ -16,11 +16,15 @@ import { InitialSchema1710000000000 } from './database/migrations/1710000000000-
 import { ConsultationImages1720000000000 } from './database/migrations/1720000000000-ConsultationImages';
 import { SalonHours1730000000000 } from './database/migrations/1730000000000-SalonHours';
 import { BookingCatalog1740000000000 } from './database/migrations/1740000000000-BookingCatalog';
-import { SeedServiceCatalog1750000000 } from './database/migrations/1750000000000-SeedServiceCatalog';
+import { SeedServiceCatalog1750000000000 } from './database/migrations/1750000000000-SeedServiceCatalog';
 import { AiModule } from './ai/ai.module';
+import { Review } from './reviews/review.entity';
+import { ReviewModule } from './reviews/review.module';
+import { Reviews1760000000000 } from './database/migrations/1760000000000-Reviews';
+import { SalonBranches1770000000000 } from './database/migrations/1770000000000-SalonBranches';
 import { resolve } from 'path';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true, envFilePath: [resolve(process.cwd(), '.env'), resolve(process.cwd(), '../.env')] }), TypeOrmModule.forRoot({ type: 'postgres', url: process.env.DATABASE_URL, entities: [Consultation, Appointment, User, Salon, Passport], migrations: [InitialSchema1710000000000, ConsultationImages1720000000000, SalonHours1730000000000, BookingCatalog1740000000000, SeedServiceCatalog1750000000], migrationsRun: true, synchronize: false }), ConsultationModule, AppointmentModule, AuthModule, SalonModule, PassportModule, DashboardModule, AiModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true, envFilePath: [resolve(process.cwd(), '.env'), resolve(process.cwd(), '../.env')] }), TypeOrmModule.forRoot({ type: 'postgres', url: process.env.DATABASE_URL, entities: [Consultation, Appointment, User, Salon, Passport, Review], migrations: [InitialSchema1710000000000, ConsultationImages1720000000000, SalonHours1730000000000, BookingCatalog1740000000000, SeedServiceCatalog1750000000000, Reviews1760000000000, SalonBranches1770000000000], migrationsRun: true, synchronize: false }), ConsultationModule, AppointmentModule, AuthModule, SalonModule, PassportModule, DashboardModule, AiModule, ReviewModule],
 })
 export class AppModule {}

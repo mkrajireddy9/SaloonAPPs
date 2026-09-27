@@ -9,6 +9,7 @@ export class Salon {
   @Column({ type: 'jsonb', default: '[]' }) stylists!: string[];
   @Column({ type: 'jsonb', default: '[]' }) serviceDetails!: { name: string; durationMinutes: number; price: number }[];
   @Column({ type: 'jsonb', default: '{}' }) stylistSchedules!: Record<string, { workingDays: string[]; leaveDates: string[] }>;
+  @Column({ type: 'jsonb', default: '[]' }) branches!: { id: string; name: string; location: string; openingHours: { open: string; close: string }; closedDays: string[] }[];
   @Column({ type: 'jsonb', default: '{"open":"09:00","close":"19:00"}' }) openingHours!: { open: string; close: string };
   @Column({ type: 'jsonb', default: '[]' }) closedDays!: string[];
   @CreateDateColumn() createdAt!: Date;
