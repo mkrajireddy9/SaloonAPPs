@@ -11,6 +11,7 @@ export class AuthService implements OnModuleInit {
   constructor(@InjectRepository(User) private readonly users: Repository<User>, private readonly jwt: JwtService) {}
 
   async onModuleInit() {
+    if (process.env.NODE_ENV === 'production') return;
     const demoUsers = [
       { name: 'Meera Nair', email: 'admin@halo.local', role: UserRole.ADMIN },
       { name: 'Ananya Rao', email: 'guest@halo.local', role: UserRole.USER },
@@ -32,7 +33,7 @@ export class AuthService implements OnModuleInit {
   }
 
   async login(dto: LoginDto) {
-    if (!dto.email?.trim() && !dto.password && process.env.ALLOW_EMPTY_LOGIN !== 'false') {
+    if (!dto.email?.trim() && !dto.password && process.env.NODE_ENV !== 'production' && process.env.ALLOW_EMPTY_LOGIN === 'true') {
       const demoEmail = dto.role === UserRole.ADMIN ? 'admin@halo.local' : 'guest@halo.local';
       const demoUser = await this.users.createQueryBuilder('user').addSelect('user.passwordHash').where('user.email = :email', { email: demoEmail }).getOne();
       if (demoUser) return this.issueToken(demoUser);

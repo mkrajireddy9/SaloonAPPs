@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build"
+    "build": "tsc -b && vite build",
+    "test": "npm run build"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",

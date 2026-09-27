@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SalonBranchDto, UpdatePriceListDto, UpdateSalonDto, UpdateSalonThemeDto } from './salon.dto';
@@ -42,7 +42,8 @@ export class SalonService {
 
   async get() {
     let salon = await this.repo.findOne({ where: {} });
-    if (!salon) salon = await this.repo.save(this.repo.create(demoSalon));
+    if (!salon && process.env.NODE_ENV !== 'production') salon = await this.repo.save(this.repo.create(demoSalon));
+    if (!salon) throw new ServiceUnavailableException('Salon configuration has not been created');
     return salon;
   }
 
