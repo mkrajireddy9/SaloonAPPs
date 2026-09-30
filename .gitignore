@@ -7,5 +7,8 @@ dist/
 *.tsbuildinfo
 .next/
 frontend/.next/
+frontend/.next-production/
 /backups/
 /load-results/
+
+frontend/public/images/halo-promo-hair.png

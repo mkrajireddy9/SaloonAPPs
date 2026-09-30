@@ -1,0 +1,4 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsBoolean, IsDateString, IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+export class CreateBannerDto { @IsString() @MaxLength(120) title!: string; @IsString() @MaxLength(500) message!: string; @ApiPropertyOptional() @IsOptional() @IsString() imageUrl?: string; @ApiPropertyOptional() @IsOptional() @IsString() actionLabel?: string; @ApiPropertyOptional() @IsOptional() @IsString() actionUrl?: string; @ApiPropertyOptional({ default: true }) @IsOptional() @IsBoolean() active?: boolean; @ApiPropertyOptional({ enum: ['guest', 'admin', 'all'] }) @IsOptional() @IsIn(['guest', 'admin', 'all']) audience?: string; @ApiPropertyOptional() @IsOptional() @IsDateString() startsAt?: string; @ApiPropertyOptional() @IsOptional() @IsDateString() endsAt?: string; }
+export class UpdateBannerDto extends CreateBannerDto {}

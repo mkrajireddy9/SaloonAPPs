@@ -1,0 +1,2 @@
+import { Module } from '@nestjs/common'; import { TypeOrmModule } from '@nestjs/typeorm'; import { AuthModule } from '../auth/auth.module'; import { Banner } from './banner.entity'; import { BannerController } from './banner.controller'; import { BannerService } from './banner.service';
+@Module({ imports: [TypeOrmModule.forFeature([Banner]), AuthModule], controllers: [BannerController], providers: [BannerService] }) export class BannerModule {}

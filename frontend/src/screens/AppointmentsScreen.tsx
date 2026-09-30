@@ -4,6 +4,7 @@ import { ShellTitle } from '../components/ShellTitle';
 import { useToast } from '../components/Toast';
 import { request } from '../api';
 import type { Appointment, SalonBranch, SalonConfig } from '../types';
+import { BannerStrip } from '../components/BannerStrip';
 
 const pad = (value: number) => String(value).padStart(2, '0');
 const toDateValue = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -82,7 +83,7 @@ function BookingMultiSelect({ label, values, options, onChange }: { label: strin
   </div>;
 }
 
-export function AppointmentsScreen({ appointments, onCreate, onCancel, onReschedule, salon }: { appointments: Appointment[]; onCreate: (appointment: Appointment) => void; onCancel: (id: string) => void; onReschedule: (id: string, date: string, time: string) => void; salon: SalonConfig }) {
+export function AppointmentsScreen({ appointments, onCreate, onCancel, onReschedule, salon, onNavigate }: { appointments: Appointment[]; onCreate: (appointment: Appointment) => void; onCancel: (id: string) => void; onReschedule: (id: string, date: string, time: string) => void; salon: SalonConfig; onNavigate?: (path: string) => void }) {
   const { showToast } = useToast();
   const today = new Date();
   const branches = useMemo(() => (salon.branches?.length ? salon.branches : [fallbackBranch(salon)]).filter(branch => branch.active !== false), [salon]);
@@ -144,6 +145,7 @@ export function AppointmentsScreen({ appointments, onCreate, onCancel, onResched
 
   return <section className="page appointments">
     <ShellTitle eyebrow="YOUR HAIR, YOUR TIME" title="Make space for your next visit." copy={`Choose a time at ${salon.name}. Your stylist will confirm the details shortly.`} action={<span className="guest-pill">GUEST VIEW</span>} />
+    <BannerStrip onNavigate={onNavigate} />
     <div className="appointments-grid">
       <section className="panel appointment-form">
         <div className="section-label"><span className="round-icon peach"><CalendarDays size={16} /></span><div><b>Book an appointment</b><small>{salon.location}</small></div></div>
