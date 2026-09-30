@@ -68,7 +68,7 @@ export function AdminStudioScreen({
       <ShellTitle
         eyebrow="THE STUDIO AT A GLANCE"
         title="A clearer view of the work."
-        copy="Track revenue, bookings, cancellations, service demand, and staff performance from PostgreSQL."
+        copy="Track revenue, bookings, cancellations, service demand, and staff performance from your salon workspace."
         back="Back to today"
         onBack={onBack}
         action={
