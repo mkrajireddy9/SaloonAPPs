@@ -20,8 +20,8 @@ export class AppointmentService {
     return branch;
   }
 
-  private async validateSlot(date: string, time: string, durationMinutes = 30, branchId?: string) {
-    const salon = await this.salons.findOne({ where: {} });
+  private async validateSlot(date: string, time: string, durationMinutes = 30, branchId?: string, salonId?: string) {
+    const salon = salonId ? await this.salons.findOne({ where: { id: salonId } }) : await this.salons.findOne({ where: {} });
     if (!salon) throw new ConflictException('Salon booking settings are not configured');
     const branch = this.getBranch(salon, branchId);
     const weekday = new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' });
@@ -32,16 +32,16 @@ export class AppointmentService {
     return { salon, branch, requested, open, close };
   }
 
-  findAll(user: { id?: string; email: string; role: UserRole }) { return this.repo.find({ where: user.role === UserRole.ADMIN ? {} : user.id ? { customerId: user.id } : { guestEmail: user.email }, order: { createdAt: 'DESC' } }); }
+  findAll(user: { id?: string; salonId?: string; email: string; role: UserRole }) { return this.repo.find({ where: user.role === UserRole.ADMIN ? { salonId: user.salonId || undefined } : user.id ? { customerId: user.id } : { guestEmail: user.email }, order: { createdAt: 'DESC' } }); }
 
-  async create(dto: CreateAppointmentDto, user: { id?: string; email: string; name: string; role: UserRole }) {
+  async create(dto: CreateAppointmentDto, user: { id?: string; email: string; name: string; role: UserRole; salonId?: string }) {
     const account = user.id ? await this.users.findOne({ where: { id: user.id } }) : undefined;
     const accountName = account?.name || user.name;
     const accountEmail = account?.email || user.email;
     const accountPhone = account?.phone || '';
     const stylist = dto.stylist || 'Meera Nair';
     if (new Date(`${dto.date}T00:00:00`).getTime() < new Date(new Date().toDateString()).getTime()) throw new ConflictException('Appointments must be scheduled for today or a future date');
-    const salon = await this.salons.findOne({ where: {} });
+    const salon = dto.salonId ? await this.salons.findOne({ where: { id: dto.salonId } }) : await this.salons.findOne({ where: {} });
     if (!salon) throw new ConflictException('Salon booking settings are not configured');
     const branch = this.getBranch(salon, dto.branchId);
     const requestedServices = dto.service.split(',').map(item => item.trim()).filter(Boolean);
@@ -52,20 +52,20 @@ export class AppointmentService {
     const details = requestedServices.map(service => salon.serviceDetails?.find(item => item.name === service));
     const durationMinutes = details.reduce((total, detail) => total + (detail?.durationMinutes || 60), 0);
     const price = details.reduce((total, detail) => total + (detail?.price || 0), 0);
-    const slot = await this.validateSlot(dto.date, dto.time, durationMinutes, branch.id);
+    const slot = await this.validateSlot(dto.date, dto.time, durationMinutes, branch.id, salon.id);
     const schedule = slot.salon.stylistSchedules?.[stylist];
     const weekday = new Date(`${dto.date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' });
     if (schedule && (!schedule.workingDays.includes(weekday) || schedule.leaveDates.includes(dto.date))) throw new ConflictException(`${stylist} is unavailable on this date`);
-    const conflict = await this.repo.findOne({ where: { date: dto.date, time: dto.time, stylist, status: In(['Requested', 'Confirmed']) } });
+    const conflict = await this.repo.findOne({ where: { date: dto.date, time: dto.time, stylist, salonId: salon.id, status: In(['Requested', 'Confirmed']) } });
     if (conflict) throw new ConflictException('That stylist is already requested for this time');
     let saved: Appointment;
-    try { saved = await this.repo.save(this.repo.create({ ...dto, branchId: branch.id, customerId: user.role === UserRole.USER ? user.id || null : null, guestName: user.role === UserRole.USER ? accountName : (dto.guestName || 'Ananya Rao'), guestEmail: user.role === UserRole.USER ? accountEmail : (dto.guestEmail || ''), guestPhone: user.role === UserRole.USER ? (accountPhone || dto.guestPhone || '') : (dto.guestPhone || ''), stylist, durationMinutes, price, status: 'Requested' })); } catch (error) { if ((error as { code?: string }).code === '23505') throw new ConflictException('That stylist is already requested for this time'); throw error; }
+    try { saved = await this.repo.save(this.repo.create({ ...dto, salonId: salon.id, branchId: branch.id, customerId: user.role === UserRole.USER ? user.id || null : null, guestName: user.role === UserRole.USER ? accountName : (dto.guestName || 'Ananya Rao'), guestEmail: user.role === UserRole.USER ? accountEmail : (dto.guestEmail || ''), guestPhone: user.role === UserRole.USER ? (accountPhone || dto.guestPhone || '') : (dto.guestPhone || ''), stylist, durationMinutes, price, status: 'Requested' })); } catch (error) { if ((error as { code?: string }).code === '23505') throw new ConflictException('That stylist is already requested for this time'); throw error; }
     await this.notifications.queueForAppointment(saved, 'appointment.created');
     return saved;
   }
 
-  async updateStatus(id: string, dto: UpdateAppointmentStatusDto) {
-    const appointment = await this.repo.findOne({ where: { id } });
+  async updateStatus(id: string, dto: UpdateAppointmentStatusDto, salonId?: string) {
+    const appointment = await this.repo.findOne({ where: { id, ...(salonId ? { salonId } : {}) } });
     if (!appointment) throw new NotFoundException('Appointment not found');
     appointment.status = dto.status;
     const saved = await this.repo.save(appointment);
@@ -73,8 +73,8 @@ export class AppointmentService {
     return saved;
   }
 
-  async cancel(id: string, user: { id?: string; email: string; role: UserRole }) {
-    const appointment = await this.repo.findOne({ where: user.role === UserRole.ADMIN ? { id } : user.id ? { id, customerId: user.id } : { id, guestEmail: user.email } });
+  async cancel(id: string, user: { id?: string; email: string; role: UserRole; salonId?: string }) {
+    const appointment = await this.repo.findOne({ where: user.role === UserRole.ADMIN ? { id, ...(user.salonId ? { salonId: user.salonId } : {}) } : user.id ? { id, customerId: user.id } : { id, guestEmail: user.email } });
     if (!appointment) throw new NotFoundException('Appointment not found');
     if (appointment.status === 'Cancelled') return appointment;
     appointment.status = 'Cancelled';
@@ -83,18 +83,18 @@ export class AppointmentService {
     return saved;
   }
 
-  async reschedule(id: string, dto: RescheduleAppointmentDto, user: { id?: string; email: string; role: UserRole }) {
-    const appointment = await this.repo.findOne({ where: user.role === UserRole.ADMIN ? { id } : user.id ? { id, customerId: user.id } : { id, guestEmail: user.email } });
+  async reschedule(id: string, dto: RescheduleAppointmentDto, user: { id?: string; email: string; role: UserRole; salonId?: string }) {
+    const appointment = await this.repo.findOne({ where: user.role === UserRole.ADMIN ? { id, ...(user.salonId ? { salonId: user.salonId } : {}) } : user.id ? { id, customerId: user.id } : { id, guestEmail: user.email } });
     if (!appointment) throw new NotFoundException('Appointment not found');
     if (appointment.status === 'Cancelled') throw new ConflictException('Cancelled appointments cannot be rescheduled');
     if (new Date(`${dto.date}T00:00:00`).getTime() < new Date(new Date().toDateString()).getTime()) throw new ConflictException('Appointments must be scheduled for today or a future date');
-    await this.validateSlot(dto.date, dto.time, appointment.durationMinutes || 60, appointment.branchId);
-    const salon = await this.salons.findOne({ where: {} });
+    await this.validateSlot(dto.date, dto.time, appointment.durationMinutes || 60, appointment.branchId, appointment.salonId || undefined);
+    const salon = appointment.salonId ? await this.salons.findOne({ where: { id: appointment.salonId } }) : await this.salons.findOne({ where: {} });
     const weekday = new Date(`${dto.date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' });
     const branch = salon ? this.getBranch(salon, appointment.branchId) : undefined;
     const schedule = salon?.stylistSchedules?.[appointment.stylist];
     if ((branch?.closedDays || salon?.closedDays || []).includes(weekday) || (schedule && (!schedule.workingDays.includes(weekday) || schedule.leaveDates.includes(dto.date)))) throw new ConflictException(`${appointment.stylist} is unavailable on this date`);
-    const conflict = await this.repo.findOne({ where: { date: dto.date, time: dto.time, branchId: appointment.branchId, stylist: appointment.stylist, status: In(['Requested', 'Confirmed']) } });
+    const conflict = await this.repo.findOne({ where: { date: dto.date, time: dto.time, branchId: appointment.branchId, salonId: appointment.salonId || undefined, stylist: appointment.stylist, status: In(['Requested', 'Confirmed']) } });
     if (conflict && conflict.id !== appointment.id) throw new ConflictException('That stylist is already requested for this time');
     appointment.date = dto.date;
     appointment.time = dto.time;
@@ -105,8 +105,8 @@ export class AppointmentService {
     return saved;
   }
 
-  async slots(date: string, stylist?: string, service?: string, branchId?: string) {
-    const salon = await this.salons.findOne({ where: {} });
+  async slots(date: string, stylist?: string, service?: string, branchId?: string, salonId?: string) {
+    const salon = await salonId ? await this.salons.findOne({ where: { id: salonId } }) : await this.salons.findOne({ where: {} });
     if (!salon) return [];
     const branch = this.getBranch(salon, branchId);
     const weekday = new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' });
@@ -120,7 +120,7 @@ export class AppointmentService {
     const toMinutes = (value: string) => { const [hour, minute] = value.split(':').map(Number); return hour * 60 + minute; };
     const open = toMinutes(branch.openingHours?.open || salon.openingHours.open); const close = toMinutes(branch.openingHours?.close || salon.openingHours.close);
     const duration = requestedServices.reduce((total, item) => total + (salon.serviceDetails?.find(detail => detail.name === item)?.durationMinutes || 60), 0) || 60;
-    const booked = await this.repo.find({ where: { date, branchId: branch.id, ...(stylist ? { stylist } : {}), status: In(['Requested', 'Confirmed']) } });
+    const booked = await this.repo.find({ where: { date, branchId: branch.id, salonId: salon.id, ...(stylist ? { stylist } : {}), status: In(['Requested', 'Confirmed']) } });
     const parseTime = (value: string) => { const match = value.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i); if (!match) return -1; let hour = Number(match[1]); const minute = Number(match[2]); const meridiem = match[3]?.toUpperCase(); if (meridiem === 'PM' && hour < 12) hour += 12; if (meridiem === 'AM' && hour === 12) hour = 0; return hour * 60 + minute; };
     const overlaps = (start: number) => booked.some(item => { const bookedStart = parseTime(item.time); return bookedStart >= 0 && start < bookedStart + (item.durationMinutes || 60) && start + duration > bookedStart; });
     const result: string[] = [];

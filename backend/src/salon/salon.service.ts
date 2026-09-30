@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { SalonBranchDto, UpdatePriceListDto, UpdateSalonDto, UpdateSalonThemeDto } from './salon.dto';
 import { Salon } from './salon.entity';
 
-const demoSalon = { name: 'Halo Studio', location: 'Indiranagar, Bengaluru', services: ['Signature cut', 'Texture refresh', 'Colour consultation', 'Gloss refresh'], stylists: ['Meera Nair', 'Arjun S.', 'Nidhi Rao'], openingHours: { open: '09:00', close: '19:00' }, closedDays: ['Sunday'], serviceDetails: [{ name: 'Signature cut', durationMinutes: 60, price: 1840, active: true }, { name: 'Texture refresh', durationMinutes: 75, price: 2200, active: true }, { name: 'Colour consultation', durationMinutes: 45, price: 1200, active: true }, { name: 'Gloss refresh', durationMinutes: 60, price: 1600, active: true }], stylistSchedules: {}, branches: [{ id: 'main', name: 'Indiranagar', location: 'Indiranagar, Bengaluru', contact: '', active: true, openingHours: { open: '09:00', close: '19:00' }, closedDays: ['Sunday'], services: ['Signature cut', 'Texture refresh', 'Colour consultation', 'Gloss refresh'], stylists: ['Meera Nair', 'Arjun S.', 'Nidhi Rao'] }], theme: { brandName: 'halo', logoMark: 'h', logoUrl: '', primary: '#b9533a', sidebar: '#20352d', surface: '#f7f5f0', ink: '#25372f' } };
+const demoSalon = { name: 'Halo Studio', location: 'Indiranagar, Bengaluru', services: ['Signature cut', 'Texture refresh', 'Colour consultation', 'Gloss refresh'], stylists: ['Meera Nair', 'Arjun S.', 'Nidhi Rao'], openingHours: { open: '09:00', close: '19:00' }, closedDays: ['Sunday'], serviceDetails: [{ name: 'Signature cut', durationMinutes: 60, price: 1840, active: true }, { name: 'Texture refresh', durationMinutes: 75, price: 2200, active: true }, { name: 'Colour consultation', durationMinutes: 45, price: 1200, active: true }, { name: 'Gloss refresh', durationMinutes: 60, price: 1600, active: true }], products: [{ id: 'loreal-professionnel', name: "L'Oreal Professionnel", description: 'Professional colour, care, and styling products.', imageUrl: 'https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?auto=format&fit=crop&w=900&q=80', active: true }, { id: 'brilare', name: 'Brilare', description: 'Botanical hair and scalp care products.', imageUrl: 'https://images.unsplash.com/photo-1556228578-8c89e6adf883?auto=format&fit=crop&w=900&q=80', active: true }, { id: 'schwarzkopf', name: 'Schwarzkopf Professional', description: 'Salon colour and finishing essentials.', imageUrl: 'https://images.unsplash.com/photo-1522338242992-e1a54906a8da?auto=format&fit=crop&w=900&q=80', active: true }], stylistSchedules: {}, branches: [{ id: 'main', name: 'Indiranagar', location: 'Indiranagar, Bengaluru', contact: '', active: true, openingHours: { open: '09:00', close: '19:00' }, closedDays: ['Sunday'], services: ['Signature cut', 'Texture refresh', 'Colour consultation', 'Gloss refresh'], stylists: ['Meera Nair', 'Arjun S.', 'Nidhi Rao'] }], theme: { brandName: 'halo', logoMark: 'h', logoUrl: '', primary: '#b9533a', sidebar: '#20352d', surface: '#f7f5f0', ink: '#25372f' } };
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const timePattern = /^([01]?\d|2[0-3]):[0-5]\d$/;
@@ -40,15 +40,26 @@ function validateBranches(branches: SalonBranchDto[], services: string[], stylis
 export class SalonService {
   constructor(@InjectRepository(Salon) private readonly repo: Repository<Salon>) {}
 
-  async get() {
-    let salon = await this.repo.findOne({ where: {} });
+  async get(salonId?: string) {
+    let salon = salonId ? await this.repo.findOne({ where: { id: salonId } }) : await this.repo.findOne({ where: {} });
     if (!salon && process.env.NODE_ENV !== 'production') salon = await this.repo.save(this.repo.create(demoSalon));
+    if (salon && process.env.NODE_ENV !== 'production') { const existing = new Set((salon.products || []).map(product => product.id)); const missing = demoSalon.products.filter(product => !existing.has(product.id)); if (missing.length) { salon.products = [...(salon.products || []), ...missing]; salon = await this.repo.save(salon); } }
     if (!salon) throw new ServiceUnavailableException('Salon configuration has not been created');
     return salon;
   }
 
-  async update(dto: UpdateSalonDto) {
-    const salon = await this.get();
+  async listPublic() {
+    const salons = await this.repo.find({ order: { name: 'ASC' } });
+    return salons.map(salon => ({ id: salon.id, name: salon.name, location: salon.location, branches: (salon.branches || []).filter(branch => branch.active !== false), services: salon.services, stylists: salon.stylists }));
+  }
+  async getById(id: string) {
+    const salon = await this.repo.findOne({ where: { id } });
+    if (!salon) throw new ServiceUnavailableException('Salon is not available');
+    return salon;
+  }
+
+  async update(dto: UpdateSalonDto, salonId?: string) {
+    const salon = await this.get(salonId);
     const name = dto.name?.trim() || salon.name;
     const location = dto.location?.trim() || salon.location;
     const services = dto.services || salon.services;
@@ -62,19 +73,19 @@ export class SalonService {
     return this.repo.save(salon);
   }
 
-  async updateTheme(dto: UpdateSalonThemeDto) {
-    const salon = await this.get();
+  async updateTheme(dto: UpdateSalonThemeDto, salonId?: string) {
+    const salon = await this.get(salonId);
     salon.theme = { ...salon.theme, ...dto };
     return this.repo.save(salon);
   }
 
-  async getPriceList() {
-    const salon = await this.get();
+  async getPriceList(salonId?: string) {
+    const salon = await this.get(salonId);
     return salon.serviceDetails || [];
   }
 
-  async updatePriceList(dto: UpdatePriceListDto) {
-    const salon = await this.get();
+  async updatePriceList(dto: UpdatePriceListDto, salonId?: string) {
+    const salon = await this.get(salonId);
     const items = dto.items.map(item => ({ ...item, name: item.name.trim(), active: item.active !== false, discountPrice: item.discountPrice || (item.discountPercent ? Math.round(item.price * (1 - item.discountPercent / 100)) : undefined) }));
     salon.serviceDetails = items;
     salon.services = items.map(item => item.name);

@@ -10,18 +10,19 @@ import { Payment } from './payment.entity';
 export class PaymentService {
   constructor(@InjectRepository(Payment) private readonly payments: Repository<Payment>, @InjectRepository(Appointment) private readonly appointments: Repository<Appointment>) {}
 
-  private canAccess(payment: Payment, user: { email: string; role: UserRole }) {
+  private canAccess(payment: Payment, user: { email: string; role: UserRole; salonId?: string }) {
+    if (user.salonId && payment.salonId !== user.salonId) throw new ForbiddenException('You cannot access this payment');
     if (user.role !== UserRole.ADMIN && payment.guestEmail !== user.email) throw new ForbiddenException('You cannot access this payment');
   }
 
-  async list(user: { email: string; role: UserRole }) {
-    return this.payments.find({ where: user.role === UserRole.ADMIN ? {} : { guestEmail: user.email }, order: { createdAt: 'DESC' } });
+  async list(user: { email: string; role: UserRole; salonId?: string }) {
+    return this.payments.find({ where: user.role === UserRole.ADMIN ? { salonId: user.salonId || undefined } : { guestEmail: user.email, salonId: user.salonId || undefined }, order: { createdAt: 'DESC' } });
   }
 
-  async create(dto: CreatePaymentDto, user: { email: string; role: UserRole }) {
+  async create(dto: CreatePaymentDto, user: { email: string; role: UserRole; salonId?: string }) {
     const existing = await this.payments.findOne({ where: { idempotencyKey: dto.idempotencyKey } });
     if (existing) { this.canAccess(existing, user); return existing; }
-    const appointment = await this.appointments.findOne({ where: { id: dto.appointmentId } });
+    const appointment = await this.appointments.findOne({ where: { id: dto.appointmentId, ...(user.salonId ? { salonId: user.salonId } : {}) } });
     if (!appointment) throw new NotFoundException('Appointment not found');
     if (user.role !== UserRole.ADMIN && appointment.guestEmail !== user.email) throw new ForbiddenException('You cannot pay for this appointment');
     if (appointment.status === 'Cancelled') throw new ConflictException('Cancelled appointments cannot be paid');
@@ -32,7 +33,7 @@ export class PaymentService {
     const total = subtotal - discount + tax;
     const paymentsEnabled = process.env.PAYMENTS_ENABLED === 'true';
     const provider = paymentsEnabled ? (process.env.PAYMENT_PROVIDER || 'local') : 'pay_at_salon';
-    if (!paymentsEnabled) return this.payments.save(this.payments.create({ appointmentId: appointment.id, guestEmail: appointment.guestEmail, provider, paymentMethod: 'PAY_AT_SALON', providerPaymentId: null, idempotencyKey: dto.idempotencyKey, currency: 'INR', subtotal, discount, tax, total, status: 'Pending', invoiceNumber: `INV-${new Date().getFullYear()}-${Date.now().toString().slice(-8)}`, paidAt: null, refundedAt: null }));
+    if (!paymentsEnabled) return this.payments.save(this.payments.create({ salonId: appointment.salonId || user.salonId || null, appointmentId: appointment.id, guestEmail: appointment.guestEmail, provider, paymentMethod: 'PAY_AT_SALON', providerPaymentId: null, idempotencyKey: dto.idempotencyKey, currency: 'INR', subtotal, discount, tax, total, status: 'Pending', invoiceNumber: `INV-${new Date().getFullYear()}-${Date.now().toString().slice(-8)}`, paidAt: null, refundedAt: null }));
     const localMode = provider === 'local';
     let providerPaymentId = `${localMode ? 'pi_local_' : 'pi_pending_'}${Date.now()}`;
     let paymentStatus: Payment['status'] = localMode ? 'Paid' : 'Pending';
@@ -43,7 +44,7 @@ export class PaymentService {
       providerPaymentId = result.id || providerPaymentId;
       paymentStatus = result.status === 'paid' ? 'Paid' : 'Pending';
     }
-    return this.payments.save(this.payments.create({ appointmentId: appointment.id, guestEmail: appointment.guestEmail, provider, paymentMethod: 'ONLINE', providerPaymentId, idempotencyKey: dto.idempotencyKey, currency: 'INR', subtotal, discount, tax, total, status: paymentStatus, invoiceNumber: `INV-${new Date().getFullYear()}-${Date.now().toString().slice(-8)}`, paidAt: paymentStatus === 'Paid' ? new Date() : null, refundedAt: null }));
+    return this.payments.save(this.payments.create({ salonId: appointment.salonId || user.salonId || null, appointmentId: appointment.id, guestEmail: appointment.guestEmail, provider, paymentMethod: 'ONLINE', providerPaymentId, idempotencyKey: dto.idempotencyKey, currency: 'INR', subtotal, discount, tax, total, status: paymentStatus, invoiceNumber: `INV-${new Date().getFullYear()}-${Date.now().toString().slice(-8)}`, paidAt: paymentStatus === 'Paid' ? new Date() : null, refundedAt: null }));
   }
 
   async webhook(dto: PaymentWebhookDto, secret?: string) {
@@ -56,8 +57,8 @@ export class PaymentService {
     return this.payments.save(payment);
   }
 
-  async refund(id: string, dto: RefundPaymentDto) {
-    const payment = await this.payments.findOne({ where: { id } });
+  async refund(id: string, dto: RefundPaymentDto, salonId?: string) {
+    const payment = await this.payments.findOne({ where: { id, ...(salonId ? { salonId } : {}) } });
     if (!payment) throw new NotFoundException('Payment not found');
     if (payment.status !== 'Paid') throw new ConflictException('Only paid payments can be refunded');
     payment.status = 'Refunded'; payment.refundedAt = new Date();

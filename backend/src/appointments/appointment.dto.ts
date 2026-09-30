@@ -2,6 +2,8 @@ import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, Matches, MinLength, Ma
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateAppointmentDto {
+  @ApiProperty({ example: 'salon-uuid' })
+  @IsNotEmpty() @IsString() salonId!: string;
   @ApiPropertyOptional({ example: 'Ananya Rao' })
   @IsOptional() @IsString() @MinLength(2) guestName?: string;
   @ApiPropertyOptional({ example: 'ananya@example.com' })

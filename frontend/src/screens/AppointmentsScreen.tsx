@@ -117,13 +117,13 @@ export function AppointmentsScreen({ appointments, onCreate, onCancel, onResched
   useEffect(() => {
     let active = true;
     if (!branch || !service || !stylist) return undefined;
-    void request<string[]>(`/appointments/slots?date=${encodeURIComponent(date)}&branchId=${encodeURIComponent(branch.id)}&stylist=${encodeURIComponent(stylist)}&service=${encodeURIComponent(service)}`).then(slots => { if (!active) return; const usable = removePastSlots(slots, date); setAvailableTimes(usable); setTime(current => usable.includes(current) ? current : usable[0] || ''); }).catch(() => { if (active) { setAvailableTimes([]); setTime(''); } });
+    void request<string[]>(`/appointments/slots?date=${encodeURIComponent(date)}&salonId=${encodeURIComponent(salon.id || '')}&branchId=${encodeURIComponent(branch.id)}&stylist=${encodeURIComponent(stylist)}&service=${encodeURIComponent(service)}`).then(slots => { if (!active) return; const usable = removePastSlots(slots, date); setAvailableTimes(usable); setTime(current => usable.includes(current) ? current : usable[0] || ''); }).catch(() => { if (active) { setAvailableTimes([]); setTime(''); } });
     return () => { active = false; };
   }, [branch, date, service, stylist]);
   useEffect(() => {
     let active = true;
     if (!rescheduling || !rescheduleBranch || !rescheduleDate) return undefined;
-    void request<string[]>(`/appointments/slots?date=${encodeURIComponent(rescheduleDate)}&branchId=${encodeURIComponent(rescheduleBranch.id)}&stylist=${encodeURIComponent(rescheduling.stylist)}&service=${encodeURIComponent(rescheduling.service)}`).then(slots => { if (!active) return; const usable = removePastSlots(slots, rescheduleDate); setRescheduleTimes(usable); setRescheduleTime(current => usable.includes(current) ? current : usable[0] || ''); }).catch(() => { if (active) { setRescheduleTimes([]); setRescheduleTime(''); } });
+    void request<string[]>(`/appointments/slots?date=${encodeURIComponent(rescheduleDate)}&salonId=${encodeURIComponent(salon.id || '')}&branchId=${encodeURIComponent(rescheduleBranch.id)}&stylist=${encodeURIComponent(rescheduling.stylist)}&service=${encodeURIComponent(rescheduling.service)}`).then(slots => { if (!active) return; const usable = removePastSlots(slots, rescheduleDate); setRescheduleTimes(usable); setRescheduleTime(current => usable.includes(current) ? current : usable[0] || ''); }).catch(() => { if (active) { setRescheduleTimes([]); setRescheduleTime(''); } });
     return () => { active = false; };
   }, [rescheduleBranch, rescheduleDate, rescheduling]);
 
@@ -131,7 +131,7 @@ export function AppointmentsScreen({ appointments, onCreate, onCancel, onResched
   const selectRescheduleDate = (value: string) => { setRescheduleDate(value); const next = new Date(`${value}T00:00:00`); setRescheduleMonth(new Date(next.getFullYear(), next.getMonth(), 1)); };
   const submit = async () => {
     if (!time || !branch) return;
-    try { if (phone.trim()) await request('/customers/me', { method: 'PATCH', body: JSON.stringify({ phone: phone.trim() }) }); await onCreate({ id: `appointment-${Date.now()}`, service, branchId: branch.id, date, time, stylist, notes, guestPhone: phone.trim(), status: 'Requested' }); setNotes(''); showToast('Appointment request sent to the salon.'); }
+    try { if (phone.trim()) await request('/customers/me', { method: 'PATCH', body: JSON.stringify({ phone: phone.trim() }) }); await onCreate({ id: `appointment-${Date.now()}`, salonId: salon.id, service, branchId: branch.id, date, time, stylist, notes, guestPhone: phone.trim(), status: 'Requested' }); setNotes(''); showToast('Appointment request sent to the salon.'); }
     catch (error) { showToast(error instanceof Error ? error.message : 'Could not create the appointment.', 'error'); }
   };
   const openReschedule = (appointment: Appointment) => { const next = new Date(`${appointment.date}T00:00:00`); setRescheduling(appointment); setRescheduleDate(appointment.date); setRescheduleMonth(new Date(next.getFullYear(), next.getMonth(), 1)); setRescheduleTime(''); };

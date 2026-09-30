@@ -10,6 +10,7 @@ export class User {
   @Column({ select: false }) passwordHash!: string;
   @Column({ type: 'varchar', nullable: true, select: false }) refreshTokenHash!: string | null;
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER }) role!: UserRole;
+  @Column({ type: 'uuid', nullable: true }) salonId!: string | null;
   @Column({ type: 'varchar', nullable: true }) phone!: string | null;
   @Column({ type: 'varchar', nullable: true }) location!: string | null;
   @Column({ type: 'varchar', nullable: true }) texture!: string | null;

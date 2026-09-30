@@ -16,12 +16,22 @@ export class UpdateSalonDto {
   @IsOptional() @IsArray() @IsString({ each: true }) closedDays?: string[];
   @ApiPropertyOptional({ example: [{ name: 'Signature cut', durationMinutes: 60, price: 1840 }] })
   @IsOptional() @IsArray() serviceDetails?: PriceListItemDto[];
+  @ApiPropertyOptional({ example: [{ id: 'loreal', name: "L'Oreal Professionnel", description: 'Professional colour and care products.', imageUrl: '/media/example', active: true }] })
+  @IsOptional() @IsArray() products?: ProductItemDto[];
   @ApiPropertyOptional({ example: { 'Meera Nair': { workingDays: ['Monday', 'Tuesday'], leaveDates: [] } } })
   @IsOptional() @IsObject() stylistSchedules?: Record<string, { workingDays: string[]; leaveDates: string[] }>;
   @ApiPropertyOptional({ example: { 'Meera Nair': { bio: 'Specialises in textured cuts.', imageUrl: '/images/stylist-meera.jpg' } } })
   @IsOptional() @IsObject() stylistProfiles?: Record<string, { bio: string; imageUrl: string }>;
   @ApiPropertyOptional({ type: [Object], example: [{ id: 'main', name: 'Indiranagar', location: 'Bengaluru', openingHours: { open: '09:00', close: '19:00' }, closedDays: ['Sunday'] }] })
   @IsOptional() @IsArray() branches?: SalonBranchDto[];
+}
+
+export class ProductItemDto {
+  @ApiProperty({ example: 'loreal' }) @IsString() @MinLength(1) id!: string;
+  @ApiProperty({ example: "L'Oreal Professionnel" }) @IsString() @MinLength(2) name!: string;
+  @ApiPropertyOptional({ example: 'Professional colour and care products.' }) @IsOptional() @IsString() description?: string;
+  @ApiPropertyOptional({ example: '/media/example' }) @IsOptional() @IsString() imageUrl?: string;
+  @ApiPropertyOptional({ example: true }) @IsOptional() @IsBoolean() active?: boolean;
 }
 
 export class SalonBranchDto {

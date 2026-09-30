@@ -3,6 +3,7 @@ import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateCol
 @Entity('appointments')
 export class Appointment {
   @PrimaryGeneratedColumn('uuid') id!: string;
+  @Column({ type: 'uuid', nullable: true }) salonId!: string | null;
   @Column({ default: 'Ananya Rao' }) guestName!: string;
   @Column({ default: '' }) guestEmail!: string;
   @Column({ default: '' }) guestPhone!: string;

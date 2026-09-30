@@ -3,6 +3,7 @@ import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 
 @Entity('media_assets')
 export class MediaAsset {
   @PrimaryGeneratedColumn('uuid') id!: string;
+  @Index() @Column({ type: 'uuid', nullable: true }) salonId!: string | null;
   @Index() @Column() ownerEmail!: string;
   @Column() filename!: string;
   @Column() originalName!: string;

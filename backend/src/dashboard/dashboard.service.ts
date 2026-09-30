@@ -10,12 +10,12 @@ import { Salon } from '../salon/salon.entity';
 export class DashboardService {
   constructor(@InjectRepository(Appointment) private readonly appointments: Repository<Appointment>, @InjectRepository(Consultation) private readonly consultations: Repository<Consultation>, @InjectRepository(User) private readonly users: Repository<User>, @InjectRepository(Salon) private readonly salons: Repository<Salon>) {}
 
-  async summary(query: { dateFrom?: string; dateTo?: string; branchId?: string; service?: string; stylist?: string; status?: string } = {}) {
+  async summary(query: { dateFrom?: string; dateTo?: string; branchId?: string; service?: string; stylist?: string; status?: string } = {}, salonId?: string) {
     const [appointments, consultations, customers, salon] = await Promise.all([
-      this.appointments.find({ order: { createdAt: 'DESC' } }),
-      this.consultations.find({ order: { createdAt: 'DESC' } }),
-      this.users.find({ where: { role: UserRole.USER }, order: { createdAt: 'DESC' } }),
-      this.salons.findOne({ where: {} }),
+      this.appointments.find({ where: salonId ? { salonId } : {}, order: { createdAt: 'DESC' } }),
+      this.consultations.find({ where: salonId ? { salonId } : {}, order: { createdAt: 'DESC' } }),
+      this.users.find({ where: { role: UserRole.USER, ...(salonId ? { salonId } : {}) }, order: { createdAt: 'DESC' } }),
+      salonId ? this.salons.findOne({ where: { id: salonId } }) : this.salons.findOne({ where: {} }),
     ]);
     const filtered = appointments.filter(item => (!query.dateFrom || item.date >= query.dateFrom) && (!query.dateTo || item.date <= query.dateTo) && (!query.branchId || item.branchId === query.branchId) && (!query.service || item.service === query.service) && (!query.stylist || item.stylist === query.stylist) && (!query.status || item.status === query.status));
     const completed = filtered.filter(item => item.status === 'Confirmed').length;

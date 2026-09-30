@@ -6,22 +6,31 @@ import { createHash, randomBytes } from 'crypto';
 import { Repository } from 'typeorm';
 import { ForgotPasswordDto, LoginDto, NotificationPreferencesDto, RefreshTokenDto, RegisterDto, ResetPasswordDto } from './auth.dto';
 import { User, UserRole } from './user.entity';
+import { Salon } from '../salon/salon.entity';
 
 @Injectable()
 export class AuthService implements OnModuleInit {
   private readonly logger = new Logger(AuthService.name);
-  constructor(@InjectRepository(User) private readonly users: Repository<User>, private readonly jwt: JwtService) {}
+  constructor(@InjectRepository(User) private readonly users: Repository<User>, @InjectRepository(Salon) private readonly salons: Repository<Salon>, private readonly jwt: JwtService) {}
 
   async onModuleInit() {
     await this.ensureActivityColumns();
     if (process.env.NODE_ENV === 'production') return;
     const demoUsers = [
-      { name: 'Meera Nair', email: 'admin@halo.local', role: UserRole.ADMIN },
+      { name: 'Meera Nair', email: 'admin@halo.local', role: UserRole.ADMIN, salon: { name: 'Halo Studio Indiranagar', location: 'Indiranagar, Bengaluru', services: ['Signature cut', 'Gloss refresh', 'Colour consultation'], stylists: ['Meera Nair', 'Arjun S.'], prices: [{ name: 'Signature cut', durationMinutes: 60, price: 1800, active: true }, { name: 'Gloss refresh', durationMinutes: 45, price: 1400, active: true }, { name: 'Colour consultation', durationMinutes: 30, price: 800, active: true }], products: [{ id: 'loreal-halo', name: "L'Oreal Professionnel", description: 'Professional colour and care.', imageUrl: 'https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?auto=format&fit=crop&w=900&q=80', active: true }], branch: { id: 'indiranagar', name: 'Indiranagar', location: 'Indiranagar, Bengaluru' } } },
+      { name: 'Arjun Rao', email: 'admin@blossom.local', role: UserRole.ADMIN, salon: { name: 'Blossom Hair Lounge', location: 'Banjara Hills, Hyderabad', services: ['Hair spa', 'Hair cut', 'Bridal styling'], stylists: ['Arjun Rao', 'Nidhi Rao'], prices: [{ name: 'Hair spa', durationMinutes: 60, price: 1200, active: true }, { name: 'Hair cut', durationMinutes: 45, price: 700, active: true }, { name: 'Bridal styling', durationMinutes: 120, price: 3500, active: true }], products: [{ id: 'brilare-blossom', name: 'Brilare', description: 'Botanical hair and scalp care.', imageUrl: 'https://images.unsplash.com/photo-1556228578-8c89e6adf883?auto=format&fit=crop&w=900&q=80', active: true }], branch: { id: 'banjara-hills', name: 'Banjara Hills', location: 'Banjara Hills, Hyderabad' } } },
       { name: 'Ananya Rao', email: 'guest@halo.local', role: UserRole.USER },
     ];
     for (const demo of demoUsers) {
-      if (!await this.users.findOne({ where: { email: demo.email } })) {
-        await this.users.save(this.users.create({ ...demo, passwordHash: await bcrypt.hash('password123', 12), refreshTokenHash: null, emailVerified: true }));
+      let user = await this.users.findOne({ where: { email: demo.email } });
+      if (!user) {
+        user = await this.users.save(this.users.create({ name: demo.name, email: demo.email, role: demo.role, passwordHash: await bcrypt.hash('password123', 12), refreshTokenHash: null, emailVerified: true, salonId: null }));
+      }
+      if (demo.role === UserRole.ADMIN && demo.salon && !user.salonId) {
+        const branch = { ...demo.salon.branch, contact: '', active: true, openingHours: { open: '09:00', close: '19:00' }, closedDays: [], services: demo.salon.services, stylists: demo.salon.stylists };
+        const salon = await this.salons.save(this.salons.create({ name: demo.salon.name, location: demo.salon.location, ownerId: user.id, services: demo.salon.services, stylists: demo.salon.stylists, serviceDetails: demo.salon.prices, products: demo.salon.products, stylistSchedules: {}, stylistProfiles: {}, branches: [branch], openingHours: { open: '09:00', close: '19:00' }, closedDays: [] }));
+        user.salonId = salon.id;
+        await this.users.save(user);
       }
     }
   }
@@ -38,7 +47,12 @@ export class AuthService implements OnModuleInit {
     if (await this.users.findOne({ where: { email } })) throw new ConflictException('An account with this email already exists');
     const role = dto.role || UserRole.USER;
     if (role === UserRole.ADMIN && (!process.env.ADMIN_INVITE_CODE || dto.inviteCode !== process.env.ADMIN_INVITE_CODE)) throw new UnauthorizedException('A valid admin invite code is required');
-    const user = await this.users.save(this.users.create({ name: dto.name.trim(), email, passwordHash: await bcrypt.hash(dto.password, 12), role, refreshTokenHash: null, emailVerified: false }));
+    const user = await this.users.save(this.users.create({ name: dto.name.trim(), email, passwordHash: await bcrypt.hash(dto.password, 12), role, salonId: null, refreshTokenHash: null, emailVerified: false }));
+    if (role === UserRole.ADMIN) {
+      const salon = await this.salons.save(this.salons.create({ name: `${dto.name.trim()}'s Salon`, location: 'Add your salon location', ownerId: user.id, services: [], stylists: [], products: [], serviceDetails: [], stylistSchedules: {}, stylistProfiles: {}, branches: [], openingHours: { open: '09:00', close: '19:00' }, closedDays: [] }));
+      user.salonId = salon.id;
+      await this.users.save(user);
+    }
     await this.issueEmailVerification(user);
     return this.issueToken(user);
   }
@@ -128,7 +142,7 @@ export class AuthService implements OnModuleInit {
   }
 
   issueToken(user: User) {
-    const payload = { sub: user.id, email: user.email, role: user.role, name: user.name, type: 'access' };
+    const payload = { sub: user.id, email: user.email, role: user.role, name: user.name, salonId: user.salonId, type: 'access' };
     const accessToken = this.jwt.sign(payload, { expiresIn: '15m' });
     const refreshToken = this.jwt.sign({ sub: user.id, type: 'refresh' }, { expiresIn: '30d' });
     void this.users.update(user.id, { refreshTokenHash: bcrypt.hashSync(refreshToken, 12), lastLoginAt: new Date(), lastSeenAt: new Date() });

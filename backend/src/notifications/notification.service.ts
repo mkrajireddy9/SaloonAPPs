@@ -23,13 +23,13 @@ export class NotificationService implements OnModuleInit, OnModuleDestroy {
     const records = await Promise.all(channels.map(async channel => {
       const existing = await this.repo.findOne({ where: { appointmentId: appointment.id, event, channel } });
       if (existing) { if (!existing.recipientPhone && recipientPhone) { existing.recipientPhone = recipientPhone; existing.status = 'Queued'; existing.lastError = null; } return this.repo.save(existing); }
-      return this.repo.save(this.repo.create({ appointmentId: appointment.id, recipientEmail: appointment.guestEmail, recipientPhone, channel, event, payload: { service: appointment.service, date: appointment.date, time: appointment.time, stylist: appointment.stylist, status: appointment.status }, status: 'Queued', attempts: 0, maxAttempts: 3, providerMessageId: null, lastError: null, scheduledAt: null, sentAt: null }));
+      return this.repo.save(this.repo.create({ salonId: appointment.salonId || null, appointmentId: appointment.id, recipientEmail: appointment.guestEmail, recipientPhone, channel, event, payload: { service: appointment.service, date: appointment.date, time: appointment.time, stylist: appointment.stylist, status: appointment.status }, status: 'Queued', attempts: 0, maxAttempts: 3, providerMessageId: null, lastError: null, scheduledAt: null, sentAt: null }));
     }));
     await Promise.all(records.map(record => this.deliver(record.id)));
     return records;
   }
 
-  async list(email: string, isAdmin: boolean) { return this.repo.find({ where: isAdmin ? {} : { recipientEmail: email }, order: { createdAt: 'DESC' } }); }
+  async list(email: string, isAdmin: boolean, salonId?: string) { return this.repo.find({ where: isAdmin ? { salonId: salonId || undefined } : { recipientEmail: email, salonId: salonId || undefined }, order: { createdAt: 'DESC' } }); }
 
   async deliver(id: string) {
     const item = await this.repo.findOne({ where: { id } });
