@@ -159,10 +159,19 @@ select:focus {
 .app-dropdown-option{width:100%;display:flex;align-items:center;gap:7px;border:0;border-radius:7px;background:transparent;padding:9px 8px;color:var(--ink);font-size:12px;text-align:left}.app-dropdown-option:hover,.app-dropdown-option.is-selected{background:#e8f1ed}.app-dropdown-option.is-selected{font-weight:700;color:#29483a}.dropdown-check-space{width:14px;flex:0 0 14px}
 .date-picker{position:relative;min-width:150px}.date-picker-trigger{width:100%;min-height:42px;display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;background:#fffdfa;padding:10px 12px;color:var(--ink);font-size:12px;text-align:left}.date-picker-trigger svg{color:#718078}.date-picker-menu{position:absolute;top:calc(100% + 6px);left:0;z-index:40;width:260px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fffdfa;box-shadow:0 16px 32px #26392c26}.date-picker-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.date-picker-head button{display:grid;place-items:center;width:28px;height:28px;border-radius:7px}.date-picker-head button:hover{background:#e8f1ed}.date-picker-weekdays,.date-picker-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.date-picker-weekdays{margin-bottom:4px}.date-picker-weekdays span{text-align:center;color:#7a867e;font-size:10px;font-weight:700}.date-picker-grid button{height:29px;border-radius:7px;color:var(--ink);font-size:11px}.date-picker-grid button:hover{background:#e8f1ed}.date-picker-grid button.outside{color:#b5bcb7}.date-picker-grid button.selected{background:var(--rust);color:#fff;font-weight:700}
 .clear-customer-filters{grid-column:1 / -1;justify-self:start;padding:7px 0;color:var(--rust)}
-.analytics-filter-panel{position:relative;z-index:10;overflow:visible}
-.analytics-filters{position:relative;z-index:20}
-.analytics-filters .app-dropdown{z-index:30}
-.analytics-filters .app-dropdown-menu{z-index:50;min-width:100%}
+.choice.selected,.chip.selected{border-color:var(--rust);background:color-mix(in srgb,var(--rust) 10%,#fffdfa)}
+.queue-foot button,.text-button{color:var(--rust)}
+.score strong,.meter i,.capture,.best .rank,.recommendation>strong,.service-row strong,.catalog-pagination .icon-button{color:var(--rust)}
+.meter i,.capture,.best .rank{background:var(--rust)}
+.capture,.best .rank{color:#fff}
+.back{width:max-content;margin:0 0 28px;padding:9px 13px;border:1px solid var(--line);border-radius:9px;background:#fffdfa;color:var(--rust);font-weight:700;transition:background .18s,border-color .18s,transform .18s,box-shadow .18s}
+.back:hover{background:color-mix(in srgb,var(--rust) 8%,#fffdfa);border-color:var(--rust);transform:translateX(-2px);box-shadow:0 5px 14px #26392c12}
+.back svg{width:16px;height:16px}
+.analytics-filter-panel{position:relative;z-index:100;overflow:visible!important}
+.analytics-filters{position:relative;z-index:200;overflow:visible!important}
+.analytics-filters .app-dropdown{z-index:300}
+.analytics-filters .app-dropdown.is-open{z-index:1000!important}
+.analytics-filters .app-dropdown-menu{z-index:500;min-width:100%;max-height:280px;overflow-y:auto}
 .data-stats{position:relative;z-index:1}
 @keyframes menu-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
 .field-optional{font-size:9px!important;letter-spacing:0!important;color:#89938b;font-weight:500;margin-left:4px}.field.has-error input{border-color:#c95b46;background:#fff8f5}.field-error{display:block;color:#b14938;font-size:10px;margin-top:6px;line-height:1.4}
