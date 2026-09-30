@@ -27,8 +27,9 @@
     ]
   },
   "include": [
+    ".next/types/**/*.ts",
     "src",
-    ".next/types/**/*.ts"
+    ".next-production/types/**/*.ts"
   ],
   "references": [],
   "exclude": [
