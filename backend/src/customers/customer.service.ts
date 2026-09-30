@@ -75,5 +75,5 @@ export class CustomerService {
     return [header, ...rows].map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(',')).join('\n');
   }
 
-  private profile(user: User) { return { id: user.id, name: user.name, email: user.email, phone: user.phone || '', location: user.location || '', texture: user.texture || '', length: user.length || '', preferredStylist: user.preferredStylist || '', createdAt: user.createdAt }; }
+  private profile(user: User) { return { id: user.id, name: user.name, email: user.email, phone: user.phone || '', location: user.location || '', texture: user.texture || '', length: user.length || '', preferredStylist: user.preferredStylist || '', createdAt: user.createdAt, active: user.active, lastSeenAt: user.lastSeenAt, lastLoginAt: user.lastLoginAt, lastLogoutAt: user.lastLogoutAt }; }
 }

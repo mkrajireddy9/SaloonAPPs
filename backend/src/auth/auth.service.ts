@@ -13,6 +13,7 @@ export class AuthService implements OnModuleInit {
   constructor(@InjectRepository(User) private readonly users: Repository<User>, private readonly jwt: JwtService) {}
 
   async onModuleInit() {
+    await this.ensureActivityColumns();
     if (process.env.NODE_ENV === 'production') return;
     const demoUsers = [
       { name: 'Meera Nair', email: 'admin@halo.local', role: UserRole.ADMIN },
@@ -23,6 +24,13 @@ export class AuthService implements OnModuleInit {
         await this.users.save(this.users.create({ ...demo, passwordHash: await bcrypt.hash('password123', 12), refreshTokenHash: null, emailVerified: true }));
       }
     }
+  }
+
+  private async ensureActivityColumns() {
+    await this.users.query(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "active" boolean NOT NULL DEFAULT true`);
+    await this.users.query(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "lastSeenAt" TIMESTAMP WITH TIME ZONE`);
+    await this.users.query(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "lastLoginAt" TIMESTAMP WITH TIME ZONE`);
+    await this.users.query(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "lastLogoutAt" TIMESTAMP WITH TIME ZONE`);
   }
 
   async register(dto: RegisterDto) {
@@ -43,6 +51,7 @@ export class AuthService implements OnModuleInit {
     }
     const user = await this.users.createQueryBuilder('user').addSelect('user.passwordHash').where('user.email = :email', { email: dto.email?.toLowerCase().trim() || '' }).getOne();
     if (!user || !dto.password || !(await bcrypt.compare(dto.password, user.passwordHash))) throw new UnauthorizedException('Invalid email or password');
+    if (!user.active) throw new UnauthorizedException('This account has been deactivated');
     if (process.env.NODE_ENV === 'production' && !user.emailVerified) throw new UnauthorizedException('Please verify your email before signing in');
     return this.issueToken(user);
   }
@@ -99,7 +108,11 @@ export class AuthService implements OnModuleInit {
     return this.issueToken(user);
   }
 
-  async logout(userId: string) { await this.users.update(userId, { refreshTokenHash: null }); return { success: true }; }
+  async logout(userId: string) { await this.users.update(userId, { refreshTokenHash: null, lastLogoutAt: new Date() }); return { success: true }; }
+
+  async heartbeat(userId: string) { await this.users.update(userId, { lastSeenAt: new Date() }); return { success: true }; }
+
+  async setActive(id: string, active: boolean) { const user = await this.users.findOne({ where: { id, role: UserRole.USER } }); if (!user) throw new UnauthorizedException('User not found'); user.active = active; return this.users.save(user); }
 
   async getNotificationPreferences(email: string) {
     const user = await this.users.findOne({ where: { email } });
@@ -118,7 +131,7 @@ export class AuthService implements OnModuleInit {
     const payload = { sub: user.id, email: user.email, role: user.role, name: user.name, type: 'access' };
     const accessToken = this.jwt.sign(payload, { expiresIn: '15m' });
     const refreshToken = this.jwt.sign({ sub: user.id, type: 'refresh' }, { expiresIn: '30d' });
-    void this.users.update(user.id, { refreshTokenHash: bcrypt.hashSync(refreshToken, 12) });
+    void this.users.update(user.id, { refreshTokenHash: bcrypt.hashSync(refreshToken, 12), lastLoginAt: new Date(), lastSeenAt: new Date() });
     return { accessToken, refreshToken, user: { id: user.id, name: user.name, email: user.email, role: user.role } };
   }
 }

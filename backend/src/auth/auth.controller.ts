@@ -1,8 +1,11 @@
-import { Body, Controller, Get, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { ForgotPasswordDto, LoginDto, NotificationPreferencesDto, RefreshTokenDto, RegisterDto, ResetPasswordDto, VerifyEmailDto } from './auth.dto';
 import { JwtAuthGuard } from './auth.guard';
+import { Roles } from './roles.decorator';
+import { RolesGuard } from './roles.guard';
+import { UserRole } from './user.entity';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -17,6 +20,8 @@ export class AuthController {
   @Get('verify-email') @ApiOperation({ summary: 'Verify an email address' }) verifyEmail(@Query() query: VerifyEmailDto) { return this.service.verifyEmail(query.token); }
   @Post('verify-email') @ApiOperation({ summary: 'Verify an email address' }) verifyEmailPost(@Body() dto: VerifyEmailDto) { return this.service.verifyEmail(dto.token); }
   @Post('logout') @ApiBearerAuth() @UseGuards(JwtAuthGuard) @ApiOperation({ summary: 'Revoke the current user refresh token' }) logout(@Req() request: { user: { sub: string } }) { return this.service.logout(request.user.sub); }
+  @Post('heartbeat') @ApiBearerAuth() @UseGuards(JwtAuthGuard) heartbeat(@Req() request: { user: { sub: string } }) { return this.service.heartbeat(request.user.sub); }
+  @Patch('users/:id/status') @ApiBearerAuth() @UseGuards(JwtAuthGuard, RolesGuard) @Roles(UserRole.ADMIN) setStatus(@Param('id') id: string, @Body() body: { active: boolean }) { return this.service.setActive(id, body.active === true); }
   @Get('me') @ApiBearerAuth() @UseGuards(JwtAuthGuard) @ApiOperation({ summary: 'Get the authenticated user' }) me(@Req() request: { user: unknown }) { return request.user; }
   @Get('preferences') @ApiBearerAuth() @UseGuards(JwtAuthGuard) @ApiOperation({ summary: 'Get notification preferences' }) preferences(@Req() request: { user: { email: string } }) { return this.service.getNotificationPreferences(request.user.email); }
   @Put('preferences') @ApiBearerAuth() @UseGuards(JwtAuthGuard) @ApiOperation({ summary: 'Update notification preferences' }) updatePreferences(@Req() request: { user: { email: string } }, @Body() dto: NotificationPreferencesDto) { return this.service.updateNotificationPreferences(request.user.email, dto); }
