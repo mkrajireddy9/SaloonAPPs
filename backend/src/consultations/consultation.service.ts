@@ -15,22 +15,22 @@ const fallback = (c: Consultation) => ({
 @Injectable()
 export class ConsultationService {
   constructor(@InjectRepository(Consultation) private readonly repo: Repository<Consultation>, private readonly ai: AiService) {}
-  list() { return this.repo.find({ order: { createdAt: 'DESC' } }); }
-  async create(dto: CreateConsultationDto) { const c = this.repo.create({ ...dto, report: null, status: 'draft' }); return this.repo.save(c); }
-  async capture(id: string, dto: CaptureViewDto) { const c = await this.get(id); const views = new Set(c.capturedViews.split(',').filter(Boolean)); views.add(dto.view); c.capturedViews = [...views].join(','); return this.repo.save(c); }
-  async analyze(id: string, imageBase64?: string) {
-    const c = await this.get(id); const report = await this.ai.analyze({ goal: c.goal, texture: c.texture, length: c.length, imageBase64 });
+  list(salonId?: string) { return this.repo.find({ where: salonId ? { salonId } : {}, order: { createdAt: 'DESC' } }); }
+  async create(dto: CreateConsultationDto, salonId?: string) { const c = this.repo.create({ ...dto, salonId: salonId || null, report: null, status: 'draft' }); return this.repo.save(c); }
+  async capture(id: string, dto: CaptureViewDto, salonId?: string) { const c = await this.get(id, salonId); const views = new Set(c.capturedViews.split(',').filter(Boolean)); views.add(dto.view); c.capturedViews = [...views].join(','); return this.repo.save(c); }
+  async analyze(id: string, imageBase64?: string, salonId?: string) {
+    const c = await this.get(id, salonId); const report = await this.ai.analyze({ goal: c.goal, texture: c.texture, length: c.length, imageBase64 });
     const recommendedStyle = report.recommendations?.[0]?.name || 'Soft textured lob';
     const preview = await this.ai.tryOn({ styleName: recommendedStyle, imageBase64 });
     c.report = report; c.beforeImage = imageBase64 || null; c.afterImage = preview.previewImage; c.selectedStyle = recommendedStyle; c.status = 'complete'; return this.repo.save(c);
   }
-  async saveResult(id: string, dto: SaveConsultationDto) {
-    const c = await this.get(id);
+  async saveResult(id: string, dto: SaveConsultationDto, salonId?: string) {
+    const c = await this.get(id, salonId);
     if (dto.selectedStyle !== undefined) c.selectedStyle = dto.selectedStyle;
     if (dto.selectedServices !== undefined) c.selectedServices = dto.selectedServices;
     if (dto.afterImage !== undefined) c.afterImage = dto.afterImage;
     c.status = 'saved';
     return this.repo.save(c);
   }
-  async get(id: string) { const c = await this.repo.findOne({ where: { id } }); if (!c) throw new NotFoundException('Consultation not found'); if (!c.afterImage && c.report) { const recommendations = c.report.recommendations as { name?: string }[] | undefined; const first = recommendations?.[0]?.name; c.afterImage = first === 'Airy collarbone layers' ? '/images/hair-airy.svg' : first === 'Long side-swept fringe' ? '/images/hair-gloss.svg' : '/images/hair-lob.svg'; await this.repo.save(c); } return c; }
+  async get(id: string, salonId?: string) { const c = await this.repo.findOne({ where: { id, ...(salonId ? { salonId } : {}) } }); if (!c) throw new NotFoundException('Consultation not found'); if (!c.afterImage && c.report) { const recommendations = c.report.recommendations as { name?: string }[] | undefined; const first = recommendations?.[0]?.name; c.afterImage = first === 'Airy collarbone layers' ? '/images/hair-airy.svg' : first === 'Long side-swept fringe' ? '/images/hair-gloss.svg' : '/images/hair-lob.svg'; await this.repo.save(c); } return c; }
 }

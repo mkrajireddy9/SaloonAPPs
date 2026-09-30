@@ -5,7 +5,7 @@ import { Appointment } from '../appointments/appointment.entity';
 import { User, UserRole } from '../auth/user.entity';
 import { CustomerHistoryQueryDto, UpdateCustomerProfileDto } from './customer.dto';
 
-type RequestUser = { id: string; email: string; role: UserRole };
+type RequestUser = { id: string; email: string; role: UserRole; salonId?: string };
 
 @Injectable()
 export class CustomerService {
@@ -41,8 +41,8 @@ export class CustomerService {
     return this.paginatedHistory(await this.appointmentsFor(user), query);
   }
 
-  async customerHistory(id: string, query: CustomerHistoryQueryDto) {
-    const customer = await this.users.findOne({ where: { id, role: UserRole.USER } });
+  async customerHistory(id: string, query: CustomerHistoryQueryDto, salonId?: string) {
+    const customer = await this.users.findOne({ where: { id, role: UserRole.USER, ...(salonId ? { salonId } : {}) } });
     if (!customer) throw new NotFoundException('Customer account not found');
     return this.paginatedHistory(await this.appointmentsFor(customer), query);
   }
@@ -53,8 +53,8 @@ export class CustomerService {
     return { items: filtered.slice((page - 1) * pageSize, page * pageSize), total: filtered.length, page, pageSize, pageCount: Math.max(1, Math.ceil(filtered.length / pageSize)) };
   }
 
-  async list(query: CustomerHistoryQueryDto) {
-    const customers = await this.users.find({ where: { role: UserRole.USER }, order: { createdAt: 'DESC' } });
+  async list(query: CustomerHistoryQueryDto, salonId?: string) {
+    const customers = await this.users.find({ where: { role: UserRole.USER, ...(salonId ? { salonId } : {}) }, order: { createdAt: 'DESC' } });
     const search = query.search?.trim().toLowerCase();
     const records = (await Promise.all(customers.map(async customer => {
       const appointments = await this.appointmentsFor(customer);
@@ -68,8 +68,8 @@ export class CustomerService {
     return { items: records.slice((page - 1) * pageSize, page * pageSize), total: records.length, page, pageSize, pageCount: Math.max(1, Math.ceil(records.length / pageSize)) };
   }
 
-  async exportCsv(query: CustomerHistoryQueryDto) {
-    const result = await this.list({ ...query, page: 1, pageSize: 100000 });
+  async exportCsv(query: CustomerHistoryQueryDto, salonId?: string) {
+    const result = await this.list({ ...query, page: 1, pageSize: 100000 }, salonId);
     const header = ['Name', 'Email', 'Phone', 'Location', 'Visits', 'Last appointment', 'Last service', 'Last status'];
     const rows = result.items.map((item: any) => [item.name, item.email, item.phone || '', item.location || '', item.appointmentCount, item.lastAppointment?.date || '', item.lastAppointment?.service || '', item.lastAppointment?.status || '']);
     return [header, ...rows].map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(',')).join('\n');

@@ -20,7 +20,7 @@ export class MediaService implements OnModuleInit {
     for (const asset of expired) { await fs.unlink(asset.storagePath).catch(() => undefined); await this.repo.remove(asset); }
   }
 
-  async validateAndSave(file: any, ownerEmail: string, consentGiven = false) {
+  async validateAndSave(file: any, ownerEmail: string, salonId: string | null, consentGiven = false) {
     if (!file || !allowed.has(file.mimetype)) throw new BadRequestException('Only JPEG, PNG, and WebP images are supported');
     const maxBytes = Number(process.env.MEDIA_MAX_BYTES || 5 * 1024 * 1024);
     if (file.size > maxBytes) throw new BadRequestException(`Images must be ${Math.round(maxBytes / 1024 / 1024)} MB or smaller`);
@@ -36,12 +36,12 @@ export class MediaService implements OnModuleInit {
     const retentionUntil = new Date(Date.now() + retentionDays * 24 * 60 * 60 * 1000);
     let storageProvider: 'local' | 'cloudinary' = 'local'; let publicId: string | null = null; let storagePath = file.path;
     if (this.cloudinary.enabled()) { try { const uploaded = await this.cloudinary.upload(file.path, file.mimetype, file.originalname); storageProvider = 'cloudinary'; publicId = uploaded.publicId; storagePath = uploaded.url; await fs.unlink(file.path).catch(() => undefined); } catch { await fs.unlink(file.path).catch(() => undefined); throw new BadRequestException('Image storage provider is unavailable'); } }
-    const saved = await this.repo.save(this.repo.create({ ownerEmail, filename: file.filename, originalName: file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_'), mimeType: file.mimetype, size: file.size, width, height, format: metadata.format || null, storagePath, storageProvider, publicId, visibility: 'private', consentGiven, consentedAt, retentionUntil }));
+    const saved = await this.repo.save(this.repo.create({ salonId, ownerEmail, filename: file.filename, originalName: file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_'), mimeType: file.mimetype, size: file.size, width, height, format: metadata.format || null, storagePath, storageProvider, publicId, visibility: 'private', consentGiven, consentedAt, retentionUntil }));
     return { id: saved.id, url: `/media/${saved.id}`, mimeType: saved.mimeType, size: saved.size };
   }
 
-  async get(id: string, _ownerEmail: string, _isAdmin: boolean) {
-    const asset = await this.repo.findOne({ where: { id } });
+  async get(id: string, _ownerEmail: string, _isAdmin: boolean, salonId: string | null) {
+    const asset = await this.repo.findOne({ where: { id, ...(salonId ? { salonId } : {}) } });
     if (!asset) throw new NotFoundException('Media asset not found');
     if (asset.storageProvider === 'local' && !existsSync(asset.storagePath)) throw new NotFoundException('Media file is missing');
     return asset;
@@ -49,8 +49,8 @@ export class MediaService implements OnModuleInit {
 
   signedUrl(publicId: string, format?: string | null) { return this.cloudinary.signedUrl(publicId, format); }
 
-  async remove(id: string, ownerEmail: string, isAdmin: boolean) {
-    const asset = await this.get(id, ownerEmail, isAdmin);
+  async remove(id: string, ownerEmail: string, isAdmin: boolean, salonId: string | null) {
+    const asset = await this.get(id, ownerEmail, isAdmin, salonId);
     if (!isAdmin && asset.ownerEmail !== ownerEmail) throw new ForbiddenException('You cannot delete this image');
     if (asset.storageProvider === 'cloudinary' && asset.publicId) await this.cloudinary.destroy(asset.publicId); else await fs.unlink(asset.storagePath).catch(() => undefined);
     await this.repo.remove(asset);

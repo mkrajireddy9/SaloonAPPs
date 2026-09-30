@@ -1,8 +1,9 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('passports')
 export class Passport {
   @PrimaryGeneratedColumn('uuid') id!: string;
+  @Index() @Column({ type: 'uuid', nullable: true }) salonId!: string | null;
   @Column({ unique: true }) ownerEmail!: string;
   @Column({ default: 'Ananya Rao' }) guestName!: string;
   @Column({ default: 'Hyderabad' }) location!: string;

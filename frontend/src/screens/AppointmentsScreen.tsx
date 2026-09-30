@@ -3,7 +3,7 @@ import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Ma
 import { ShellTitle } from '../components/ShellTitle';
 import { useToast } from '../components/Toast';
 import { request } from '../api';
-import type { Appointment, SalonBranch, SalonConfig } from '../types';
+import type { Appointment, PublicSalon, SalonBranch, SalonConfig } from '../types';
 import { BannerStrip } from '../components/BannerStrip';
 
 const pad = (value: number) => String(value).padStart(2, '0');
@@ -83,12 +83,13 @@ function BookingMultiSelect({ label, values, options, onChange }: { label: strin
   </div>;
 }
 
-export function AppointmentsScreen({ appointments, onCreate, onCancel, onReschedule, salon, onNavigate }: { appointments: Appointment[]; onCreate: (appointment: Appointment) => void; onCancel: (id: string) => void; onReschedule: (id: string, date: string, time: string) => void; salon: SalonConfig; onNavigate?: (path: string) => void }) {
+export function AppointmentsScreen({ appointments, onCreate, onCancel, onReschedule, salon, salons = [], onSelectSalon, onNavigate }: { appointments: Appointment[]; onCreate: (appointment: Appointment) => void; onCancel: (id: string) => void; onReschedule: (id: string, date: string, time: string) => void; salon: SalonConfig; salons?: PublicSalon[]; onSelectSalon?: (id: string) => void; onNavigate?: (path: string) => void }) {
   const { showToast } = useToast();
   const today = new Date();
   const branches = useMemo(() => (salon.branches?.length ? salon.branches : [fallbackBranch(salon)]).filter(branch => branch.active !== false), [salon]);
   const [month, setMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [branchId, setBranchId] = useState(branches[0]?.id || 'main');
+  const [selectedSalonId, setSelectedSalonId] = useState(salon.id || '');
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [date, setDate] = useState(toDateValue(new Date(today.getTime() + 7 * 86400000)));
   const [time, setTime] = useState('');
@@ -111,19 +112,20 @@ export function AppointmentsScreen({ appointments, onCreate, onCancel, onResched
   const rescheduleSchedule = rescheduling ? salon.stylistSchedules?.[rescheduling.stylist] : undefined;
 
   useEffect(() => { if (!branches.some(item => item.id === branchId)) setBranchId(branches[0]?.id || 'main'); }, [branchId, branches]);
+  useEffect(() => { if (salon.id && !selectedSalonId) setSelectedSalonId(salon.id); }, [salon.id, selectedSalonId]);
   useEffect(() => { void request<{ phone?: string }>('/customers/me').then(profile => setPhone(profile.phone || '')).catch(() => undefined); }, []);
   const service = selectedServices.join(', ');
   useEffect(() => { setSelectedServices(current => current.filter(item => services.includes(item)).length ? current.filter(item => services.includes(item)) : (services[0] ? [services[0]] : [])); setStylist(current => stylists.includes(current) ? current : stylists[0] || ''); }, [branchId, services, stylists]);
   useEffect(() => {
     let active = true;
     if (!branch || !service || !stylist) return undefined;
-    void request<string[]>(`/appointments/slots?date=${encodeURIComponent(date)}&branchId=${encodeURIComponent(branch.id)}&stylist=${encodeURIComponent(stylist)}&service=${encodeURIComponent(service)}`).then(slots => { if (!active) return; const usable = removePastSlots(slots, date); setAvailableTimes(usable); setTime(current => usable.includes(current) ? current : usable[0] || ''); }).catch(() => { if (active) { setAvailableTimes([]); setTime(''); } });
+    void request<string[]>(`/appointments/slots?date=${encodeURIComponent(date)}&salonId=${encodeURIComponent(salon.id || '')}&branchId=${encodeURIComponent(branch.id)}&stylist=${encodeURIComponent(stylist)}&service=${encodeURIComponent(service)}`).then(slots => { if (!active) return; const usable = removePastSlots(slots, date); setAvailableTimes(usable); setTime(current => usable.includes(current) ? current : usable[0] || ''); }).catch(() => { if (active) { setAvailableTimes([]); setTime(''); } });
     return () => { active = false; };
   }, [branch, date, service, stylist]);
   useEffect(() => {
     let active = true;
     if (!rescheduling || !rescheduleBranch || !rescheduleDate) return undefined;
-    void request<string[]>(`/appointments/slots?date=${encodeURIComponent(rescheduleDate)}&branchId=${encodeURIComponent(rescheduleBranch.id)}&stylist=${encodeURIComponent(rescheduling.stylist)}&service=${encodeURIComponent(rescheduling.service)}`).then(slots => { if (!active) return; const usable = removePastSlots(slots, rescheduleDate); setRescheduleTimes(usable); setRescheduleTime(current => usable.includes(current) ? current : usable[0] || ''); }).catch(() => { if (active) { setRescheduleTimes([]); setRescheduleTime(''); } });
+    void request<string[]>(`/appointments/slots?date=${encodeURIComponent(rescheduleDate)}&salonId=${encodeURIComponent(salon.id || '')}&branchId=${encodeURIComponent(rescheduleBranch.id)}&stylist=${encodeURIComponent(rescheduling.stylist)}&service=${encodeURIComponent(rescheduling.service)}`).then(slots => { if (!active) return; const usable = removePastSlots(slots, rescheduleDate); setRescheduleTimes(usable); setRescheduleTime(current => usable.includes(current) ? current : usable[0] || ''); }).catch(() => { if (active) { setRescheduleTimes([]); setRescheduleTime(''); } });
     return () => { active = false; };
   }, [rescheduleBranch, rescheduleDate, rescheduling]);
 
@@ -131,7 +133,7 @@ export function AppointmentsScreen({ appointments, onCreate, onCancel, onResched
   const selectRescheduleDate = (value: string) => { setRescheduleDate(value); const next = new Date(`${value}T00:00:00`); setRescheduleMonth(new Date(next.getFullYear(), next.getMonth(), 1)); };
   const submit = async () => {
     if (!time || !branch) return;
-    try { if (phone.trim()) await request('/customers/me', { method: 'PATCH', body: JSON.stringify({ phone: phone.trim() }) }); await onCreate({ id: `appointment-${Date.now()}`, service, branchId: branch.id, date, time, stylist, notes, guestPhone: phone.trim(), status: 'Requested' }); setNotes(''); showToast('Appointment request sent to the salon.'); }
+    try { if (phone.trim()) await request('/customers/me', { method: 'PATCH', body: JSON.stringify({ phone: phone.trim() }) }); await onCreate({ id: `appointment-${Date.now()}`, salonId: salon.id, service, branchId: branch.id, date, time, stylist, notes, guestPhone: phone.trim(), status: 'Requested' }); setNotes(''); showToast('Appointment request sent to the salon.'); }
     catch (error) { showToast(error instanceof Error ? error.message : 'Could not create the appointment.', 'error'); }
   };
   const openReschedule = (appointment: Appointment) => { const next = new Date(`${appointment.date}T00:00:00`); setRescheduling(appointment); setRescheduleDate(appointment.date); setRescheduleMonth(new Date(next.getFullYear(), next.getMonth(), 1)); setRescheduleTime(''); };
@@ -149,6 +151,7 @@ export function AppointmentsScreen({ appointments, onCreate, onCancel, onResched
     <div className="appointments-grid">
       <section className="panel appointment-form">
         <div className="section-label"><span className="round-icon peach"><CalendarDays size={16} /></span><div><b>Book an appointment</b><small>{salon.location}</small></div></div>
+        {salons.length > 0 && <BookingSelect label="Choose a salon" value={selectedSalonId || salon.id || ''} options={salons.map(item => item.id)} getLabel={value => { const item = salons.find(candidate => candidate.id === value); return item ? `${item.name} · ${item.location}` : value; }} onChange={value => { setSelectedSalonId(value); onSelectSalon?.(value); }} />}
         <BookingSelect label="Choose a branch" value={branch?.id || ''} options={branches.map(item => item.id)} getLabel={value => { const item = branches.find(branchItem => branchItem.id === value); return item ? `${item.name} · ${item.location}` : value; }} onChange={setBranchId} />
         <BookingMultiSelect label="What would you like to book?" values={selectedServices} options={services} onChange={setSelectedServices} />
         <BookingSelect label="Preferred stylist" value={stylist} options={stylists} onChange={setStylist} />

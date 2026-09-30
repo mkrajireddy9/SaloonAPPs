@@ -7,11 +7,12 @@ import { JwtAuthGuard } from './auth.guard';
 import { RolesGuard } from './roles.guard';
 import { AuthService } from './auth.service';
 import { User } from './user.entity';
+import { Salon } from '../salon/salon.entity';
 
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, Salon]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

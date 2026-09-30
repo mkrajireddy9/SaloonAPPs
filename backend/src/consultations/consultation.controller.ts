@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common';
 import { ConsultationService } from './consultation.service';
 import { AnalyzeConsultationDto, CaptureViewDto, CreateConsultationDto, SaveConsultationDto } from './consultation.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -15,10 +15,10 @@ import { UserRole } from '../auth/user.entity';
 @Roles(UserRole.ADMIN)
 export class ConsultationController {
   constructor(private readonly service: ConsultationService) {}
-  @Get() @ApiOperation({ summary: 'List consultations' }) list() { return this.service.list(); }
-  @Post() @ApiOperation({ summary: 'Create a consultation' }) create(@Body() dto: CreateConsultationDto) { return this.service.create(dto); }
-  @Get(':id') @ApiOperation({ summary: 'Get a consultation' }) get(@Param('id') id: string) { return this.service.get(id); }
-  @Post(':id/capture') @ApiOperation({ summary: 'Capture a scan view' }) capture(@Param('id') id: string, @Body() dto: CaptureViewDto) { return this.service.capture(id, dto); }
-  @Post(':id/analyze') @ApiOperation({ summary: 'Generate a consultation report from an optional image' }) analyze(@Param('id') id: string, @Body() dto: AnalyzeConsultationDto) { return this.service.analyze(id, dto.imageBase64); }
-  @Post(':id/save') @ApiOperation({ summary: 'Save the consultation result and generated before/after look' }) save(@Param('id') id: string, @Body() dto: SaveConsultationDto) { return this.service.saveResult(id, dto); }
+  @Get() @ApiOperation({ summary: 'List consultations' }) list(@Req() request: any) { return this.service.list(request.user.salonId); }
+  @Post() @ApiOperation({ summary: 'Create a consultation' }) create(@Body() dto: CreateConsultationDto, @Req() request: any) { return this.service.create(dto, request.user.salonId); }
+  @Get(':id') @ApiOperation({ summary: 'Get a consultation' }) get(@Param('id') id: string, @Req() request: any) { return this.service.get(id, request.user.salonId); }
+  @Post(':id/capture') @ApiOperation({ summary: 'Capture a scan view' }) capture(@Param('id') id: string, @Body() dto: CaptureViewDto, @Req() request: any) { return this.service.capture(id, dto, request.user.salonId); }
+  @Post(':id/analyze') @ApiOperation({ summary: 'Generate a consultation report from an optional image' }) analyze(@Param('id') id: string, @Body() dto: AnalyzeConsultationDto, @Req() request: any) { return this.service.analyze(id, dto.imageBase64, request.user.salonId); }
+  @Post(':id/save') @ApiOperation({ summary: 'Save the consultation result and generated before/after look' }) save(@Param('id') id: string, @Body() dto: SaveConsultationDto, @Req() request: any) { return this.service.saveResult(id, dto, request.user.salonId); }
 }
