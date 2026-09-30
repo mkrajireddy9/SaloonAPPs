@@ -34,6 +34,7 @@ export function AppointmentsScreen({ appointments, onCreate, onCancel, onResched
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [stylist, setStylist] = useState('');
   const [notes, setNotes] = useState('');
+  const [phone, setPhone] = useState('');
   const [rescheduling, setRescheduling] = useState<Appointment | null>(null);
   const [rescheduleMonth, setRescheduleMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [rescheduleDate, setRescheduleDate] = useState('');
@@ -49,6 +50,7 @@ export function AppointmentsScreen({ appointments, onCreate, onCancel, onResched
   const rescheduleSchedule = rescheduling ? salon.stylistSchedules?.[rescheduling.stylist] : undefined;
 
   useEffect(() => { if (!branches.some(item => item.id === branchId)) setBranchId(branches[0]?.id || 'main'); }, [branchId, branches]);
+  useEffect(() => { void request<{ phone?: string }>('/customers/me').then(profile => setPhone(profile.phone || '')).catch(() => undefined); }, []);
   useEffect(() => { setService(current => services.includes(current) ? current : services[0] || ''); setStylist(current => stylists.includes(current) ? current : stylists[0] || ''); }, [branchId, services, stylists]);
   useEffect(() => {
     let active = true;
@@ -67,7 +69,7 @@ export function AppointmentsScreen({ appointments, onCreate, onCancel, onResched
   const selectRescheduleDate = (value: string) => { setRescheduleDate(value); const next = new Date(`${value}T00:00:00`); setRescheduleMonth(new Date(next.getFullYear(), next.getMonth(), 1)); };
   const submit = async () => {
     if (!time || !branch) return;
-    try { await onCreate({ id: `appointment-${Date.now()}`, service, branchId: branch.id, date, time, stylist, notes, status: 'Requested' }); setNotes(''); showToast('Appointment request sent to the salon.'); }
+    try { if (phone.trim()) await request('/customers/me', { method: 'PATCH', body: JSON.stringify({ phone: phone.trim() }) }); await onCreate({ id: `appointment-${Date.now()}`, service, branchId: branch.id, date, time, stylist, notes, guestPhone: phone.trim(), status: 'Requested' }); setNotes(''); showToast('Appointment request sent to the salon.'); }
     catch (error) { showToast(error instanceof Error ? error.message : 'Could not create the appointment.', 'error'); }
   };
   const openReschedule = (appointment: Appointment) => { const next = new Date(`${appointment.date}T00:00:00`); setRescheduling(appointment); setRescheduleDate(appointment.date); setRescheduleMonth(new Date(next.getFullYear(), next.getMonth(), 1)); setRescheduleTime(''); };
@@ -87,6 +89,7 @@ export function AppointmentsScreen({ appointments, onCreate, onCancel, onResched
         <div className="field"><label>Choose a branch</label><select value={branch?.id || ''} onChange={event => setBranchId(event.target.value)}>{branches.map(item => <option key={item.id} value={item.id}>{item.name} · {item.location}</option>)}</select></div>
         <div className="field"><label>What would you like to book?</label><select value={service} onChange={event => setService(event.target.value)}>{services.map(item => <option key={item}>{item}</option>)}</select></div>
         <div className="field"><label>Preferred stylist</label><select value={stylist} onChange={event => setStylist(event.target.value)}>{stylists.map(item => <option key={item}>{item}</option>)}</select></div>
+        <div className="field"><label>WhatsApp or SMS number</label><input value={phone} onChange={event => setPhone(event.target.value)} placeholder="+91 98450 12345" /></div>
         <div className="calendar-panel"><div className="calendar-header"><button type="button" className="icon-button" aria-label="Previous month" onClick={() => setMonth(current => new Date(current.getFullYear(), current.getMonth() - 1, 1))}><ChevronLeft size={16} /></button><b>{month.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</b><button type="button" className="icon-button" aria-label="Next month" onClick={() => setMonth(current => new Date(current.getFullYear(), current.getMonth() + 1, 1))}><ChevronRight size={16} /></button></div><div className="calendar-weekdays">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => <span key={day}>{day}</span>)}</div>{renderCalendar(days, date, month, selectDate, branch, stylistSchedule)}</div>
         <div className="field"><label>Available time slots · {new Date(`${date}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</label><div className="tags">{availableTimes.length ? availableTimes.map(slot => <button type="button" className={time === slot ? 'soft' : 'text-button'} key={slot} onClick={() => setTime(slot)}><Clock3 size={13} />{slot}</button>) : <small>No slots available for this date.</small>}</div></div>
         <div className="field"><label>Anything you’d like us to know?</label><textarea className="appointment-notes" value={notes} onChange={event => setNotes(event.target.value)} placeholder="Tell us about your hair goals..." /></div>

@@ -5,6 +5,7 @@ export class Appointment {
   @PrimaryGeneratedColumn('uuid') id!: string;
   @Column({ default: 'Ananya Rao' }) guestName!: string;
   @Column({ default: '' }) guestEmail!: string;
+  @Column({ default: '' }) guestPhone!: string;
   @Column({ type: 'uuid', nullable: true }) customerId!: string | null;
   @Column() service!: string;
   @Column({ default: 'main' }) branchId!: string;

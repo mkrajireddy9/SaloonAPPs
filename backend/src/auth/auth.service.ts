@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, OnModuleInit, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, OnModuleInit, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
@@ -9,6 +9,7 @@ import { User, UserRole } from './user.entity';
 
 @Injectable()
 export class AuthService implements OnModuleInit {
+  private readonly logger = new Logger(AuthService.name);
   constructor(@InjectRepository(User) private readonly users: Repository<User>, private readonly jwt: JwtService) {}
 
   async onModuleInit() {
@@ -56,13 +57,17 @@ export class AuthService implements OnModuleInit {
   private async sendEmail(to: string, subject: string, html: string) {
     if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) return false;
     const response = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'content-type': 'application/json' }, body: JSON.stringify({ from: process.env.EMAIL_FROM, to: [to], subject, html }) });
-    if (!response.ok) throw new Error(`Email provider returned ${response.status}`);
+    if (!response.ok) {
+      const providerBody = await response.text();
+      this.logger.error(`Resend rejected email: status=${response.status} body=${providerBody.slice(0, 300)}`);
+      throw new Error(`Email provider returned ${response.status}`);
+    }
     return true;
   }
   private async issueEmailVerification(user: User) {
     const token = randomBytes(32).toString('hex'); user.emailVerificationTokenHash = this.hashToken(token); user.emailVerificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); await this.users.save(user);
     const url = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${token}`;
-    if (process.env.RESEND_API_KEY && process.env.EMAIL_FROM) { try { await this.sendEmail(user.email, 'Verify your Halo Salon email', `<p>Verify your email to activate your account.</p><p><a href="${url}">Verify email</a></p>`); } catch { /* account creation remains successful; verification can be resent */ } }
+    if (process.env.RESEND_API_KEY && process.env.EMAIL_FROM) { try { await this.sendEmail(user.email, 'Verify your Halo Salon email', `<p>Verify your email to activate your account.</p><p><a href="${url}">Verify email</a></p>`); } catch { this.logger.warn(`Verification email could not be sent to ${user.email}`); /* account creation remains successful; verification can be resent */ } }
   }
   async forgotPassword(dto: ForgotPasswordDto, ip = 'unknown') {
     const email = dto.email.toLowerCase().trim(); if (!this.limited(`reset:${ip}:${email}`)) return { message: 'If an account exists, reset instructions have been sent.' };

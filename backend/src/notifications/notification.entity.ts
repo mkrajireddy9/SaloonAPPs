@@ -9,6 +9,7 @@ export class Notification {
   @PrimaryGeneratedColumn('uuid') id!: string;
   @Index() @Column({ type: 'uuid', nullable: true }) appointmentId!: string | null;
   @Index() @Column() recipientEmail!: string;
+  @Column({ type: 'varchar', nullable: true }) recipientPhone!: string | null;
   @Column() channel!: NotificationChannel;
   @Column() event!: string;
   @Column({ default: 'Queued' }) status!: NotificationStatus;

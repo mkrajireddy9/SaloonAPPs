@@ -38,6 +38,7 @@ export class AppointmentService {
     const account = user.id ? await this.users.findOne({ where: { id: user.id } }) : undefined;
     const accountName = account?.name || user.name;
     const accountEmail = account?.email || user.email;
+    const accountPhone = account?.phone || '';
     const stylist = dto.stylist || 'Meera Nair';
     if (new Date(`${dto.date}T00:00:00`).getTime() < new Date(new Date().toDateString()).getTime()) throw new ConflictException('Appointments must be scheduled for today or a future date');
     const salon = await this.salons.findOne({ where: {} });
@@ -55,7 +56,7 @@ export class AppointmentService {
     const conflict = await this.repo.findOne({ where: { date: dto.date, time: dto.time, stylist, status: In(['Requested', 'Confirmed']) } });
     if (conflict) throw new ConflictException('That stylist is already requested for this time');
     let saved: Appointment;
-    try { saved = await this.repo.save(this.repo.create({ ...dto, branchId: branch.id, customerId: user.role === UserRole.USER ? user.id || null : null, guestName: user.role === UserRole.USER ? accountName : (dto.guestName || 'Ananya Rao'), guestEmail: user.role === UserRole.USER ? accountEmail : (dto.guestEmail || ''), stylist, durationMinutes: detail?.durationMinutes || 60, price: detail?.price || 0, status: 'Requested' })); } catch (error) { if ((error as { code?: string }).code === '23505') throw new ConflictException('That stylist is already requested for this time'); throw error; }
+    try { saved = await this.repo.save(this.repo.create({ ...dto, branchId: branch.id, customerId: user.role === UserRole.USER ? user.id || null : null, guestName: user.role === UserRole.USER ? accountName : (dto.guestName || 'Ananya Rao'), guestEmail: user.role === UserRole.USER ? accountEmail : (dto.guestEmail || ''), guestPhone: user.role === UserRole.USER ? (accountPhone || dto.guestPhone || '') : (dto.guestPhone || ''), stylist, durationMinutes: detail?.durationMinutes || 60, price: detail?.price || 0, status: 'Requested' })); } catch (error) { if ((error as { code?: string }).code === '23505') throw new ConflictException('That stylist is already requested for this time'); throw error; }
     await this.notifications.queueForAppointment(saved, 'appointment.created');
     return saved;
   }

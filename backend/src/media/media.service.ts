@@ -26,7 +26,7 @@ export class MediaService implements OnModuleInit {
     const validSignature = (file.mimetype === 'image/jpeg' && bytes.subarray(0, 3).toString('hex') === 'ffd8ff') || (file.mimetype === 'image/png' && bytes.subarray(0, 8).toString('hex') === '89504e470d0a1a0a') || (file.mimetype === 'image/webp' && bytes.subarray(0, 4).toString() === 'RIFF' && bytes.subarray(8, 12).toString() === 'WEBP');
     if (!validSignature) { await fs.unlink(file.path).catch(() => undefined); throw new BadRequestException('The uploaded file is not a valid image'); }
     let metadata: Metadata;
-    try { metadata = await sharp(file.path, { failOn: 'error' }).metadata(); } catch { await fs.unlink(file.path).catch(() => undefined); throw new BadRequestException('The uploaded image is corrupted or unreadable'); }
+    try { metadata = await sharp(file.path, { failOn: 'none' }).metadata(); } catch (error) { await fs.unlink(file.path).catch(() => undefined); const reason = error instanceof Error ? error.message.split('\n')[0] : 'decoder failure'; throw new BadRequestException(`The uploaded JPEG could not be decoded: ${reason}`); }
     const width = metadata.width || 0; const height = metadata.height || 0;
     if (!width || !height || width < 100 || height < 100 || width > 8000 || height > 8000 || width * height > 40_000_000) { await fs.unlink(file.path).catch(() => undefined); throw new BadRequestException('Images must be between 100x100 and 8000x8000 pixels'); }
     const retentionDays = Math.max(1, Number(process.env.MEDIA_RETENTION_DAYS || 365));
@@ -45,7 +45,7 @@ export class MediaService implements OnModuleInit {
     return asset;
   }
 
-  signedUrl(publicId: string) { return this.cloudinary.signedUrl(publicId); }
+  signedUrl(publicId: string, format?: string | null) { return this.cloudinary.signedUrl(publicId, format); }
 
   async remove(id: string, ownerEmail: string, isAdmin: boolean) {
     const asset = await this.get(id, ownerEmail, isAdmin);

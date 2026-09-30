@@ -1,4 +1,4 @@
-import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, Matches, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, Matches, MinLength, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateAppointmentDto {
@@ -6,6 +6,8 @@ export class CreateAppointmentDto {
   @IsOptional() @IsString() @MinLength(2) guestName?: string;
   @ApiPropertyOptional({ example: 'ananya@example.com' })
   @IsOptional() @IsEmail() guestEmail?: string;
+  @ApiPropertyOptional({ example: '+919845012345' })
+  @IsOptional() @IsString() @MaxLength(30) @Matches(/^\+?[0-9 ()-]{7,20}$/) guestPhone?: string;
   @ApiProperty({ example: 'Signature cut' })
   @IsNotEmpty() @IsString() service!: string;
   @ApiPropertyOptional({ example: 'main' })
