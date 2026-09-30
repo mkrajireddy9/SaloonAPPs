@@ -5,5 +5,7 @@ dist/
 .DS_Store
 *.log
 *.tsbuildinfo
+.next/
+frontend/.next/
 /backups/
 /load-results/

@@ -1,4 +1,4 @@
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL) || 'http://localhost:3000';
 export function clearAuthToken() { localStorage.removeItem('halo-token'); }
 export function setAuthToken(token: string) { localStorage.setItem('halo-token', token); }
 export function setAuthSession(accessToken: string, refreshToken: string) { setAuthToken(accessToken); localStorage.setItem('halo-refresh-token', refreshToken); }

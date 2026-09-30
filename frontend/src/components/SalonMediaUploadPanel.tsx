@@ -20,7 +20,7 @@ export function SalonMediaUploadPanel({ config, onSave }: { config: SalonConfig;
     try {
       const previousImage = currentImage;
       const asset = await uploadFile(file);
-      const imageUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${asset.url}`;
+      const imageUrl = `${(typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL) || 'http://localhost:3000'}${asset.url}`;
       const next = kind === 'service'
         ? { ...config, serviceDetails: services.map(item => item.name === name ? { ...item, imageUrl } : item) }
         : { ...config, stylistProfiles: { ...(config.stylistProfiles || {}), [name]: { bio: config.stylistProfiles?.[name]?.bio || '', imageUrl } } };
