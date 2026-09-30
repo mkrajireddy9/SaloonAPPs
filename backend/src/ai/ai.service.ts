@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { AnalyzeAiDto, QualityCheckDto, TryOnDto } from './ai.dto';
+import { Injectable, BadRequestException } from '@nestjs/common';
+import { AnalyzeAiDto, QualityCheckDto, RecommendDto, SeeOnMeDto, StylistInstructionsDto, TryOnDto } from './ai.dto';
 import { AiReport, QualityResult } from './ai.provider';
 import { OllamaProvider } from './ollama.provider';
-import { fal } from '@fal-ai/client';
+import { GeminiProvider } from './gemini.provider';
+import { HAIRSTYLE_CATALOG, catalogForPrompt } from './hairstyle.catalog';
 
 const fallbackReport = (input: AnalyzeAiDto): AiReport => ({
   faceShape: 'Soft oval', texture: input.texture || 'Wavy', length: input.length || 'Shoulder length', density: 'Medium-full', movement: 'Natural wave', visibleCondition: 'Moderate',
@@ -13,9 +14,24 @@ const fallbackReport = (input: AnalyzeAiDto): AiReport => ({
 
 @Injectable()
 export class AiService {
-  constructor(private readonly provider: OllamaProvider) {}
+  constructor(private readonly provider: OllamaProvider, private readonly gemini: GeminiProvider) {}
 
   async analyze(input: AnalyzeAiDto): Promise<AiReport & { provider: string }> {
+    if ((process.env.AI_PROVIDER || 'gemini') === 'gemini') {
+      const prompt = `You are Halo's hair consultation analysis engine. Analyze only visible characteristics and return ONLY JSON matching this shape: {"faceShape":"unknown","faceConfidence":0,"hairLength":"unknown","hairTexture":"unknown","hairType":"unknown","hairDensity":"unknown","hairVolume":"unknown","currentStyle":"unknown","hairline":"unknown"}. Use unknown and confidence 0 when uncertain. Never diagnose. User preferences: goal=${input.goal || 'unknown'}, length=${input.length || 'unknown'}, texture=${input.texture || 'unknown'}.`;
+      const profile = await this.gemini.generateJson<Record<string, unknown>>(prompt, input.imageBase64);
+      const recommendations = await this.recommend({ profile, preferences: { goal: input.goal, preferredLength: input.length, texture: input.texture } });
+      const report = fallbackReport(input);
+      report.faceShape = String(profile.faceShape || 'unknown');
+      report.texture = String(profile.hairTexture || input.texture || 'unknown');
+      report.length = String(profile.hairLength || input.length || 'unknown');
+      report.density = String(profile.hairDensity || 'unknown');
+      report.recommendations = recommendations.recommendations.map((item, index) => {
+        const recommendation = item as { name: string; reason: string; length: string; maintenance: string; styling?: string; matchReasons?: string[] };
+        return { name: recommendation.name, score: Math.max(70, 96 - index * 5), tag: index === 0 ? 'Best match' : 'Good match', description: recommendation.reason, chips: [recommendation.length, recommendation.maintenance, ...(recommendation.matchReasons || []).slice(0, 1)] };
+      });
+      return { ...report, provider: 'gemini', hairProfile: profile } as AiReport & { provider: string };
+    }
     const fallback = fallbackReport(input);
     const result = await this.provider.analyze(`Return only JSON matching this exact structure: ${JSON.stringify(fallback)}. Guest goal: ${input.goal || 'A cut that feels like me'}; texture: ${input.texture || 'Wavy'}; length: ${input.length || 'Shoulder length'}. Use stylist-safe visible observations only. Never diagnose medical conditions.`, input.imageBase64);
     return { ...fallback, ...result, provider: result ? 'ollama' : 'deterministic-fallback' } as AiReport & { provider: string };
@@ -30,27 +46,29 @@ export class AiService {
 
   async tryOn(input: TryOnDto) {
     const previews: Record<string, string> = { 'Soft textured lob': '/images/hair-lob.svg', 'Airy collarbone layers': '/images/hair-airy.svg', 'Long side-swept fringe': '/images/hair-gloss.svg' };
-    const fallback = { styleName: input.styleName, status: 'preview-ready', provider: 'local-demo-provider', beforeImage: '/images/hair-before.svg', previewImage: previews[input.styleName] || '/images/hair-lob.svg', message: 'Add FAL_KEY to enable real image-to-image generation.' };
-    const token = process.env.FAL_KEY;
-    if (!token) return { ...fallback, message: 'FAL_KEY is not loaded by the backend.' };
-    if (!input.imageBase64) return { ...fallback, message: 'An input image is required for real image-to-image generation.' };
-    try {
-      const imageDataUrl = `data:image/jpeg;base64,${input.imageBase64}`;
-      const prompt = `Keep the person's identity and face. Change only the hairstyle to a ${input.styleName}. Create a natural salon consultation preview with realistic hair, consistent lighting, and no text.`;
-      fal.config({ credentials: token });
-      const result = await fal.subscribe('fal-ai/flux-2/klein/9b/edit', {
-        input: { prompt, image_urls: [imageDataUrl] },
-      }) as { data?: { images?: { url?: string }[] } };
-      const imageUrl = result.data?.images?.[0]?.url;
-      if (!imageUrl) throw new Error('provider returned no image');
-      const imageResponse = await fetch(imageUrl);
-      if (!imageResponse.ok) throw new Error(`image ${imageResponse.status}`);
-      const bytes = Buffer.from(await imageResponse.arrayBuffer());
-      const contentType = imageResponse.headers.get('content-type') || 'image/png';
-      return { ...fallback, provider: 'fal-image-to-image', previewImage: `data:${contentType};base64,${bytes.toString('base64')}`, message: 'Generated by fal FLUX.2 image-to-image.' };
-    } catch (error) {
-      const reason = error instanceof Error ? error.message.slice(0, 180) : 'provider request failed';
-      return { ...fallback, message: `fal provider unavailable: ${reason}` };
-    }
+    const localSource = input.imageBase64 ? `data:image/jpeg;base64,${input.imageBase64}` : '';
+    const fallback = { styleName: input.styleName, status: 'preview-ready', provider: 'local', beforeImage: localSource || '/images/hair-before.svg', previewImage: localSource || previews[input.styleName] || '/images/hair-lob.svg', message: 'Local preview source ready. No paid image-generation provider is enabled.' };
+    return { ...fallback, provider: 'local', message: 'Use the local browser preview renderer. No paid image-generation provider is enabled.' };
+  }
+
+  async recommend(input: RecommendDto) {
+    if ((process.env.AI_PROVIDER || 'gemini') !== 'gemini') throw new BadRequestException('AI_PROVIDER must be gemini for recommendations.');
+    const prompt = `You are Halo's hairstyle recommendation engine. Return ONLY JSON: {"recommendations":[{"styleId":"","name":"","reason":"","length":"","maintenance":"","styling":"","matchReasons":[]}]} with exactly 5 items. Select only styleId values from this catalog: ${JSON.stringify(catalogForPrompt())}. Never invent names. Profile: ${JSON.stringify(input.profile)} Preferences: ${JSON.stringify(input.preferences || {})}.`;
+    const result = await this.gemini.generateJson<{ recommendations: unknown[] }>(prompt);
+    const allowed = new Map(HAIRSTYLE_CATALOG.map(style => [style.id, style]));
+    const recommendations = (result.recommendations || []).filter(item => typeof item === 'object' && item !== null && allowed.has(String((item as { styleId?: string }).styleId))).slice(0, 5);
+    if (recommendations.length !== 5) throw new BadRequestException("We couldn't complete the recommendations. Please try again.");
+    return { recommendations, provider: 'gemini' };
+  }
+
+  async stylistInstructions(input: StylistInstructionsDto) {
+    const prompt = `You are Halo's professional hairstyle consultation assistant. Return ONLY JSON with keys styleName, length, layers, volume, texture, maintenance, stylistInstruction. Do not make medical claims. Profile: ${JSON.stringify(input.profile)} Selected style: ${input.selectedStyle} Preferences: ${JSON.stringify(input.preferences || {})}.`;
+    return { ...(await this.gemini.generateJson<Record<string, unknown>>(prompt)), provider: 'gemini' };
+  }
+
+  async seeOnMe(input: SeeOnMeDto) {
+    if (!input.originalImage) throw new BadRequestException('An original photo is required.');
+    if (!HAIRSTYLE_CATALOG.some(style => style.id === input.styleId)) throw new BadRequestException('Choose a hairstyle from the catalog.');
+    return { provider: 'local', previewImage: `data:image/jpeg;base64,${input.originalImage}`, styleId: input.styleId, message: 'Local preview source ready. Hairstyle overlay is rendered in the browser.' };
   }
 }

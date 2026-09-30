@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBase64, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBase64, IsIn, IsNotEmpty, IsObject, IsOptional, IsString } from 'class-validator';
 
 export class AnalyzeAiDto {
   @ApiPropertyOptional({ example: 'A low-maintenance shape with natural movement.' })
@@ -24,4 +24,21 @@ export class TryOnDto {
   @IsNotEmpty() @IsString() styleName!: string;
   @ApiPropertyOptional({ description: 'Optional base64 source image without the data URL prefix.' })
   @IsOptional() @IsBase64() imageBase64?: string;
+}
+
+export class HairProfileDto {
+  @IsObject() profile!: Record<string, unknown>;
+  @IsOptional() @IsObject() preferences?: Record<string, unknown>;
+}
+
+export class RecommendDto extends HairProfileDto {}
+
+export class SeeOnMeDto {
+  @IsBase64() originalImage!: string;
+  @IsNotEmpty() @IsString() styleId!: string;
+  @IsOptional() @IsObject() hairProfile?: Record<string, unknown>;
+}
+
+export class StylistInstructionsDto extends HairProfileDto {
+  @IsNotEmpty() @IsString() selectedStyle!: string;
 }
