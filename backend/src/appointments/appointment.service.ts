@@ -44,19 +44,22 @@ export class AppointmentService {
     const salon = await this.salons.findOne({ where: {} });
     if (!salon) throw new ConflictException('Salon booking settings are not configured');
     const branch = this.getBranch(salon, dto.branchId);
+    const requestedServices = dto.service.split(',').map(item => item.trim()).filter(Boolean);
     const availableServices = branch.services?.length ? branch.services : salon.services;
     const availableStylists = branch.stylists?.length ? branch.stylists : salon.stylists;
-    if (!availableServices.includes(dto.service)) throw new ConflictException('That service is not available at the selected branch');
+    if (!requestedServices.length || requestedServices.some(item => !availableServices.includes(item))) throw new ConflictException('One or more selected services are not available at the selected branch');
     if (!availableStylists.includes(stylist)) throw new ConflictException('That stylist is not available at the selected branch');
-    const detail = salon.serviceDetails?.find(item => item.name === dto.service);
-    const slot = await this.validateSlot(dto.date, dto.time, detail?.durationMinutes || 60, branch.id);
+    const details = requestedServices.map(service => salon.serviceDetails?.find(item => item.name === service));
+    const durationMinutes = details.reduce((total, detail) => total + (detail?.durationMinutes || 60), 0);
+    const price = details.reduce((total, detail) => total + (detail?.price || 0), 0);
+    const slot = await this.validateSlot(dto.date, dto.time, durationMinutes, branch.id);
     const schedule = slot.salon.stylistSchedules?.[stylist];
     const weekday = new Date(`${dto.date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' });
     if (schedule && (!schedule.workingDays.includes(weekday) || schedule.leaveDates.includes(dto.date))) throw new ConflictException(`${stylist} is unavailable on this date`);
     const conflict = await this.repo.findOne({ where: { date: dto.date, time: dto.time, stylist, status: In(['Requested', 'Confirmed']) } });
     if (conflict) throw new ConflictException('That stylist is already requested for this time');
     let saved: Appointment;
-    try { saved = await this.repo.save(this.repo.create({ ...dto, branchId: branch.id, customerId: user.role === UserRole.USER ? user.id || null : null, guestName: user.role === UserRole.USER ? accountName : (dto.guestName || 'Ananya Rao'), guestEmail: user.role === UserRole.USER ? accountEmail : (dto.guestEmail || ''), guestPhone: user.role === UserRole.USER ? (accountPhone || dto.guestPhone || '') : (dto.guestPhone || ''), stylist, durationMinutes: detail?.durationMinutes || 60, price: detail?.price || 0, status: 'Requested' })); } catch (error) { if ((error as { code?: string }).code === '23505') throw new ConflictException('That stylist is already requested for this time'); throw error; }
+    try { saved = await this.repo.save(this.repo.create({ ...dto, branchId: branch.id, customerId: user.role === UserRole.USER ? user.id || null : null, guestName: user.role === UserRole.USER ? accountName : (dto.guestName || 'Ananya Rao'), guestEmail: user.role === UserRole.USER ? accountEmail : (dto.guestEmail || ''), guestPhone: user.role === UserRole.USER ? (accountPhone || dto.guestPhone || '') : (dto.guestPhone || ''), stylist, durationMinutes, price, status: 'Requested' })); } catch (error) { if ((error as { code?: string }).code === '23505') throw new ConflictException('That stylist is already requested for this time'); throw error; }
     await this.notifications.queueForAppointment(saved, 'appointment.created');
     return saved;
   }
@@ -108,13 +111,15 @@ export class AppointmentService {
     const branch = this.getBranch(salon, branchId);
     const weekday = new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' });
     if ((branch.closedDays || salon.closedDays || []).includes(weekday)) return [];
-    if (service && (branch.services?.length ? branch.services : salon.services).indexOf(service) < 0) return [];
+    const requestedServices = service?.split(',').map(item => item.trim()).filter(Boolean) || [];
+    const availableServices = branch.services?.length ? branch.services : salon.services;
+    if (requestedServices.some(item => !availableServices.includes(item))) return [];
     if (stylist && (branch.stylists?.length ? branch.stylists : salon.stylists).indexOf(stylist) < 0) return [];
     const schedule = stylist ? salon.stylistSchedules?.[stylist] : undefined;
     if (schedule && (!schedule.workingDays.includes(weekday) || schedule.leaveDates.includes(date))) return [];
     const toMinutes = (value: string) => { const [hour, minute] = value.split(':').map(Number); return hour * 60 + minute; };
     const open = toMinutes(branch.openingHours?.open || salon.openingHours.open); const close = toMinutes(branch.openingHours?.close || salon.openingHours.close);
-    const duration = salon.serviceDetails?.find(item => item.name === service)?.durationMinutes || 60;
+    const duration = requestedServices.reduce((total, item) => total + (salon.serviceDetails?.find(detail => detail.name === item)?.durationMinutes || 60), 0) || 60;
     const booked = await this.repo.find({ where: { date, branchId: branch.id, ...(stylist ? { stylist } : {}), status: In(['Requested', 'Confirmed']) } });
     const parseTime = (value: string) => { const match = value.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i); if (!match) return -1; let hour = Number(match[1]); const minute = Number(match[2]); const meridiem = match[3]?.toUpperCase(); if (meridiem === 'PM' && hour < 12) hour += 12; if (meridiem === 'AM' && hour === 12) hour = 0; return hour * 60 + minute; };
     const overlaps = (start: number) => booked.some(item => { const bookedStart = parseTime(item.time); return bookedStart >= 0 && start < bookedStart + (item.durationMinutes || 60) && start + duration > bookedStart; });

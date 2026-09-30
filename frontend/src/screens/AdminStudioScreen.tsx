@@ -1,6 +1,7 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 import { ArrowUpRight, Check, ClipboardList, Filter, Search, Settings2, Users, WalletCards } from 'lucide-react';
 import { ShellTitle } from '../components/ShellTitle';
+import { Dropdown } from '../components/Dropdown';
 import type { DashboardFilters, DashboardGroup, DashboardSummary } from '../types';
 
 type ServiceCategory = 'All' | 'Hair' | 'Nails & spa' | 'Other';
@@ -76,7 +77,7 @@ export function AdminStudioScreen({
         }
       />
 
-      <section className="panel analytics-filter-panel"><div className="panel-head"><div><label>OPERATING REPORT FILTERS</label><h2>Find the useful view</h2></div><Filter size={18} /></div><div className="analytics-filters"><input type="date" value={filters.dateFrom} onChange={event => updateFilter('dateFrom', event.target.value)} aria-label="Analytics start date"/><input type="date" value={filters.dateTo} onChange={event => updateFilter('dateTo', event.target.value)} aria-label="Analytics end date"/><select value={filters.branchId} onChange={event => updateFilter('branchId', event.target.value)}><option value="">All branches</option>{data.analytics.byBranch.map(branch => <option key={branch.id || branch.name} value={branch.id || branch.name}>{branch.name}</option>)}</select><select value={filters.service} onChange={event => updateFilter('service', event.target.value)}><option value="">All services</option>{data.services.map(item => <option key={item.name}>{item.name}</option>)}</select><select value={filters.stylist} onChange={event => updateFilter('stylist', event.target.value)}><option value="">All stylists</option>{data.analytics.byStylist.map(item => <option key={item.name}>{item.name}</option>)}</select><select value={filters.status} onChange={event => updateFilter('status', event.target.value)}><option value="">All statuses</option><option>Requested</option><option>Confirmed</option><option>Cancelled</option></select><button className="text-button" onClick={() => { const next = { dateFrom: '', dateTo: '', branchId: '', service: '', stylist: '', status: '' }; setFilters(next); onFilterChange(next); }}>Clear filters</button></div></section>
+      <section className="panel analytics-filter-panel"><div className="panel-head"><div><label>OPERATING REPORT FILTERS</label><h2>Find the useful view</h2></div><Filter size={18} /></div><div className="analytics-filters"><input type="date" value={filters.dateFrom} onChange={event => updateFilter('dateFrom', event.target.value)} aria-label="Analytics start date"/><input type="date" value={filters.dateTo} onChange={event => updateFilter('dateTo', event.target.value)} aria-label="Analytics end date"/><Dropdown value={filters.branchId} options={[{ value: '', label: 'All branches' }, ...data.analytics.byBranch.map(branch => ({ value: branch.id || branch.name, label: branch.name }))]} onChange={value => updateFilter('branchId', value)} ariaLabel="Filter by branch" /><Dropdown value={filters.service} options={[{ value: '', label: 'All services' }, ...data.services.map(item => ({ value: item.name, label: item.name }))]} onChange={value => updateFilter('service', value)} ariaLabel="Filter by service" /><Dropdown value={filters.stylist} options={[{ value: '', label: 'All stylists' }, ...data.analytics.byStylist.map(item => ({ value: item.name, label: item.name }))]} onChange={value => updateFilter('stylist', value)} ariaLabel="Filter by stylist" /><Dropdown value={filters.status} options={[{ value: '', label: 'All statuses' }, { value: 'Requested', label: 'Requested' }, { value: 'Confirmed', label: 'Confirmed' }, { value: 'Cancelled', label: 'Cancelled' }]} onChange={value => updateFilter('status', value)} ariaLabel="Filter by status" /><button className="text-button" onClick={() => { const next = { dateFrom: '', dateTo: '', branchId: '', service: '', stylist: '', status: '' }; setFilters(next); onFilterChange(next); }}>Clear filters</button></div></section>
 
       <div className="data-stats">
         <div className="panel data-stat">
@@ -163,12 +164,7 @@ export function AdminStudioScreen({
               <Search size={15} />
               <input value={serviceQuery} onChange={(event) => setServiceQuery(event.target.value)} placeholder="Search services" />
             </div>
-            <select className="catalog-filter-select" value={serviceCategory} onChange={(event) => setServiceCategory(event.target.value as ServiceCategory)} aria-label="Filter services by category">
-              <option>All</option>
-              <option>Hair</option>
-              <option>Nails &amp; spa</option>
-              <option>Other</option>
-            </select>
+            <Dropdown value={serviceCategory} options={[{ value: 'All', label: 'All' }, { value: 'Hair', label: 'Hair' }, { value: 'Nails & spa', label: 'Nails & spa' }, { value: 'Other', label: 'Other' }]} onChange={value => setServiceCategory(value as ServiceCategory)} ariaLabel="Filter services by category" />
           </div>
           <small className="catalog-result-count">Showing {filteredServices.length} of {data.services.length} services</small>
           <div className="studio-catalog-list">

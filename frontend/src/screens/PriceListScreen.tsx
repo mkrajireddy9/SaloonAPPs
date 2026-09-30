@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Clock3, Percent, Plus, Save, Search, Tag, Tr
 import { ShellTitle } from '../components/ShellTitle';
 import { useToast } from '../components/Toast';
 import { authenticatedImageUrl } from '../api';
+import { Dropdown } from '../components/Dropdown';
 import type { PriceListItem, Role } from '../types';
 
 const blankItem = (): PriceListItem => ({ name: '', durationMinutes: 60, price: 0, discountPercent: 0, discountPrice: 0, offerText: '', active: true });
@@ -43,7 +44,7 @@ export function PriceListScreen({ role, items, onBack, onSave }: { role: Role; i
   return <section className="page price-list">
     <ShellTitle eyebrow={role === 'admin' ? 'STUDIO CATALOG' : 'SALON MENU'} title={role === 'admin' ? 'Prices and offers, kept current.' : 'Choose what feels right for you.'} copy={role === 'admin' ? 'Add services, set prices, and publish discounts for guests.' : 'Browse the salon services, durations, and current offers.'} back={role === 'admin' ? 'Back to studio data' : 'Back to appointments'} onBack={onBack} action={role === 'admin' ? <button className="primary" disabled={saving} onClick={() => void save()}><Save size={16}/>{saving ? 'Saving...' : 'Save price list'}</button> : <span className="guest-pill">CURRENT PRICES</span>}/>
     {message && <p className="save-error passport-message">{message}</p>}
-    <div className="catalog-filters"><label className="catalog-search"><Search size={16}/><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search services or offers"/></label><label className="catalog-category"><span>Category</span><select value={category} onChange={event => setCategory(event.target.value)}>{categories.map(item => <option key={item}>{item}</option>)}</select></label>{(query || category !== 'All') && <button className="text-button" onClick={() => { setQuery(''); setCategory('All'); }}>Clear filters</button>}</div>
+    <div className="catalog-filters"><label className="catalog-search"><Search size={16}/><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search services or offers"/></label><label className="catalog-category"><span>Category</span><Dropdown value={category} options={categories.map(item => ({ value: item, label: item }))} onChange={setCategory} ariaLabel="Service category"/></label>{(query || category !== 'All') && <button className="text-button" onClick={() => { setQuery(''); setCategory('All'); }}>Clear filters</button>}</div>
     {role === 'admin' ? <section className="panel form-panel price-editor">
       <div className="section-label"><span className="round-icon peach"><Tag size={16}/></span><div><b>Services and discounts</b><small>Only active services appear in the guest menu.</small></div></div>
       {pageItems.map(item => { const index = draft.indexOf(item); return <div className="price-editor-row" key={`${item.name}-${index}`}>
