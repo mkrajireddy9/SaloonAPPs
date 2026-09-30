@@ -7,6 +7,11 @@ import type { Appointment, SalonBranch, SalonConfig } from '../types';
 
 const pad = (value: number) => String(value).padStart(2, '0');
 const toDateValue = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+function removePastSlots(slots: string[], selectedDate: string) {
+  const now = new Date();
+  if (selectedDate !== toDateValue(now)) return slots;
+  return slots.filter(slot => { const match = slot.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i); if (!match) return true; let hour = Number(match[1]); const minute = Number(match[2]); const meridiem = match[3].toUpperCase(); if (meridiem === 'PM' && hour !== 12) hour += 12; if (meridiem === 'AM' && hour === 12) hour = 0; return hour * 60 + minute > now.getHours() * 60 + now.getMinutes(); });
+}
 function calendarDays(month: Date) {
   const first = new Date(month.getFullYear(), month.getMonth(), 1);
   const start = new Date(first);
@@ -55,13 +60,13 @@ export function AppointmentsScreen({ appointments, onCreate, onCancel, onResched
   useEffect(() => {
     let active = true;
     if (!branch || !service || !stylist) return undefined;
-    void request<string[]>(`/appointments/slots?date=${encodeURIComponent(date)}&branchId=${encodeURIComponent(branch.id)}&stylist=${encodeURIComponent(stylist)}&service=${encodeURIComponent(service)}`).then(slots => { if (!active) return; setAvailableTimes(slots); setTime(current => slots.includes(current) ? current : slots[0] || ''); }).catch(() => { if (active) { setAvailableTimes([]); setTime(''); } });
+    void request<string[]>(`/appointments/slots?date=${encodeURIComponent(date)}&branchId=${encodeURIComponent(branch.id)}&stylist=${encodeURIComponent(stylist)}&service=${encodeURIComponent(service)}`).then(slots => { if (!active) return; const usable = removePastSlots(slots, date); setAvailableTimes(usable); setTime(current => usable.includes(current) ? current : usable[0] || ''); }).catch(() => { if (active) { setAvailableTimes([]); setTime(''); } });
     return () => { active = false; };
   }, [branch, date, service, stylist]);
   useEffect(() => {
     let active = true;
     if (!rescheduling || !rescheduleBranch || !rescheduleDate) return undefined;
-    void request<string[]>(`/appointments/slots?date=${encodeURIComponent(rescheduleDate)}&branchId=${encodeURIComponent(rescheduleBranch.id)}&stylist=${encodeURIComponent(rescheduling.stylist)}&service=${encodeURIComponent(rescheduling.service)}`).then(slots => { if (!active) return; setRescheduleTimes(slots); setRescheduleTime(current => slots.includes(current) ? current : slots[0] || ''); }).catch(() => { if (active) { setRescheduleTimes([]); setRescheduleTime(''); } });
+    void request<string[]>(`/appointments/slots?date=${encodeURIComponent(rescheduleDate)}&branchId=${encodeURIComponent(rescheduleBranch.id)}&stylist=${encodeURIComponent(rescheduling.stylist)}&service=${encodeURIComponent(rescheduling.service)}`).then(slots => { if (!active) return; const usable = removePastSlots(slots, rescheduleDate); setRescheduleTimes(usable); setRescheduleTime(current => usable.includes(current) ? current : usable[0] || ''); }).catch(() => { if (active) { setRescheduleTimes([]); setRescheduleTime(''); } });
     return () => { active = false; };
   }, [rescheduleBranch, rescheduleDate, rescheduling]);
 

@@ -83,19 +83,19 @@ export function AdminStudioScreen({
           <Users size={18} />
           <span>Total bookings</span>
           <strong>{data.analytics.totalBookings}</strong>
-          <small><ArrowUpRight size={13} /> From PostgreSQL</small>
+          <small><ArrowUpRight size={13} /> Live studio data</small>
         </div>
         <div className="panel data-stat">
           <Check size={18} />
           <span>Confirmed bookings</span>
           <strong>{data.analytics.confirmedBookings}</strong>
-          <small><ArrowUpRight size={13} /> From PostgreSQL</small>
+          <small><ArrowUpRight size={13} /> Live studio data</small>
         </div>
         <div className="panel data-stat">
           <WalletCards size={18} />
           <span>Confirmed revenue</span>
           <strong>₹{data.analytics.revenue.toLocaleString('en-IN')}</strong>
-          <small><ArrowUpRight size={13} /> From PostgreSQL</small>
+          <small><ArrowUpRight size={13} /> Live studio data</small>
         </div>
         <div className="panel data-stat"><span>Cancellations</span><strong>{data.analytics.cancelledBookings}</strong><small><ArrowUpRight size={13} /> {data.analytics.cancellationRate}% of filtered bookings</small></div>
       </div>
