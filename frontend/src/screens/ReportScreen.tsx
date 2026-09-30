@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Check, Clipboard, Heart, ImagePlus, Share2, Sparkles } from 'lucide-react';
-import { request } from '../api';
+import { Check, Heart, ImagePlus, Sparkles } from 'lucide-react';
 import { ShellTitle } from '../components/ShellTitle';
+import { StylistCard } from '../components/StylistCard';
 import type { Consultation, Report } from '../types';
 
 export function ReportScreen({ consultation, report, onBack, onSave, onGeneratePreview }: { consultation: Consultation; report: Report; onBack: () => void; onSave: (data: { selectedStyle: string; selectedServices: string[]; afterImage: string }) => Promise<void>; onGeneratePreview: (styleName: string) => Promise<{ previewImage: string }> }) {
