@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Check, Heart, ImagePlus, Sparkles } from 'lucide-react';
 import { ShellTitle } from '../components/ShellTitle';
 import type { Consultation, Report } from '../types';
 
 export function ReportScreen({ consultation, report, onBack, onSave, onGeneratePreview }: { consultation: Consultation; report: Report; onBack: () => void; onSave: (data: { selectedStyle: string; selectedServices: string[]; afterImage: string }) => Promise<void>; onGeneratePreview: (styleName: string, provider: 'gemini' | 'pollinations') => Promise<{ previewImage: string }> }) {
   const [selectedStyle, setSelectedStyle] = useState(consultation.selectedStyle || report.recommendations[0].name); const [imageProvider, setImageProvider] = useState<'gemini' | 'pollinations'>('gemini'); const [generating, setGenerating] = useState(false); const [previewReady, setPreviewReady] = useState(Boolean(consultation.afterImage)); const [previewImage, setPreviewImage] = useState(consultation.afterImage || ''); const [favorite, setFavorite] = useState(false); const [services, setServices] = useState<string[]>(consultation.selectedServices || []); const [saving, setSaving] = useState(false); const [saved, setSaved] = useState(consultation.status === 'saved'); const [saveError, setSaveError] = useState(''); const [previewError, setPreviewError] = useState(''); const previewImages: Record<string, string> = { 'Soft textured lob': '/images/hair-lob.svg', 'Airy collarbone layers': '/images/hair-airy.svg', 'Long side-swept fringe': '/images/hair-gloss.svg' };
+  useEffect(() => { setImageProvider('pollinations'); }, []);
   const createLocalPreview = async (styleName: string) => {
     if (!consultation.beforeImage) return '';
     const source = new Image(); source.src = `data:image/jpeg;base64,${consultation.beforeImage}`;

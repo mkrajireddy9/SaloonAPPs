@@ -50,7 +50,7 @@ export class AiService {
   async tryOn(input: TryOnDto) {
     const previews: Record<string, string> = { 'Soft textured lob': '/images/hair-lob.svg', 'Airy collarbone layers': '/images/hair-airy.svg', 'Long side-swept fringe': '/images/hair-gloss.svg' };
     const localSource = input.imageBase64 ? `data:image/jpeg;base64,${input.imageBase64}` : '';
-    if (input.provider === 'pollinations') {
+    if ((input.provider || 'pollinations') === 'pollinations') {
       const previewImage = await this.pollinations.editHairstyle(input.imageBase64, input.styleName);
       return { styleName: input.styleName, status: 'preview-ready', provider: 'pollinations', beforeImage: localSource, previewImage, message: 'Free AI hairstyle preview ready.' };
     }
