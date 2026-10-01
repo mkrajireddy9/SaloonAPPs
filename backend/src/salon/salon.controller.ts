@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -14,7 +14,7 @@ export class SalonController {
   constructor(private readonly service: SalonService) {}
 
   @Get() @UseGuards(JwtAuthGuard) @ApiOperation({ summary: 'Get salon profile, services, and stylists' }) get(@Req() request: { user: { salonId?: string } }) { return this.service.get(request.user.salonId); }
-  @Get('directory') @UseGuards(JwtAuthGuard) @ApiOperation({ summary: 'List salons available for guest booking' }) directory() { return this.service.listPublic(); }
+  @Get('directory') @UseGuards(JwtAuthGuard) @ApiOperation({ summary: 'List salons available for guest booking' }) directory(@Query('latitude') latitude?: string, @Query('longitude') longitude?: string, @Query('radiusKm') radiusKm?: string) { return this.service.listPublic(Number(latitude), Number(longitude), Number(radiusKm) || 25); }
   @Get('theme') @ApiOperation({ summary: 'Get the active salon theme' }) getTheme(@Req() request: { user?: { salonId?: string } }) { return this.service.get(request.user?.salonId).then(salon => salon.theme); }
   @Get('price-list') @UseGuards(JwtAuthGuard) @ApiOperation({ summary: 'Get active salon services, prices, and offers' }) getPriceList(@Req() request: { user: { salonId?: string } }) { return this.service.getPriceList(request.user.salonId); }
   @Put() @UseGuards(JwtAuthGuard, RolesGuard) @Roles(UserRole.ADMIN) @ApiOperation({ summary: 'Update salon profile, services, and stylists (admin only)' }) update(@Body() dto: UpdateSalonDto, @Req() request: { user: { salonId?: string } }) { return this.service.update(dto, request.user.salonId); }
