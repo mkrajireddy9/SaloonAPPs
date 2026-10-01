@@ -24,6 +24,8 @@ export class TryOnDto {
   @IsNotEmpty() @IsString() styleName!: string;
   @ApiPropertyOptional({ description: 'Optional base64 source image without the data URL prefix.' })
   @IsOptional() @IsBase64() imageBase64?: string;
+  @ApiPropertyOptional({ enum: ['gemini', 'pollinations'], default: 'gemini' })
+  @IsOptional() @IsIn(['gemini', 'pollinations']) provider?: 'gemini' | 'pollinations';
 }
 
 export class HairProfileDto {
