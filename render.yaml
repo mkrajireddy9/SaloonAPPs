@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: halo-api
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build --workspace backend
+    startCommand: npm run start --workspace backend
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_INVITE_CODE
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: ALLOW_EMPTY_LOGIN
+        value: "false"
+      - key: EMAIL_REMINDERS_ENABLED
+        value: "false"

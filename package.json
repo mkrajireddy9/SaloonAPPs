@@ -9,6 +9,15 @@
     "db:down": "docker compose down",
     "install:all": "npm install --workspaces"
   },
-  "devDependencies": { "concurrently": "^9.1.2" },
-  "workspaces": ["backend", "frontend"]
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "dependencies": {
+    "@neon/config": "^1.8.3",
+    "@neon/env": "^1.4.8"
+  }
 }
