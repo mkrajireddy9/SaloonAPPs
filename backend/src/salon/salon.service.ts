@@ -48,9 +48,11 @@ export class SalonService {
     return salon;
   }
 
-  async listPublic() {
+  async listPublic(latitude?: number, longitude?: number, radiusKm = 25) {
     const salons = await this.repo.find({ order: { name: 'ASC' } });
-    return salons.map(salon => ({ id: salon.id, name: salon.name, location: salon.location, branches: (salon.branches || []).filter(branch => branch.active !== false), services: salon.services, stylists: salon.stylists }));
+    const hasLocation = Number.isFinite(latitude) && Number.isFinite(longitude);
+    const distance = (branch: { latitude?: number; longitude?: number }) => { if (!hasLocation || !Number.isFinite(branch.latitude) || !Number.isFinite(branch.longitude)) return null; const radians = (value: number) => value * Math.PI / 180; const dLat = radians(branch.latitude! - latitude!); const dLon = radians(branch.longitude! - longitude!); const a = Math.sin(dLat / 2) ** 2 + Math.cos(radians(latitude!)) * Math.cos(radians(branch.latitude!)) * Math.sin(dLon / 2) ** 2; return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); };
+    return salons.map(salon => { const branches = (salon.branches || []).filter(branch => branch.active !== false).map(branch => ({ ...branch, distanceKm: distance(branch) })).filter(branch => !hasLocation || branch.distanceKm === null || branch.distanceKm <= radiusKm); return { id: salon.id, name: salon.name, location: salon.location, branches, services: salon.services, stylists: salon.stylists, distanceKm: branches.reduce<number | null>((nearest, branch) => branch.distanceKm === null ? nearest : nearest === null ? branch.distanceKm : Math.min(nearest, branch.distanceKm), null) }; }).filter(salon => salon.branches.length).sort((a, b) => (a.distanceKm ?? Number.MAX_SAFE_INTEGER) - (b.distanceKm ?? Number.MAX_SAFE_INTEGER));
   }
   async getById(id: string) {
     const salon = await this.repo.findOne({ where: { id } });

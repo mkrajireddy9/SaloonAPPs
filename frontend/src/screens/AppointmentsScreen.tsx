@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, MapPin, Plus, Scissors, X } from 'lucide-react';
 import { ShellTitle } from '../components/ShellTitle';
 import { useToast } from '../components/Toast';
-import { request } from '../api';
+import { getApiErrorMessage, PHONE_PATTERN, request } from '../api';
 import type { Appointment, SalonBranch, SalonConfig } from '../types';
 import { BannerStrip } from '../components/BannerStrip';
 
@@ -96,6 +96,7 @@ export function AppointmentsScreen({ appointments, onCreate, onCancel, onResched
   const [stylist, setStylist] = useState('');
   const [notes, setNotes] = useState('');
   const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState('');
   const [rescheduling, setRescheduling] = useState<Appointment | null>(null);
   const [rescheduleMonth, setRescheduleMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [rescheduleDate, setRescheduleDate] = useState('');
@@ -131,8 +132,11 @@ export function AppointmentsScreen({ appointments, onCreate, onCancel, onResched
   const selectRescheduleDate = (value: string) => { setRescheduleDate(value); const next = new Date(`${value}T00:00:00`); setRescheduleMonth(new Date(next.getFullYear(), next.getMonth(), 1)); };
   const submit = async () => {
     if (!time || !branch) return;
-    try { if (phone.trim()) await request('/customers/me', { method: 'PATCH', body: JSON.stringify({ phone: phone.trim() }) }); await onCreate({ id: `appointment-${Date.now()}`, salonId: salon.id, service, branchId: branch.id, date, time, stylist, notes, guestPhone: phone.trim(), status: 'Requested' }); setNotes(''); showToast('Appointment request sent to the salon.'); }
-    catch (error) { showToast(error instanceof Error ? error.message : 'Could not create the appointment.', 'error'); }
+    const normalizedPhone = phone.trim();
+    if (normalizedPhone && !PHONE_PATTERN.test(normalizedPhone)) { setPhoneError('Enter a valid mobile number, for example +91 98450 12345.'); return; }
+    setPhoneError('');
+    try { if (normalizedPhone) await request('/customers/me', { method: 'PATCH', body: JSON.stringify({ phone: normalizedPhone }) }); await onCreate({ id: `appointment-${Date.now()}`, salonId: salon.id, service, branchId: branch.id, date, time, stylist, notes, guestPhone: normalizedPhone, status: 'Requested' }); setNotes(''); showToast('Appointment request sent to the salon.'); }
+    catch (error) { showToast(getApiErrorMessage(error, 'Could not create the appointment. Please try again.'), 'error'); }
   };
   const openReschedule = (appointment: Appointment) => { const next = new Date(`${appointment.date}T00:00:00`); setRescheduling(appointment); setRescheduleDate(appointment.date); setRescheduleMonth(new Date(next.getFullYear(), next.getMonth(), 1)); setRescheduleTime(''); };
   const submitReschedule = async () => {
@@ -152,7 +156,7 @@ export function AppointmentsScreen({ appointments, onCreate, onCancel, onResched
         <BookingSelect label="Choose a branch" value={branch?.id || ''} options={branches.map(item => item.id)} getLabel={value => { const item = branches.find(branchItem => branchItem.id === value); return item ? `${item.name} · ${item.location}` : value; }} onChange={setBranchId} />
         <BookingMultiSelect label="What would you like to book?" values={selectedServices} options={services} onChange={setSelectedServices} />
         <BookingSelect label="Preferred stylist" value={stylist} options={stylists} onChange={setStylist} />
-        <div className="field"><label>WhatsApp or SMS number</label><input value={phone} onChange={event => setPhone(event.target.value)} placeholder="+91 98450 12345" /></div>
+        <div className={`field${phoneError ? ' has-error' : ''}`}><label>WhatsApp or SMS number</label><input value={phone} onChange={event => { setPhone(event.target.value); if (phoneError) setPhoneError(''); }} onBlur={() => { const value = phone.trim(); if (value && !PHONE_PATTERN.test(value)) setPhoneError('Enter a valid mobile number, for example +91 98450 12345.'); }} placeholder="+91 98450 12345" aria-invalid={Boolean(phoneError)} />{phoneError && <small className="field-error">{phoneError}</small>}</div>
         <div className="calendar-panel"><div className="calendar-header"><button type="button" className="icon-button" aria-label="Previous month" onClick={() => setMonth(current => new Date(current.getFullYear(), current.getMonth() - 1, 1))}><ChevronLeft size={16} /></button><b>{month.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</b><button type="button" className="icon-button" aria-label="Next month" onClick={() => setMonth(current => new Date(current.getFullYear(), current.getMonth() + 1, 1))}><ChevronRight size={16} /></button></div><div className="calendar-weekdays">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => <span key={day}>{day}</span>)}</div>{renderCalendar(days, date, month, selectDate, branch, stylistSchedule)}</div>
         <div className="field"><label>Available time slots · {new Date(`${date}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</label><div className="tags">{availableTimes.length ? availableTimes.map(slot => <button type="button" className={time === slot ? 'soft' : 'text-button'} key={slot} onClick={() => setTime(slot)}><Clock3 size={13} />{slot}</button>) : <small>No slots available for this date.</small>}</div></div>
         <div className="field"><label>Anything you’d like us to know?</label><textarea className="appointment-notes" value={notes} onChange={event => setNotes(event.target.value)} placeholder="Tell us about your hair goals..." /></div>

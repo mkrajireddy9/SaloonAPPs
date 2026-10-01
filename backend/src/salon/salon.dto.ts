@@ -44,6 +44,8 @@ export class SalonBranchDto {
   @ApiProperty({ example: ['Sunday'] }) @IsArray() @IsString({ each: true }) @IsIn(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'], { each: true }) closedDays!: string[];
   @ApiPropertyOptional({ example: ['Signature cut'] }) @IsOptional() @IsArray() @IsString({ each: true }) services?: string[];
   @ApiPropertyOptional({ example: ['Meera Nair'] }) @IsOptional() @IsArray() @IsString({ each: true }) stylists?: string[];
+  @ApiPropertyOptional({ example: 17.4483 }) @IsOptional() @IsNumber() @Min(-90) @Max(90) latitude?: number;
+  @ApiPropertyOptional({ example: 78.3915 }) @IsOptional() @IsNumber() @Min(-180) @Max(180) longitude?: number;
 }
 
 export class PriceListItemDto {

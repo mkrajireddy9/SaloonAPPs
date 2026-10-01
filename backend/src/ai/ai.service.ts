@@ -4,6 +4,7 @@ import { AiReport, QualityResult } from './ai.provider';
 import { OllamaProvider } from './ollama.provider';
 import { GeminiProvider } from './gemini.provider';
 import { HAIRSTYLE_CATALOG, catalogForPrompt } from './hairstyle.catalog';
+import { PollinationsProvider } from './pollinations.provider';
 
 const fallbackReport = (input: AnalyzeAiDto): AiReport => ({
   faceShape: 'Soft oval', texture: input.texture || 'Wavy', length: input.length || 'Shoulder length', density: 'Medium-full', movement: 'Natural wave', visibleCondition: 'Moderate',
@@ -14,13 +15,15 @@ const fallbackReport = (input: AnalyzeAiDto): AiReport => ({
 
 @Injectable()
 export class AiService {
-  constructor(private readonly provider: OllamaProvider, private readonly gemini: GeminiProvider) {}
+  constructor(private readonly provider: OllamaProvider, private readonly gemini: GeminiProvider, private readonly pollinations: PollinationsProvider) {}
 
   async analyze(input: AnalyzeAiDto): Promise<AiReport & { provider: string }> {
     if ((process.env.AI_PROVIDER || 'gemini') === 'gemini') {
       const prompt = `You are Halo's hair consultation analysis engine. Analyze only visible characteristics and return ONLY JSON matching this shape: {"faceShape":"unknown","faceConfidence":0,"hairLength":"unknown","hairTexture":"unknown","hairType":"unknown","hairDensity":"unknown","hairVolume":"unknown","currentStyle":"unknown","hairline":"unknown"}. Use unknown and confidence 0 when uncertain. Never diagnose. User preferences: goal=${input.goal || 'unknown'}, length=${input.length || 'unknown'}, texture=${input.texture || 'unknown'}.`;
-      const profile = await this.gemini.generateJson<Record<string, unknown>>(prompt, input.imageBase64);
-      const recommendations = await this.recommend({ profile, preferences: { goal: input.goal, preferredLength: input.length, texture: input.texture } });
+      let profile: Record<string, unknown>;
+      try { profile = await this.gemini.generateJson<Record<string, unknown>>(prompt, input.imageBase64); } catch { return { ...fallbackReport(input), provider: 'deterministic-fallback' } as AiReport & { provider: string }; }
+      let recommendations: { recommendations: unknown[] };
+      try { recommendations = await this.recommend({ profile, preferences: { goal: input.goal, preferredLength: input.length, texture: input.texture } }); } catch { return { ...fallbackReport(input), provider: 'deterministic-fallback', hairProfile: profile } as AiReport & { provider: string }; }
       const report = fallbackReport(input);
       report.faceShape = String(profile.faceShape || 'unknown');
       report.texture = String(profile.hairTexture || input.texture || 'unknown');
@@ -47,7 +50,12 @@ export class AiService {
   async tryOn(input: TryOnDto) {
     const previews: Record<string, string> = { 'Soft textured lob': '/images/hair-lob.svg', 'Airy collarbone layers': '/images/hair-airy.svg', 'Long side-swept fringe': '/images/hair-gloss.svg' };
     const localSource = input.imageBase64 ? `data:image/jpeg;base64,${input.imageBase64}` : '';
-    const fallback = { styleName: input.styleName, status: 'preview-ready', provider: 'local', beforeImage: localSource || '/images/hair-before.svg', previewImage: localSource || previews[input.styleName] || '/images/hair-lob.svg', message: 'Local preview source ready. No paid image-generation provider is enabled.' };
+    if (input.provider === 'pollinations') {
+      const previewImage = await this.pollinations.editHairstyle(input.imageBase64, input.styleName);
+      return { styleName: input.styleName, status: 'preview-ready', provider: 'pollinations', beforeImage: localSource, previewImage, message: 'Free AI hairstyle preview ready.' };
+    }
+    if (input.imageBase64 && process.env.GEMINI_IMAGE_PREVIEWS !== 'false') { try { const previewImage = await this.gemini.editHairstyle(input.imageBase64, input.styleName); return { styleName: input.styleName, status: 'preview-ready', provider: 'gemini', beforeImage: localSource, previewImage, message: 'AI hairstyle preview ready.' }; } catch { /* Keep the consultation usable when the optional image provider is unavailable. */ } }
+    const fallback = { styleName: input.styleName, status: 'preview-ready', provider: 'local', beforeImage: localSource || '/images/hair-before.svg', previewImage: localSource || previews[input.styleName] || '/images/hair-lob.svg', message: 'Local preview source ready. No AI image editing is enabled.' };
     return { ...fallback, provider: 'local', message: 'Use the local browser preview renderer. No paid image-generation provider is enabled.' };
   }
 
