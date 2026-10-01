@@ -1,4 +1,20 @@
 const API = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL) || 'http://localhost:3000';
+export const PHONE_PATTERN = /^\+?[0-9 ()-]{7,20}$/;
+export function getApiErrorMessage(error: unknown, fallback = 'Something went wrong. Please try again.') {
+  if (!(error instanceof Error)) return fallback;
+  try {
+    const payload = JSON.parse(error.message) as { message?: string | string[] };
+    const messages = Array.isArray(payload.message) ? payload.message : [payload.message];
+    const message = messages.filter(Boolean).join(' ');
+    if (/guestPhone|phone/i.test(message)) return 'Enter a valid mobile number, for example +91 98450 12345.';
+    if (/already requested|already booked|conflict/i.test(message)) return 'That time is no longer available. Please choose another slot.';
+    if (/unauthorized|invalid email|invalid password/i.test(message)) return 'The email or password is incorrect.';
+    if (message) return message;
+  } catch {
+    if (error.message && !error.message.startsWith('{')) return error.message;
+  }
+  return fallback;
+}
 export function clearAuthToken() { localStorage.removeItem('halo-token'); }
 export function setAuthToken(token: string) { localStorage.setItem('halo-token', token); }
 export function setAuthSession(accessToken: string, refreshToken: string) { setAuthToken(accessToken); localStorage.setItem('halo-refresh-token', refreshToken); }
