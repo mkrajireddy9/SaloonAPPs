@@ -60,6 +60,7 @@ function AppContent() {
     window.addEventListener('popstate', syncView);
     return () => window.removeEventListener('popstate', syncView);
   }, []);
+  useEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; }, [view]);
   const refreshAppointments = async () => { try { setAppointments(await request<Appointment[]>('/appointments')); } catch { setAppointments([]); } };
   const refreshSalon = async () => { try { setSalon(await request<SalonConfig>('/salon')); } catch { setSalon(current => current); } };
   const refreshSalons = async () => { try { let query = ''; if (typeof navigator !== 'undefined' && navigator.geolocation) { const position = await new Promise<GeolocationPosition | null>(resolve => navigator.geolocation.getCurrentPosition(resolve, () => resolve(null), { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 })); if (position) query = `?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}&radiusKm=25`; } setSalons(await request<PublicSalon[]>(`/salon/directory${query}`)); } catch { setSalons([]); } };
