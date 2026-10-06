@@ -1,5 +1,11 @@
 export type Consultation = { id: string; guestName: string; phone: string; stylist: string; goal: string; length: string; texture: string; capturedViews: string; report: Report | null; status: string; beforeImage?: string | null; afterImage?: string | null; selectedStyle?: string; selectedServices?: string[]; };
 export type Report = { faceShape: string; texture: string; length: string; density: string; movement: string; visibleCondition: string; signals: { label: string; level: string; note: string }[]; recommendations: { name: string; score: number; tag: string; description: string; chips: string[] }[]; services: { name: string; reason: string }[] };
+declare global {
+  interface Window {
+    google?: { accounts: { id: { initialize: (options: { client_id: string; callback: (response: { credential?: string }) => void }) => void; renderButton: (element: HTMLElement, options: Record<string, string | number>) => void } } };
+  }
+}
+
 export type Role = 'admin' | 'user';
 export type Appointment = { id: string; salonId?: string; guestName?: string; guestEmail?: string; guestPhone?: string; service: string; branchId?: string; date: string; time: string; durationMinutes?: number; price?: number; stylist: string; status: 'Confirmed' | 'Requested' | 'Cancelled'; notes: string };
 export type PriceListItem = { name: string; durationMinutes: number; price: number; discountPercent?: number; discountPrice?: number; offerText?: string; active?: boolean; imageUrl?: string };

@@ -13,7 +13,7 @@ export function getApiErrorMessage(error: unknown, fallback = 'Something went wr
     if (/unauthorized|invalid email|invalid password/i.test(message)) return 'The email or password is incorrect.';
     if (message && !/statuscode|requestid|validation failed/i.test(message)) return message;
   } catch {
-    return fallback;
+    return error.message && !/statuscode|requestid|validation failed/i.test(error.message) ? error.message : fallback;
   }
   return fallback;
 }

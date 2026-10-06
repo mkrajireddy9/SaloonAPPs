@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, MinLength, ValidateIf } from 'class-validator';
+import { IsBoolean, IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
 import { UserRole } from './user.entity';
 
 export class RegisterDto {
@@ -18,9 +18,16 @@ export class RegisterDto {
 export class LoginDto {
   @ApiProperty({ example: 'ananya@example.com' })
   @ApiPropertyOptional({ enum: UserRole, default: UserRole.USER })
-  @ValidateIf((_, value) => value !== '') @IsOptional() @IsEmail() email?: string;
+  @IsEmail() email!: string;
   @ApiProperty({ example: 'strong-password' })
-  @IsOptional() @IsString() password?: string;
+  @IsNotEmpty() @IsString() password!: string;
+  @ApiPropertyOptional({ enum: UserRole, default: UserRole.USER })
+  @IsOptional() @IsIn([UserRole.USER, UserRole.ADMIN]) role?: UserRole;
+}
+
+export class GoogleLoginDto {
+  @ApiProperty({ description: 'Google Identity Services ID token credential.' })
+  @IsNotEmpty() @IsString() credential!: string;
   @ApiPropertyOptional({ enum: UserRole, default: UserRole.USER })
   @IsOptional() @IsIn([UserRole.USER, UserRole.ADMIN]) role?: UserRole;
 }

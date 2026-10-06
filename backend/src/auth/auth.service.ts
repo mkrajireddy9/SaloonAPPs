@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
 import { Repository } from 'typeorm';
-import { ForgotPasswordDto, LoginDto, NotificationPreferencesDto, RefreshTokenDto, RegisterDto, ResetPasswordDto } from './auth.dto';
+import { ForgotPasswordDto, GoogleLoginDto, LoginDto, NotificationPreferencesDto, RefreshTokenDto, RegisterDto, ResetPasswordDto } from './auth.dto';
 import { User, UserRole } from './user.entity';
 import { Salon } from '../salon/salon.entity';
 
@@ -58,15 +58,47 @@ export class AuthService implements OnModuleInit {
   }
 
   async login(dto: LoginDto) {
-    if (!dto.email?.trim() && !dto.password && process.env.NODE_ENV !== 'production' && process.env.ALLOW_EMPTY_LOGIN === 'true') {
-      const demoEmail = dto.role === UserRole.ADMIN ? 'admin@halo.local' : 'guest@halo.local';
-      const demoUser = await this.users.createQueryBuilder('user').addSelect('user.passwordHash').where('user.email = :email', { email: demoEmail }).getOne();
-      if (demoUser) return this.issueToken(demoUser);
-    }
-    const user = await this.users.createQueryBuilder('user').addSelect('user.passwordHash').where('user.email = :email', { email: dto.email?.toLowerCase().trim() || '' }).getOne();
-    if (!user || !dto.password || !(await bcrypt.compare(dto.password, user.passwordHash))) throw new UnauthorizedException('Invalid email or password');
+    const user = await this.users.createQueryBuilder('user').addSelect('user.passwordHash').where('user.email = :email', { email: dto.email.toLowerCase().trim() }).getOne();
+    if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) throw new UnauthorizedException('Invalid email or password');
     if (!user.active) throw new UnauthorizedException('This account has been deactivated');
     if (process.env.NODE_ENV === 'production' && !user.emailVerified) throw new UnauthorizedException('Please verify your email before signing in');
+    return this.issueToken(user);
+  }
+
+  async googleLogin(dto: GoogleLoginDto) {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) throw new UnauthorizedException('Google sign-in is not configured yet');
+    let payload: { aud?: string; iss?: string; exp?: number | string; email?: string; email_verified?: boolean | string; name?: string };
+    try {
+      const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(dto.credential)}`);
+      if (!response.ok) throw new Error('Google token rejected');
+      payload = await response.json() as typeof payload;
+    } catch {
+      throw new UnauthorizedException('Google sign-in could not be verified. Please try again.');
+    }
+    const expiresAt = Number(payload.exp);
+    if (payload.aud !== clientId || !['accounts.google.com', 'https://accounts.google.com'].includes(payload.iss || '') || !payload.email || !['true', true].includes(payload.email_verified as string | boolean) || !Number.isFinite(expiresAt) || expiresAt * 1000 <= Date.now()) throw new UnauthorizedException('Google sign-in could not be verified. Please try again.');
+    const email = payload.email.toLowerCase().trim();
+    const adminEmails = (process.env.ADMIN_GOOGLE_EMAILS || '').split(',').map(value => value.trim().toLowerCase()).filter(Boolean);
+    let user = await this.users.createQueryBuilder('user').addSelect('user.passwordHash').where('user.email = :email', { email }).getOne();
+    if (user && dto.role && user.role !== dto.role && !(dto.role === UserRole.ADMIN && adminEmails.includes(email) && user.role === UserRole.USER)) throw new UnauthorizedException(`This Google account is registered as ${user.role === UserRole.ADMIN ? 'admin' : 'guest'}. Select the matching workspace.`);
+    if (!user) {
+      const role = dto.role === UserRole.ADMIN && adminEmails.includes(email) ? UserRole.ADMIN : UserRole.USER;
+      if (dto.role === UserRole.ADMIN && role !== UserRole.ADMIN) throw new UnauthorizedException('This Google email is not approved for admin access.');
+      user = await this.users.save(this.users.create({ name: payload.name?.trim() || email.split('@')[0], email, passwordHash: await bcrypt.hash(randomBytes(32).toString('hex'), 12), role, salonId: null, refreshTokenHash: null, emailVerified: true }));
+      if (role === UserRole.ADMIN) {
+        const salon = await this.salons.save(this.salons.create({ name: `${user.name}'s Salon`, location: 'Add your salon location', ownerId: user.id, services: [], stylists: [], products: [], serviceDetails: [], stylistSchedules: {}, stylistProfiles: {}, branches: [], openingHours: { open: '09:00', close: '19:00' }, closedDays: [] }));
+        user.salonId = salon.id;
+        user = await this.users.save(user);
+      }
+    }
+    if (user && dto.role === UserRole.ADMIN && adminEmails.includes(email) && user.role === UserRole.USER) {
+      const salon = await this.salons.save(this.salons.create({ name: `${user.name}'s Salon`, location: 'Add your salon location', ownerId: user.id, services: [], stylists: [], products: [], serviceDetails: [], stylistSchedules: {}, stylistProfiles: {}, branches: [], openingHours: { open: '09:00', close: '19:00' }, closedDays: [] }));
+      user.role = UserRole.ADMIN;
+      user.salonId = salon.id;
+      user = await this.users.save(user);
+    }
+    if (!user.active) throw new UnauthorizedException('This account has been deactivated');
     return this.issueToken(user);
   }
 
