@@ -7,7 +7,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const status = exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
     const body = exception instanceof HttpException ? exception.getResponse() : { message: 'Internal server error' };
     const message = typeof body === 'string' ? body : (body as any).message || 'Request failed';
-    if (status >= 500) process.stderr.write(`${JSON.stringify({ timestamp: new Date().toISOString(), level: 'error', requestId: request.requestId, method: request.method, route: request.originalUrl, statusCode: status, message: 'request failed' })}\n`);
+    if (status >= 500) {
+      const event = { timestamp: new Date().toISOString(), level: 'error', requestId: request.requestId, method: request.method, route: request.originalUrl, statusCode: status, errorType: exception instanceof Error ? exception.name : 'UnknownError', message: 'request failed' };
+      process.stderr.write(`${JSON.stringify(event)}\n`);
+      const monitorUrl = process.env.ERROR_MONITORING_WEBHOOK_URL;
+      if (monitorUrl) void fetch(monitorUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(event), signal: AbortSignal.timeout(3000) }).catch(() => undefined);
+    }
     response.status(status).json({ statusCode: status, message, requestId: request.requestId });
   }
 }
