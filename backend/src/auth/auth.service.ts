@@ -144,13 +144,13 @@ export class AuthService implements OnModuleInit {
 
   async getNotificationPreferences(email: string) {
     const user = await this.users.findOne({ where: { email } });
-    return user?.notificationPreferences || { email: true, sms: false, whatsapp: false };
+    return user?.notificationPreferences || { email: true, appointmentReminders: true };
   }
 
   async updateNotificationPreferences(email: string, dto: NotificationPreferencesDto) {
     const user = await this.users.findOne({ where: { email } });
     if (!user) throw new UnauthorizedException('User not found');
-    user.notificationPreferences = { ...{ email: true, sms: false, whatsapp: false }, ...dto };
+    user.notificationPreferences = { ...{ email: true, appointmentReminders: true }, ...dto };
     await this.users.save(user);
     return user.notificationPreferences;
   }

@@ -1,0 +1,3 @@
+import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+@Entity('push_subscriptions') @Index(['userId', 'endpoint'], { unique: true })
+export class PushSubscription { @PrimaryGeneratedColumn('uuid') id!: string; @Index() @Column({ type: 'uuid' }) userId!: string; @Column({ type: 'text' }) endpoint!: string; @Column({ type: 'text' }) p256dh!: string; @Column({ type: 'text' }) auth!: string; @Column({ type: 'text', nullable: true }) userAgent!: string | null; @Column({ default: true }) isActive!: boolean; @Column({ type: 'timestamptz', nullable: true }) lastUsedAt!: Date | null; @CreateDateColumn() createdAt!: Date; @UpdateDateColumn() updatedAt!: Date; }

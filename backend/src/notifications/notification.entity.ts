@@ -1,6 +1,6 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
-export type NotificationChannel = 'email' | 'sms' | 'whatsapp';
+export type NotificationChannel = 'email';
 export type NotificationStatus = 'Queued' | 'Sent' | 'Failed';
 
 @Entity('notifications')

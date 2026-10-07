@@ -17,7 +17,7 @@ export class MediaService implements OnModuleInit {
 
   async onModuleInit() {
     const expired = await this.repo.find({ where: { retentionUntil: LessThan(new Date()) } });
-    for (const asset of expired) { await fs.unlink(asset.storagePath).catch(() => undefined); await this.repo.remove(asset); }
+    for (const asset of expired) { if (asset.storageProvider === 'cloudinary' && asset.publicId) await this.cloudinary.destroy(asset.publicId); else await fs.unlink(asset.storagePath).catch(() => undefined); await this.repo.remove(asset); }
   }
 
   async validateAndSave(file: any, ownerEmail: string, salonId: string | null, consentGiven = false) {

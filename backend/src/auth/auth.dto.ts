@@ -39,8 +39,7 @@ export class RefreshTokenDto {
 
 export class NotificationPreferencesDto {
   @ApiPropertyOptional({ default: true }) @IsOptional() @IsBoolean() email?: boolean;
-  @ApiPropertyOptional({ default: false }) @IsOptional() @IsBoolean() sms?: boolean;
-  @ApiPropertyOptional({ default: false }) @IsOptional() @IsBoolean() whatsapp?: boolean;
+  @ApiPropertyOptional({ default: true }) @IsOptional() @IsBoolean() appointmentReminders?: boolean;
 }
 
 export class ForgotPasswordDto {

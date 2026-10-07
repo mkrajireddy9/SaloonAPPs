@@ -18,8 +18,9 @@ export class NotificationService implements OnModuleInit, OnModuleDestroy {
     if (!appointment.guestEmail && !appointment.guestPhone) return [];
     const user = await this.users.findOne({ where: { email: appointment.guestEmail } });
     const recipientPhone = appointment.guestPhone || user?.phone || null;
-    const preferences = user?.notificationPreferences || { email: true, sms: false, whatsapp: false };
-    const channels = (Object.keys(preferences) as NotificationChannel[]).filter(channel => preferences[channel]);
+    const preferences = user?.notificationPreferences || { email: true, appointmentReminders: true };
+    if (event === 'appointment.reminder' && (preferences as { appointmentReminders?: boolean }).appointmentReminders === false) return [];
+    const channels = (['email'] as NotificationChannel[]).filter(channel => preferences[channel]);
     const records = await Promise.all(channels.map(async channel => {
       const existing = await this.repo.findOne({ where: { appointmentId: appointment.id, event, channel } });
       if (existing) { if (!existing.recipientPhone && recipientPhone) { existing.recipientPhone = recipientPhone; existing.status = 'Queued'; existing.lastError = null; } return this.repo.save(existing); }
@@ -29,6 +30,7 @@ export class NotificationService implements OnModuleInit, OnModuleDestroy {
     return records;
   }
 
+
   async list(email: string, isAdmin: boolean, salonId?: string) { return this.repo.find({ where: isAdmin ? { salonId: salonId || undefined } : { recipientEmail: email, salonId: salonId || undefined }, order: { createdAt: 'DESC' } }); }
 
   async deliver(id: string) {
@@ -37,7 +39,6 @@ export class NotificationService implements OnModuleInit, OnModuleDestroy {
     item.attempts += 1;
     try {
       const webhook = process.env[`NOTIFICATION_${item.channel.toUpperCase()}_WEBHOOK_URL`];
-      if (item.channel === 'whatsapp' && process.env.WHATSAPP_ENABLED !== 'true') { item.status = 'Queued'; item.lastError = 'WhatsApp reminders are disabled'; return this.repo.save(item); }
       let providerMessageId: string | null = null;
       if (item.channel === 'email' && process.env.EMAIL_REMINDERS_ENABLED !== 'false') {
         if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) throw new Error('Resend email configuration is missing');
@@ -45,21 +46,6 @@ export class NotificationService implements OnModuleInit, OnModuleDestroy {
         if (!response.ok) throw new Error(`Resend returned ${response.status}`);
         const result = await response.json() as { id?: string };
         providerMessageId = result.id || null;
-      } else if (item.channel === 'sms' || item.channel === 'whatsapp') {
-        if (!item.recipientPhone) throw new Error('A phone number is required for SMS or WhatsApp notifications');
-        if (item.channel === 'sms' && process.env.SMS_ENABLED !== 'true') { item.status = 'Queued'; item.lastError = 'SMS reminders are disabled'; return this.repo.save(item); }
-        if (item.channel === 'whatsapp' && process.env.WHATSAPP_ENABLED !== 'true') { item.status = 'Queued'; item.lastError = 'WhatsApp reminders are disabled'; return this.repo.save(item); }
-        const accountSid = process.env.TWILIO_ACCOUNT_SID;
-        const authToken = process.env.TWILIO_AUTH_TOKEN;
-        const from = item.channel === 'whatsapp' ? process.env.TWILIO_WHATSAPP_FROM : process.env.TWILIO_SMS_FROM;
-        if (!accountSid || !authToken || !from) throw new Error(`${item.channel} provider configuration is missing`);
-        const message = `Halo Salon: your ${item.payload.service || 'appointment'} is ${item.payload.status || 'scheduled'} on ${item.payload.date || ''} at ${item.payload.time || ''}.`;
-        const contentSid = item.channel === 'whatsapp' ? process.env.TWILIO_WHATSAPP_CONTENT_SID : process.env.TWILIO_SMS_CONTENT_SID;
-        const body = new URLSearchParams({ To: item.channel === 'whatsapp' ? `whatsapp:${item.recipientPhone}` : item.recipientPhone, From: from, ...(contentSid ? { ContentSid: contentSid, ContentVariables: JSON.stringify({ '1': String(item.payload.service || 'appointment'), '2': String(item.payload.date || ''), '3': String(item.payload.time || ''), '4': String(item.payload.status || 'scheduled') }) } : { Body: message }) });
-        const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, { method: 'POST', headers: { authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`, 'content-type': 'application/x-www-form-urlencoded' }, body });
-        const result = await response.json() as { sid?: string; message?: string; code?: number };
-        if (!response.ok) throw new Error(`Twilio returned ${response.status}: ${result.message || 'delivery failed'}`);
-        providerMessageId = result.sid || null;
       } else if (webhook) {
         const response = await fetch(webhook, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ to: item.recipientEmail, channel: item.channel, event: item.event, payload: item.payload }) });
         if (!response.ok) throw new Error(`Notification provider returned ${response.status}`);
