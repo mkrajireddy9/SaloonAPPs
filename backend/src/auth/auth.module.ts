@@ -17,7 +17,7 @@ import { Salon } from '../salon/salon.entity';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET') || (config.get<string>('NODE_ENV') === 'production' ? (() => { throw new Error('JWT_SECRET must be configured in production'); })() : 'local-development-only-change-me'),
+        secret: (() => { const secret = config.get<string>('JWT_SECRET'); if (config.get<string>('NODE_ENV') === 'production' && (!secret || secret.length < 32 || secret.includes('replace-with'))) throw new Error('JWT_SECRET must be a random value of at least 32 characters in production'); return secret || 'local-development-only-change-me'; })(),
         signOptions: { expiresIn: (config.get<string>('JWT_EXPIRES_IN') || '7d') as any },
       }),
     }),

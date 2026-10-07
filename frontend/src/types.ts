@@ -3,6 +3,7 @@ export type Report = { faceShape: string; texture: string; length: string; densi
 declare global {
   interface Window {
     google?: { accounts: { id: { initialize: (options: { client_id: string; callback: (response: { credential?: string }) => void }) => void; renderButton: (element: HTMLElement, options: Record<string, string | number>) => void } } };
+    Razorpay?: new (options: { key: string; amount: number; currency: string; name: string; description: string; order_id: string; handler: (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => void; modal?: { ondismiss?: () => void } }) => { open: () => void };
   }
 }
 

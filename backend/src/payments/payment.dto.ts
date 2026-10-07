@@ -15,3 +15,9 @@ export class PaymentWebhookDto {
 export class RefundPaymentDto {
   @ApiPropertyOptional({ example: 'Customer cancelled' }) @IsOptional() @IsString() reason?: string;
 }
+
+export class VerifyRazorpayPaymentDto {
+  @ApiProperty() @IsString() @IsNotEmpty() razorpayOrderId!: string;
+  @ApiProperty() @IsString() @IsNotEmpty() razorpayPaymentId!: string;
+  @ApiProperty() @IsString() @IsNotEmpty() razorpaySignature!: string;
+}
