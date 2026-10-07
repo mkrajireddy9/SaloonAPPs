@@ -5,7 +5,7 @@ import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
 import { Repository } from 'typeorm';
 import { ForgotPasswordDto, GoogleLoginDto, LoginDto, NotificationPreferencesDto, RefreshTokenDto, RegisterDto, ResetPasswordDto } from './auth.dto';
-import { User, UserRole } from './user.entity';
+import { AdminApprovalStatus, User, UserRole } from './user.entity';
 import { Salon } from '../salon/salon.entity';
 
 @Injectable()
@@ -29,13 +29,15 @@ export class AuthService implements OnModuleInit {
     if (await this.users.findOne({ where: { email } })) throw new ConflictException('An account with this email already exists');
     const role = dto.role || UserRole.USER;
     if (role === UserRole.ADMIN && (!process.env.ADMIN_INVITE_CODE || process.env.ADMIN_INVITE_CODE.includes('replace-with') || process.env.ADMIN_INVITE_CODE.length < 16 || dto.inviteCode !== process.env.ADMIN_INVITE_CODE)) throw new UnauthorizedException('A valid admin invite code is required');
-    const user = await this.users.save(this.users.create({ name: dto.name.trim(), email, passwordHash: await bcrypt.hash(dto.password, 12), role, salonId: null, refreshTokenHash: null, emailVerified: false }));
+    const approval = role === UserRole.ADMIN ? AdminApprovalStatus.PENDING : AdminApprovalStatus.NOT_REQUIRED;
+    const user = await this.users.save(this.users.create({ name: dto.name.trim(), email, passwordHash: await bcrypt.hash(dto.password, 12), role, adminApprovalStatus: approval, salonId: null, refreshTokenHash: null, emailVerified: false }));
     if (role === UserRole.ADMIN) {
       const salon = await this.salons.save(this.salons.create({ name: `${dto.name.trim()}'s Salon`, location: 'Add your salon location', ownerId: user.id, services: [], stylists: [], products: [], serviceDetails: [], stylistSchedules: {}, stylistProfiles: {}, branches: [], openingHours: { open: '09:00', close: '19:00' }, closedDays: [] }));
       user.salonId = salon.id;
       await this.users.save(user);
     }
     await this.issueEmailVerification(user);
+    if (role === UserRole.ADMIN) return { pendingApproval: true, message: 'Your admin registration is awaiting approval from an existing administrator.' };
     return this.issueToken(user);
   }
 
@@ -43,6 +45,7 @@ export class AuthService implements OnModuleInit {
     const user = await this.users.createQueryBuilder('user').addSelect('user.passwordHash').where('user.email = :email', { email: dto.email.toLowerCase().trim() }).getOne();
     if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) throw new UnauthorizedException('Invalid email or password');
     if (!user.active) throw new UnauthorizedException('This account has been deactivated');
+    if (user.role === UserRole.ADMIN && user.adminApprovalStatus !== AdminApprovalStatus.APPROVED) throw new UnauthorizedException(user.adminApprovalStatus === AdminApprovalStatus.REJECTED ? 'Your admin registration was rejected.' : 'Your admin registration is awaiting approval.');
     if (process.env.NODE_ENV === 'production' && !user.emailVerified) throw new UnauthorizedException('Please verify your email before signing in');
     return this.issueToken(user);
   }
@@ -141,6 +144,16 @@ export class AuthService implements OnModuleInit {
   async heartbeat(userId: string) { await this.users.update(userId, { lastSeenAt: new Date() }); return { success: true }; }
 
   async setActive(id: string, active: boolean) { const user = await this.users.findOne({ where: { id, role: UserRole.USER } }); if (!user) throw new UnauthorizedException('User not found'); user.active = active; return this.users.save(user); }
+
+  async listAdminRequests() { return this.users.find({ where: [{ role: UserRole.ADMIN, adminApprovalStatus: AdminApprovalStatus.PENDING }, { role: UserRole.ADMIN, adminApprovalStatus: AdminApprovalStatus.REJECTED }], select: ['id', 'name', 'email', 'adminApprovalStatus', 'createdAt'], order: { createdAt: 'DESC' } }); }
+
+  async approveAdmin(id: string, approved: boolean) {
+    const user = await this.users.findOne({ where: { id, role: UserRole.ADMIN } });
+    if (!user) throw new UnauthorizedException('Admin registration not found');
+    user.adminApprovalStatus = approved ? AdminApprovalStatus.APPROVED : AdminApprovalStatus.REJECTED;
+    user.active = approved;
+    return this.users.save(user);
+  }
 
   async getNotificationPreferences(email: string) {
     const user = await this.users.findOne({ where: { email } });

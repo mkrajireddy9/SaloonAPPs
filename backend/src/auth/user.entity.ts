@@ -1,6 +1,7 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 export enum UserRole { USER = 'user', ADMIN = 'admin' }
+export enum AdminApprovalStatus { NOT_REQUIRED = 'not_required', PENDING = 'pending', APPROVED = 'approved', REJECTED = 'rejected' }
 
 @Entity('users')
 export class User {
@@ -10,6 +11,7 @@ export class User {
   @Column({ select: false }) passwordHash!: string;
   @Column({ type: 'varchar', nullable: true, select: false }) refreshTokenHash!: string | null;
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER }) role!: UserRole;
+  @Column({ type: 'varchar', default: AdminApprovalStatus.NOT_REQUIRED }) adminApprovalStatus!: AdminApprovalStatus;
   @Column({ type: 'uuid', nullable: true }) salonId!: string | null;
   @Column({ type: 'varchar', nullable: true }) phone!: string | null;
   @Column({ type: 'varchar', nullable: true }) location!: string | null;
