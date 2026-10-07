@@ -1,11 +1,13 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { ArrowRight, Check, LockKeyhole, Palette, Sparkles, UserRound } from 'lucide-react';
 import { ThemePanel } from '../components/StudioLayout';
+import { useToast } from '../components/Toast';
 import { defaultTheme, type ThemeConfig } from '../theme';
 import type { Role } from '../types';
 import { request } from '../api';
 
 export function LoginScreen({ onLogin, onGoogleLogin, onRegister, error }: { onLogin: (email: string, password: string, role: Role, theme: ThemeConfig) => void | Promise<void>; onGoogleLogin: (credential: string, role: Role) => void | Promise<void>; onRegister: (name: string, email: string, password: string, role: Role, inviteCode: string) => void | Promise<void>; error?: string }) {
+  const { showToast } = useToast();
   const [role, setRole] = useState<Role>('user');
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -16,6 +18,9 @@ export function LoginScreen({ onLogin, onGoogleLogin, onRegister, error }: { onL
   const [settingsOpen, setSettingsOpen] = useState(false);
   useEffect(() => { void request<ThemeConfig>('/salon/theme').then(savedTheme => setTheme({ ...defaultTheme, ...savedTheme })).catch(() => undefined); }, []);
   useEffect(() => { const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID; if (!clientId) return; const script = document.createElement('script'); script.src = 'https://accounts.google.com/gsi/client'; script.async = true; script.onload = () => { window.google?.accounts.id.initialize({ client_id: clientId, callback: response => { if (response.credential) void onGoogleLogin(response.credential, role); } }); const target = document.querySelector('.google-login'); if (target instanceof HTMLElement) window.google?.accounts.id.renderButton(target, { theme: 'outline', size: 'large', width: 400, text: 'continue_with' }); }; document.head.appendChild(script); return () => script.remove(); }, [onGoogleLogin, role]);
+  useEffect(() => { const button = document.querySelector('.login-submit'); if (!(button instanceof HTMLButtonElement)) return; const start = () => { button.disabled = true; button.setAttribute('aria-busy', 'true'); }; button.addEventListener('click', start); return () => button.removeEventListener('click', start); }, [registering, role]);
+  useEffect(() => { if (!error) return; const button = document.querySelector('.login-submit'); if (button instanceof HTMLButtonElement) { button.disabled = false; button.removeAttribute('aria-busy'); } }, [error]);
+  useEffect(() => { if (error) showToast(error, 'error'); }, [error]);
   const cssVars = { '--rust': theme.primary, '--dark': theme.sidebar, '--cream': theme.surface, '--ink': theme.ink } as CSSProperties;
   const logo = theme.logoUrl ? <img className="brand-image" src={theme.logoUrl} alt={theme.brandName}/> : <span className="brand-mark">{theme.logoMark}</span>;
   const googleConfigured = Boolean(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
