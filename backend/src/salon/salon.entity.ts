@@ -3,6 +3,7 @@ import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateCol
 @Entity('salons')
 export class Salon {
   @PrimaryGeneratedColumn('uuid') id!: string;
+  @Column({ type: 'varchar', unique: true, nullable: true }) tenantCode!: string | null;
   @Column({ type: 'uuid', nullable: true }) ownerId!: string | null;
   @Column({ default: 'Halo Studio' }) name!: string;
   @Column({ default: 'Indiranagar, Bengaluru' }) location!: string;

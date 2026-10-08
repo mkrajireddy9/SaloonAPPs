@@ -52,7 +52,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.useGlobalFilters(new HttpExceptionFilter());
   const swaggerConfig = new DocumentBuilder().setTitle('Halo Salon API').setDescription('Consultations, appointments, and salon workspace APIs.').setVersion('1.0').addTag('consultations').addTag('appointments').build();
-  SwaggerModule.setup('docs', app, SwaggerModule.createDocument(app, swaggerConfig));
+  SwaggerModule.setup('docs', app as any, SwaggerModule.createDocument(app as any, swaggerConfig));
   await app.listen(process.env.PORT || 3000);
 }
 bootstrap();

@@ -60,6 +60,7 @@ import { MediaSalon1990000000000 } from './database/migrations/1990000000000-Med
 import { RemainingSalonOwnership2000000000000 } from './database/migrations/2000000000000-RemainingSalonOwnership';
 import { PushSubscriptions2020000000000 } from './database/migrations/2020000000000-PushSubscriptions';
 import { AdminApproval2030000000000 } from './database/migrations/2030000000000-AdminApproval';
+import { SalonTenantCode2040000000000 } from './database/migrations/2040000000000-SalonTenantCode';
 import { AppointmentReminderPreferences2010000000000 } from './database/migrations/2010000000000-AppointmentReminderPreferences';
 
 @Module({

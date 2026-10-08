@@ -18,6 +18,9 @@ export class AuthService implements OnModuleInit {
   }
 
   private async ensureActivityColumns() {
+    await this.users.query(`ALTER TABLE "salons" ADD COLUMN IF NOT EXISTS "tenantCode" varchar`);
+    await this.users.query(`UPDATE "salons" SET "tenantCode" = 'salon-' || replace(left("id"::text, 8), '-', '') WHERE "tenantCode" IS NULL`);
+    await this.users.query(`CREATE UNIQUE INDEX IF NOT EXISTS "IDX_salons_tenantCode" ON "salons" ("tenantCode")`);
     await this.users.query(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "active" boolean NOT NULL DEFAULT true`);
     await this.users.query(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "lastSeenAt" TIMESTAMP WITH TIME ZONE`);
     await this.users.query(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "lastLoginAt" TIMESTAMP WITH TIME ZONE`);
@@ -32,7 +35,7 @@ export class AuthService implements OnModuleInit {
     const approval = role === UserRole.ADMIN ? AdminApprovalStatus.PENDING : AdminApprovalStatus.NOT_REQUIRED;
     const user = await this.users.save(this.users.create({ name: dto.name.trim(), email, passwordHash: await bcrypt.hash(dto.password, 12), role, adminApprovalStatus: approval, salonId: null, refreshTokenHash: null, emailVerified: false }));
     if (role === UserRole.ADMIN) {
-      const salon = await this.salons.save(this.salons.create({ name: `${dto.name.trim()}'s Salon`, location: 'Add your salon location', ownerId: user.id, services: [], stylists: [], products: [], serviceDetails: [], stylistSchedules: {}, stylistProfiles: {}, branches: [], openingHours: { open: '09:00', close: '19:00' }, closedDays: [] }));
+      const salon = await this.salons.save(this.salons.create({ tenantCode: this.tenantCode(dto.name), name: `${dto.name.trim()}'s Salon`, location: 'Add your salon location', ownerId: user.id, services: [], stylists: [], products: [], serviceDetails: [], stylistSchedules: {}, stylistProfiles: {}, branches: [], openingHours: { open: '09:00', close: '19:00' }, closedDays: [] }));
       user.salonId = salon.id;
       await this.users.save(user);
     }
@@ -44,6 +47,7 @@ export class AuthService implements OnModuleInit {
   async login(dto: LoginDto) {
     const user = await this.users.createQueryBuilder('user').addSelect('user.passwordHash').where('user.email = :email', { email: dto.email.toLowerCase().trim() }).getOne();
     if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) throw new UnauthorizedException('Invalid email or password');
+    if (user.role === UserRole.ADMIN) await this.assertTenant(user.salonId, dto.tenantCode);
     if (!user.active) throw new UnauthorizedException('This account has been deactivated');
     if (user.role === UserRole.ADMIN && user.adminApprovalStatus !== AdminApprovalStatus.APPROVED) throw new UnauthorizedException(user.adminApprovalStatus === AdminApprovalStatus.REJECTED ? 'Your admin registration was rejected.' : 'Your admin registration is awaiting approval.');
     if (process.env.NODE_ENV === 'production' && !user.emailVerified) throw new UnauthorizedException('Please verify your email before signing in');
@@ -72,19 +76,27 @@ export class AuthService implements OnModuleInit {
       if (dto.role === UserRole.ADMIN && role !== UserRole.ADMIN) throw new UnauthorizedException('This Google email is not approved for admin access.');
       user = await this.users.save(this.users.create({ name: payload.name?.trim() || email.split('@')[0], email, passwordHash: await bcrypt.hash(randomBytes(32).toString('hex'), 12), role, salonId: null, refreshTokenHash: null, emailVerified: true }));
       if (role === UserRole.ADMIN) {
-        const salon = await this.salons.save(this.salons.create({ name: `${user.name}'s Salon`, location: 'Add your salon location', ownerId: user.id, services: [], stylists: [], products: [], serviceDetails: [], stylistSchedules: {}, stylistProfiles: {}, branches: [], openingHours: { open: '09:00', close: '19:00' }, closedDays: [] }));
+        const salon = await this.salons.save(this.salons.create({ tenantCode: this.tenantCode(user.name), name: `${user.name}'s Salon`, location: 'Add your salon location', ownerId: user.id, services: [], stylists: [], products: [], serviceDetails: [], stylistSchedules: {}, stylistProfiles: {}, branches: [], openingHours: { open: '09:00', close: '19:00' }, closedDays: [] }));
         user.salonId = salon.id;
         user = await this.users.save(user);
       }
     }
     if (user && dto.role === UserRole.ADMIN && adminEmails.includes(email) && user.role === UserRole.USER) {
-      const salon = await this.salons.save(this.salons.create({ name: `${user.name}'s Salon`, location: 'Add your salon location', ownerId: user.id, services: [], stylists: [], products: [], serviceDetails: [], stylistSchedules: {}, stylistProfiles: {}, branches: [], openingHours: { open: '09:00', close: '19:00' }, closedDays: [] }));
+      const salon = await this.salons.save(this.salons.create({ tenantCode: this.tenantCode(user.name), name: `${user.name}'s Salon`, location: 'Add your salon location', ownerId: user.id, services: [], stylists: [], products: [], serviceDetails: [], stylistSchedules: {}, stylistProfiles: {}, branches: [], openingHours: { open: '09:00', close: '19:00' }, closedDays: [] }));
       user.role = UserRole.ADMIN;
       user.salonId = salon.id;
       user = await this.users.save(user);
     }
     if (!user.active) throw new UnauthorizedException('This account has been deactivated');
+    if (user.role === UserRole.ADMIN) await this.assertTenant(user.salonId, dto.tenantCode);
     return this.issueToken(user);
+  }
+
+  private tenantCode(name: string) { return `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24) || 'salon'}-${randomBytes(3).toString('hex')}`; }
+  private async assertTenant(salonId: string | null, tenantCode?: string) {
+    if (!tenantCode?.trim()) throw new UnauthorizedException('Enter your salon tenant code');
+    const salon = await this.salons.findOne({ where: { tenantCode: tenantCode.trim().toLowerCase() } });
+    if (!salon || salon.id !== salonId) throw new UnauthorizedException('Invalid salon tenant code');
   }
 
   private hashToken(token: string) { return createHash('sha256').update(token).digest('hex'); }

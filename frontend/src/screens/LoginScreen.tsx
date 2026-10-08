@@ -6,13 +6,14 @@ import { defaultTheme, type ThemeConfig } from '../theme';
 import type { Role } from '../types';
 import { request } from '../api';
 
-export function LoginScreen({ onLogin, onGoogleLogin, onRegister, error }: { onLogin: (email: string, password: string, role: Role, theme: ThemeConfig) => void | Promise<void>; onGoogleLogin: (credential: string, role: Role) => void | Promise<void>; onRegister: (name: string, email: string, password: string, role: Role, inviteCode: string) => void | Promise<void>; error?: string }) {
+export function LoginScreen({ onLogin, onGoogleLogin, onRegister, error }: { onLogin: (email: string, password: string, role: Role, theme: ThemeConfig, tenantCode?: string) => void | Promise<void>; onGoogleLogin: (credential: string, role: Role) => void | Promise<void>; onRegister: (name: string, email: string, password: string, role: Role, inviteCode: string) => void | Promise<void>; error?: string }) {
   const { showToast } = useToast();
   const [role, setRole] = useState<Role>('user');
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [inviteCode, setInviteCode] = useState('');
+  const [tenantCode, setTenantCode] = useState('');
   const [registering, setRegistering] = useState(false);
   const [theme, setTheme] = useState<ThemeConfig>(defaultTheme);
   const [settingsOpen, setSettingsOpen] = useState(false);

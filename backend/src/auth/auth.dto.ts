@@ -16,6 +16,8 @@ export class RegisterDto {
 }
 
 export class LoginDto {
+  @ApiPropertyOptional({ description: 'Salon tenant code, required for admin login.' })
+  @IsOptional() @IsString() tenantCode?: string;
   @ApiProperty({ example: 'ananya@example.com' })
   @ApiPropertyOptional({ enum: UserRole, default: UserRole.USER })
   @IsEmail() email!: string;
@@ -30,6 +32,8 @@ export class GoogleLoginDto {
   @IsNotEmpty() @IsString() credential!: string;
   @ApiPropertyOptional({ enum: UserRole, default: UserRole.USER })
   @IsOptional() @IsIn([UserRole.USER, UserRole.ADMIN]) role?: UserRole;
+  @ApiPropertyOptional({ description: 'Salon tenant code, required for admin login.' })
+  @IsOptional() @IsString() tenantCode?: string;
 }
 
 export class RefreshTokenDto {
