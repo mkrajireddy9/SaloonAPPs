@@ -1,4 +1,10 @@
-import * as SecureStore from 'expo-secure-store';
+import * as NativeSecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
+
+const SecureStore = {
+  getItemAsync: (key: string) => Platform.OS === 'web' ? Promise.resolve(globalThis.localStorage?.getItem(key) ?? null) : NativeSecureStore.getItemAsync(key),
+  deleteItemAsync: (key: string) => Platform.OS === 'web' ? Promise.resolve(globalThis.localStorage?.removeItem(key)) : NativeSecureStore.deleteItemAsync(key),
+};
 
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000').replace(/\/$/, '');
 

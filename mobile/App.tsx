@@ -1,7 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
-import * as SecureStore from 'expo-secure-store';
+import * as NativeSecureStore from 'expo-secure-store';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -9,6 +9,12 @@ import { api } from './src/api';
 import { MoreScreen } from './src/screens/MoreScreen';
 
 WebBrowser.maybeCompleteAuthSession();
+
+const SecureStore = {
+  async getItemAsync(key: string) { return Platform.OS === 'web' ? (globalThis.localStorage?.getItem(key) ?? null) : NativeSecureStore.getItemAsync(key); },
+  async setItemAsync(key: string, value: string) { if (Platform.OS === 'web') { globalThis.localStorage?.setItem(key, value); return; } await NativeSecureStore.setItemAsync(key, value); },
+  async deleteItemAsync(key: string) { if (Platform.OS === 'web') { globalThis.localStorage?.removeItem(key); return; } await NativeSecureStore.deleteItemAsync(key); },
+};
 
 type Role = 'user' | 'admin'; type Tab = 'home' | 'appointments' | 'account' | 'more';
 type Salon = { id: string; name: string; location?: string; services?: string[]; stylists?: string[] };
