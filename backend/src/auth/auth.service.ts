@@ -10,6 +10,7 @@ import { Salon } from '../salon/salon.entity';
 
 @Injectable()
 export class AuthService implements OnModuleInit {
+  private static readonly LOCAL_TEST_USER_ID = '00000000-0000-4000-8000-000000000001';
   private readonly logger = new Logger(AuthService.name);
   constructor(@InjectRepository(User) private readonly users: Repository<User>, @InjectRepository(Salon) private readonly salons: Repository<Salon>, private readonly jwt: JwtService) {}
 
@@ -45,7 +46,11 @@ export class AuthService implements OnModuleInit {
   }
 
   async login(dto: LoginDto) {
-    const user = await this.users.createQueryBuilder('user').addSelect('user.passwordHash').where('user.email = :email', { email: dto.email.toLowerCase().trim() }).getOne();
+    const email = dto.email.toLowerCase().trim();
+    if (process.env.NODE_ENV !== 'production' && process.env.ALLOW_TEST_LOGIN === 'true' && (email === 'test' || email === 'test@test.com') && dto.password === 'test') {
+      return this.issueLocalTestToken(dto.role === UserRole.ADMIN ? UserRole.ADMIN : UserRole.USER);
+    }
+    const user = await this.users.createQueryBuilder('user').addSelect('user.passwordHash').where('user.email = :email', { email }).getOne();
     if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) throw new UnauthorizedException('Invalid email or password');
     if (user.role === UserRole.ADMIN) await this.assertTenant(user.salonId, dto.tenantCode);
     if (!user.active) throw new UnauthorizedException('This account has been deactivated');
@@ -143,9 +148,10 @@ export class AuthService implements OnModuleInit {
   }
 
   async refresh(dto: RefreshTokenDto) {
-    let payload: { sub?: string; type?: string };
+    let payload: { sub?: string; role?: UserRole; type?: string };
     try { payload = this.jwt.verify(dto.refreshToken); } catch { throw new UnauthorizedException('Invalid or expired refresh token'); }
     if (payload.type !== 'refresh' || !payload.sub) throw new UnauthorizedException('Invalid refresh token');
+    if (payload.sub === AuthService.LOCAL_TEST_USER_ID && process.env.NODE_ENV !== 'production' && process.env.ALLOW_TEST_LOGIN === 'true') return this.issueLocalTestToken(payload.role === UserRole.ADMIN ? UserRole.ADMIN : UserRole.USER);
     const user = await this.users.createQueryBuilder('user').addSelect('user.refreshTokenHash').where('user.id = :id', { id: payload.sub }).getOne();
     if (!user?.refreshTokenHash || !(await bcrypt.compare(dto.refreshToken, user.refreshTokenHash))) throw new UnauthorizedException('Refresh token has been revoked');
     return this.issueToken(user);
@@ -180,11 +186,17 @@ export class AuthService implements OnModuleInit {
     return user.notificationPreferences;
   }
 
-  issueToken(user: User) {
+  private async issueLocalTestToken(role: UserRole) {
+    const salon = role === UserRole.ADMIN ? await this.salons.findOne({ where: {} }) : null;
+    const user = { id: AuthService.LOCAL_TEST_USER_ID, name: role === UserRole.ADMIN ? 'Local Test Admin' : 'Local Test User', email: 'test@test.com', role, salonId: salon?.id || null } as User;
+    return this.issueToken(user, false);
+  }
+
+  issueToken(user: User, persist = true) {
     const payload = { sub: user.id, email: user.email, role: user.role, name: user.name, salonId: user.salonId, type: 'access' };
     const accessToken = this.jwt.sign(payload, { expiresIn: '15m' });
-    const refreshToken = this.jwt.sign({ sub: user.id, type: 'refresh' }, { expiresIn: '30d' });
-    void this.users.update(user.id, { refreshTokenHash: bcrypt.hashSync(refreshToken, 12), lastLoginAt: new Date(), lastSeenAt: new Date() });
+    const refreshToken = this.jwt.sign({ sub: user.id, role: user.role, type: 'refresh' }, { expiresIn: '30d' });
+    if (persist) void this.users.update(user.id, { refreshTokenHash: bcrypt.hashSync(refreshToken, 12), lastLoginAt: new Date(), lastSeenAt: new Date() });
     return { accessToken, refreshToken, user: { id: user.id, name: user.name, email: user.email, role: user.role } };
   }
 }
