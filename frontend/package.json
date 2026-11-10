@@ -4,7 +4,7 @@
   "scripts": {
     "dev": "next dev -p 5173",
     "build": "NEXT_DIST_DIR=.next-production next build",
-    "start": "NEXT_DIST_DIR=.next-production next start -p 5173",
+    "start": "NEXT_DIST_DIR=.next-production next start",
     "test": "npm run build"
   },
   "dependencies": {

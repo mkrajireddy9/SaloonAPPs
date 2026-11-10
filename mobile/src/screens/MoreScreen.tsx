@@ -3,15 +3,15 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { api } from '../api';
 
-type Props = { role: 'user' | 'admin'; email: string };
+type Props = { role: 'user' | 'admin'; email: string; initialSection?: string };
 type Price = { name: string; price: number; durationMinutes?: number; offerText?: string };
 type Product = { id: string; name: string; description?: string };
 type Profile = { name?: string; email?: string; phone?: string; location?: string; texture?: string; length?: string; preferredStylist?: string };
 type Passport = { guestName?: string; texture?: string; length?: string; preferredStylist?: string; notes?: string; preferences?: string[] };
 type Payment = { id?: string; description?: string; amount?: number; status?: string; createdAt?: string };
 
-export function MoreScreen({ role, email }: Props) {
-  const [section, setSection] = useState(role === 'admin' ? 'customers' : 'profile');
+export function MoreScreen({ role, email, initialSection }: Props) {
+  const [section, setSection] = useState(initialSection || (role === 'admin' ? 'customers' : 'profile'));
   const [data, setData] = useState<any>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
   const endpoints: Record<string, string> = role === 'admin' ? { customers: '/customers', consultations: '/consultations', salon: '/salon', prices: '/salon/price-list', products: '/salon', banners: '/banners/admin', approvals: '/auth/admin-requests' } : { booking: '/salon/directory', profile: '/customers/me', passport: '/passport', prices: '/salon/price-list', products: '/salon', payments: '/payments', reviews: '/reviews', notifications: '/auth/preferences' };
   useEffect(() => { setLoading(true); setError(''); api<any>(endpoints[section]).then(result => setData(result)).catch(e => setError(e instanceof Error ? e.message : 'Unable to load this screen.')).finally(() => setLoading(false)); }, [section]);

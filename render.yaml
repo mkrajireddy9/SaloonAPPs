@@ -16,10 +16,21 @@ services:
       - key: ADMIN_INVITE_CODE
         sync: false
       - key: FRONTEND_URL
-        value: https://saloon-ap-akdhduga4-saloon7.vercel.app
+        sync: false
       - key: CORS_ORIGINS
-        value: https://saloon-ap-akdhduga4-saloon7.vercel.app
+        sync: false
       - key: ALLOW_EMPTY_LOGIN
         value: "false"
       - key: EMAIL_REMINDERS_ENABLED
         value: "false"
+  - type: web
+    name: halo-web
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build --workspace frontend
+    startCommand: npm run start --workspace frontend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
