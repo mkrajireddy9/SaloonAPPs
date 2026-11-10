@@ -27,7 +27,7 @@ services:
     name: halo-web
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build --workspace frontend
+    buildCommand: npm install --include=dev && npm run build --workspace frontend
     startCommand: npm run start --workspace frontend
     envVars:
       - key: NODE_ENV
