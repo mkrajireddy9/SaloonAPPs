@@ -39,7 +39,10 @@ const platformReady = Boolean(
 const observability = platformReady
   ? new Observability({
       configs: {
-        default: { serviceName: "my-app", exporters: [new MastraPlatformExporter()] },
+        default: {
+          serviceName: "my-app",
+          exporters: [new MastraPlatformExporter()],
+        },
       },
     })
   : undefined;

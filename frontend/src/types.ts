@@ -1,24 +1,276 @@
-export type Consultation = { id: string; guestName: string; phone: string; stylist: string; goal: string; length: string; texture: string; capturedViews: string; report: Report | null; status: string; beforeImage?: string | null; afterImage?: string | null; selectedStyle?: string; selectedServices?: string[]; };
-export type Report = { faceShape: string; texture: string; length: string; density: string; movement: string; visibleCondition: string; signals: { label: string; level: string; note: string }[]; recommendations: { name: string; score: number; tag: string; description: string; chips: string[] }[]; services: { name: string; reason: string }[] };
+export type Consultation = {
+  id: string;
+  guestName: string;
+  phone: string;
+  stylist: string;
+  goal: string;
+  length: string;
+  texture: string;
+  capturedViews: string;
+  report: Report | null;
+  status: string;
+  beforeImage?: string | null;
+  afterImage?: string | null;
+  selectedStyle?: string;
+  selectedServices?: string[];
+};
+export type Report = {
+  faceShape: string;
+  texture: string;
+  length: string;
+  density: string;
+  movement: string;
+  visibleCondition: string;
+  signals: { label: string; level: string; note: string }[];
+  recommendations: {
+    name: string;
+    score: number;
+    tag: string;
+    description: string;
+    chips: string[];
+  }[];
+  services: { name: string; reason: string }[];
+};
 declare global {
   interface Window {
-    google?: { accounts: { id: { initialize: (options: { client_id: string; callback: (response: { credential?: string }) => void }) => void; renderButton: (element: HTMLElement, options: Record<string, string | number>) => void } } };
-    Razorpay?: new (options: { key: string; amount: number; currency: string; name: string; description: string; order_id: string; handler: (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => void; modal?: { ondismiss?: () => void } }) => { open: () => void };
+    google?: {
+      accounts: {
+        id: {
+          initialize: (options: {
+            client_id: string;
+            callback: (response: { credential?: string }) => void;
+          }) => void;
+          renderButton: (
+            element: HTMLElement,
+            options: Record<string, string | number>,
+          ) => void;
+        };
+      };
+    };
+    Razorpay?: new (options: {
+      key: string;
+      amount: number;
+      currency: string;
+      name: string;
+      description: string;
+      order_id: string;
+      handler: (response: {
+        razorpay_order_id: string;
+        razorpay_payment_id: string;
+        razorpay_signature: string;
+      }) => void;
+      modal?: { ondismiss?: () => void };
+    }) => { open: () => void };
   }
 }
 
-export type Role = 'admin' | 'user';
-export type Appointment = { id: string; salonId?: string; guestName?: string; guestEmail?: string; guestPhone?: string; service: string; branchId?: string; date: string; time: string; durationMinutes?: number; price?: number; stylist: string; status: 'Confirmed' | 'Requested' | 'Cancelled'; notes: string };
-export type PriceListItem = { name: string; durationMinutes: number; price: number; discountPercent?: number; discountPrice?: number; offerText?: string; active?: boolean; imageUrl?: string };
-export type ProductItem = { id: string; name: string; description?: string; imageUrl?: string; active?: boolean };
-export type SalonBranch = { id: string; name: string; location: string; contact?: string; active?: boolean; latitude?: number; longitude?: number; distanceKm?: number | null; openingHours: { open: string; close: string }; closedDays: string[]; services?: string[]; stylists?: string[] };
-export type PublicSalon = { id: string; name: string; location: string; branches: SalonBranch[]; services: string[]; stylists: string[]; distanceKm?: number | null };
-export type SalonConfig = { id?: string; name: string; location: string; services: string[]; stylists: string[]; openingHours: { open: string; close: string }; closedDays: string[]; branches?: SalonBranch[]; serviceDetails?: PriceListItem[]; products?: ProductItem[]; stylistSchedules?: Record<string, { workingDays: string[]; leaveDates: string[] }>; stylistProfiles?: Record<string, { bio: string; imageUrl: string }>; theme?: { brandName: string; logoMark: string; logoUrl: string; primary: string; sidebar: string; surface: string; ink: string } };
-export type Passport = { id: string; ownerEmail: string; guestName: string; location: string; texture: string; length: string; preferredStylist: string; preferences: string[]; notes: string; styles: { name: string; meta: string; tone: string; image: string; favorite?: boolean }[]; history: { date: string; service: string; detail: string; appointmentId?: string }[]; beforeImage: string; afterImage: string };
-export type DashboardGroup = { id?: string; name: string; bookings: number; confirmed: number; cancelled: number; requested: number; revenue: number; durationMinutes: number; date?: string; conversionRate?: number; averageDurationMinutes?: number };
-export type DashboardFilters = { dateFrom: string; dateTo: string; branchId: string; service: string; stylist: string; status: string };
-export type DashboardSummary = { consultations: number; serviceConversion: number; averageVisitValue: number; customers: { name: string; profile: string; last: string; visits: number }[]; services: { name: string; bookings: number; revenue: string }[]; recentAppointments?: Appointment[]; recentConsultations: { id: string; guestName: string; phone: string; stylist: string; goal: string; length: string; texture: string; status: string; createdAt: string }[]; analytics: { totalBookings: number; confirmedBookings: number; requestedBookings: number; cancelledBookings: number; revenue: number; cancellationRate: number; byDate: DashboardGroup[]; byBranch: DashboardGroup[]; byService: DashboardGroup[]; byStylist: DashboardGroup[]; statusBreakdown: { status: string; count: number }[] } };
-export type CustomerProfile = { id: string; name: string; email: string; phone: string; location: string; texture: string; length: string; preferredStylist: string; createdAt: string; active?: boolean; lastSeenAt?: string | null; lastLoginAt?: string | null; lastLogoutAt?: string | null };
-export type CustomerHistory = { id: string; guestName: string; guestEmail?: string; customerId?: string | null; service: string; branchId?: string; date: string; time: string; durationMinutes?: number; price?: number; stylist: string; status: 'Confirmed' | 'Requested' | 'Cancelled'; notes: string };
-export type PaginatedCustomers = { items: (CustomerProfile & { appointmentCount: number; filteredAppointmentCount: number; lastAppointment: CustomerHistory | null })[]; total: number; page: number; pageSize: number; pageCount: number };
-export type PaginatedHistory = { items: CustomerHistory[]; total: number; page: number; pageSize: number; pageCount: number };
+export type Role = "admin" | "user";
+export type Appointment = {
+  id: string;
+  salonId?: string;
+  guestName?: string;
+  guestEmail?: string;
+  guestPhone?: string;
+  service: string;
+  branchId?: string;
+  date: string;
+  time: string;
+  durationMinutes?: number;
+  price?: number;
+  stylist: string;
+  status: "Confirmed" | "Requested" | "Cancelled";
+  notes: string;
+};
+export type PriceListItem = {
+  name: string;
+  durationMinutes: number;
+  price: number;
+  discountPercent?: number;
+  discountPrice?: number;
+  offerText?: string;
+  active?: boolean;
+  imageUrl?: string;
+};
+export type ProductItem = {
+  id: string;
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  active?: boolean;
+};
+export type SalonBranch = {
+  id: string;
+  name: string;
+  location: string;
+  contact?: string;
+  active?: boolean;
+  latitude?: number;
+  longitude?: number;
+  distanceKm?: number | null;
+  openingHours: { open: string; close: string };
+  closedDays: string[];
+  services?: string[];
+  stylists?: string[];
+};
+export type PublicSalon = {
+  id: string;
+  name: string;
+  location: string;
+  branches: SalonBranch[];
+  services: string[];
+  stylists: string[];
+  distanceKm?: number | null;
+};
+export type SalonConfig = {
+  id?: string;
+  name: string;
+  location: string;
+  services: string[];
+  stylists: string[];
+  openingHours: { open: string; close: string };
+  closedDays: string[];
+  branches?: SalonBranch[];
+  serviceDetails?: PriceListItem[];
+  products?: ProductItem[];
+  stylistSchedules?: Record<
+    string,
+    { workingDays: string[]; leaveDates: string[] }
+  >;
+  stylistProfiles?: Record<string, { bio: string; imageUrl: string }>;
+  theme?: {
+    brandName: string;
+    logoMark: string;
+    logoUrl: string;
+    primary: string;
+    sidebar: string;
+    surface: string;
+    ink: string;
+  };
+};
+export type Passport = {
+  id: string;
+  ownerEmail: string;
+  guestName: string;
+  location: string;
+  texture: string;
+  length: string;
+  preferredStylist: string;
+  preferences: string[];
+  notes: string;
+  styles: {
+    name: string;
+    meta: string;
+    tone: string;
+    image: string;
+    favorite?: boolean;
+  }[];
+  history: {
+    date: string;
+    service: string;
+    detail: string;
+    appointmentId?: string;
+  }[];
+  beforeImage: string;
+  afterImage: string;
+};
+export type DashboardGroup = {
+  id?: string;
+  name: string;
+  bookings: number;
+  confirmed: number;
+  cancelled: number;
+  requested: number;
+  revenue: number;
+  durationMinutes: number;
+  date?: string;
+  conversionRate?: number;
+  averageDurationMinutes?: number;
+};
+export type DashboardFilters = {
+  dateFrom: string;
+  dateTo: string;
+  branchId: string;
+  service: string;
+  stylist: string;
+  status: string;
+};
+export type DashboardSummary = {
+  consultations: number;
+  serviceConversion: number;
+  averageVisitValue: number;
+  customers: { name: string; profile: string; last: string; visits: number }[];
+  services: { name: string; bookings: number; revenue: string }[];
+  recentAppointments?: Appointment[];
+  recentConsultations: {
+    id: string;
+    guestName: string;
+    phone: string;
+    stylist: string;
+    goal: string;
+    length: string;
+    texture: string;
+    status: string;
+    createdAt: string;
+  }[];
+  analytics: {
+    totalBookings: number;
+    confirmedBookings: number;
+    requestedBookings: number;
+    cancelledBookings: number;
+    revenue: number;
+    cancellationRate: number;
+    byDate: DashboardGroup[];
+    byBranch: DashboardGroup[];
+    byService: DashboardGroup[];
+    byStylist: DashboardGroup[];
+    statusBreakdown: { status: string; count: number }[];
+  };
+};
+export type CustomerProfile = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  location: string;
+  texture: string;
+  length: string;
+  preferredStylist: string;
+  createdAt: string;
+  active?: boolean;
+  lastSeenAt?: string | null;
+  lastLoginAt?: string | null;
+  lastLogoutAt?: string | null;
+};
+export type CustomerHistory = {
+  id: string;
+  guestName: string;
+  guestEmail?: string;
+  customerId?: string | null;
+  service: string;
+  branchId?: string;
+  date: string;
+  time: string;
+  durationMinutes?: number;
+  price?: number;
+  stylist: string;
+  status: "Confirmed" | "Requested" | "Cancelled";
+  notes: string;
+};
+export type PaginatedCustomers = {
+  items: (CustomerProfile & {
+    appointmentCount: number;
+    filteredAppointmentCount: number;
+    lastAppointment: CustomerHistory | null;
+  })[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+};
+export type PaginatedHistory = {
+  items: CustomerHistory[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+};

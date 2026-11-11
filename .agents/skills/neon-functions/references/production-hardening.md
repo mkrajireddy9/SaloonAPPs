@@ -171,7 +171,7 @@ Wrangler:
 ```jsonc
 {
   "workers_dev": false,
-  "preview_urls": false
+  "preview_urls": false,
 }
 ```
 

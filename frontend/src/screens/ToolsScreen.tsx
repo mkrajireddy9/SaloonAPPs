@@ -1,39 +1,615 @@
-import { useEffect, useState } from 'react';
-import { Bell, Check, CreditCard, Download, FileText, LockKeyhole, MessageSquare, Printer, Save, Star, X } from 'lucide-react';
-import { ShellTitle } from '../components/ShellTitle';
-import { useToast } from '../components/Toast';
-import { enablePushNotifications, request } from '../api';
-import type { Appointment, Role } from '../types';
+import { useEffect, useState } from "react";
+import {
+  Bell,
+  Check,
+  CreditCard,
+  Download,
+  FileText,
+  LockKeyhole,
+  MessageSquare,
+  Printer,
+  Save,
+  Star,
+  X,
+} from "lucide-react";
+import { ShellTitle } from "../components/ShellTitle";
+import { useToast } from "../components/Toast";
+import { enablePushNotifications, request } from "../api";
+import type { Appointment, Role } from "../types";
 
-type Review = { id: string; guestName: string; rating: number; comment: string; status: 'Pending' | 'Published' | 'Rejected'; createdAt: string };
-type Payment = { id: string; appointmentId: string; guestEmail: string; provider: string; paymentMethod?: 'PAY_AT_SALON' | 'ONLINE'; subtotal: number; discount: number; tax: number; total: number; currency: string; status: 'Pending' | 'Paid' | 'Failed' | 'Refunded'; invoiceNumber: string; createdAt: string; };
-type AdminRequest = { id: string; name: string; email: string; adminApprovalStatus: 'pending' | 'rejected'; createdAt: string };
+type Review = {
+  id: string;
+  guestName: string;
+  rating: number;
+  comment: string;
+  status: "Pending" | "Published" | "Rejected";
+  createdAt: string;
+};
+type Payment = {
+  id: string;
+  appointmentId: string;
+  guestEmail: string;
+  provider: string;
+  paymentMethod?: "PAY_AT_SALON" | "ONLINE";
+  subtotal: number;
+  discount: number;
+  tax: number;
+  total: number;
+  currency: string;
+  status: "Pending" | "Paid" | "Failed" | "Refunded";
+  invoiceNumber: string;
+  createdAt: string;
+};
+type AdminRequest = {
+  id: string;
+  name: string;
+  email: string;
+  adminApprovalStatus: "pending" | "rejected";
+  createdAt: string;
+};
 
-export function ToolsScreen({ role, appointments }: { role: Role; appointments: Appointment[] }) {
+export function ToolsScreen({
+  role,
+  appointments,
+}: {
+  role: Role;
+  appointments: Appointment[];
+}) {
   const { showToast } = useToast();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [rating, setRating] = useState(5);
-  const [comment, setComment] = useState('');
-  const [message, setMessage] = useState('');
-  const [preferences, setPreferences] = useState({ email: true, appointmentReminders: true });
-  const [pushStatus, setPushStatus] = useState<'idle' | 'enabled' | 'dismissed'>('idle');
+  const [comment, setComment] = useState("");
+  const [message, setMessage] = useState("");
+  const [preferences, setPreferences] = useState({
+    email: true,
+    appointmentReminders: true,
+  });
+  const [pushStatus, setPushStatus] = useState<
+    "idle" | "enabled" | "dismissed"
+  >("idle");
   const [adminRequests, setAdminRequests] = useState<AdminRequest[]>([]);
-  const refreshPayments = () => void request<Payment[]>('/payments').then(setPayments).catch(() => setPayments([]));
-  useEffect(() => { void request<Review[]>('/reviews').then(setReviews).catch(() => setReviews([])); void request<typeof preferences>('/auth/preferences').then(setPreferences).catch(() => undefined); if (role === 'admin') void request<AdminRequest[]>('/auth/admin-requests').then(setAdminRequests).catch(() => setAdminRequests([])); refreshPayments(); if (localStorage.getItem('halo-push-dismissed') === 'true') setPushStatus('dismissed'); void (async () => { if (!('serviceWorker' in navigator)) return; const registration = await navigator.serviceWorker.getRegistration('/sw.js'); const subscription = await registration?.pushManager.getSubscription(); if (subscription || ('Notification' in window && Notification.permission === 'granted')) setPushStatus('enabled'); })(); }, [role]);
-  const updateAdminRequest = async (id: string, approved: boolean) => { try { await request(`/auth/admin-requests/${id}`, { method: 'PATCH', body: JSON.stringify({ approved }) }); setAdminRequests(items => items.filter(item => item.id !== id)); showToast(approved ? 'Admin access approved.' : 'Admin request rejected.'); } catch { showToast('Could not update admin access.', 'error'); } };
-  const submitReview = async () => { if (!comment.trim()) return; try { const saved = await request<Review>('/reviews', { method: 'POST', body: JSON.stringify({ rating: Number(rating), comment: comment.trim(), appointmentId: appointments[0]?.id }) }); setReviews(items => [saved, ...items.filter(item => item.id !== saved.id)]); setComment(''); setMessage(''); showToast('Review and rating saved for approval.'); } catch { setMessage('Sign in to submit a review.'); showToast('Could not submit the review.', 'error'); } };
-  const updateReview = async (id: string, status: 'Published' | 'Rejected') => { try { const saved = await request<Review>(`/reviews/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }); setReviews(items => items.map(item => item.id === id ? saved : item)); showToast(`Review ${status.toLowerCase()}.`); } catch { setMessage('Could not update this review.'); showToast('Could not update this review.', 'error'); } };
-  const savePreferences = async () => { try { setPreferences(await request<typeof preferences>('/auth/preferences', { method: 'PUT', body: JSON.stringify(preferences) })); setMessage(''); showToast('Notification preferences saved.'); } catch { setMessage('Could not save notification preferences.'); showToast('Could not save notification preferences.', 'error'); } };
-  const enableBrowserNotifications = async () => { try { await enablePushNotifications(); setPushStatus('enabled'); showToast('Browser notifications enabled.'); } catch (error) { showToast(error instanceof Error ? error.message : 'Could not enable browser notifications.', 'error'); } };
-  const createPayment = async (appointment: Appointment) => { try { const result = await request<Payment & { razorpay?: { keyId: string; orderId: string; amount: number; currency: string } }>('/payments/intent', { method: 'POST', body: JSON.stringify({ appointmentId: appointment.id, idempotencyKey: `${appointment.id}-checkout-${Date.now()}` }) }); if (result.razorpay) { const checkoutResult = result as Payment & { razorpay: { keyId: string; orderId: string; amount: number; currency: string } }; if (!window.Razorpay) { const script = document.createElement('script'); script.src = 'https://checkout.razorpay.com/v1/checkout.js'; script.onload = () => openRazorpay(checkoutResult); document.body.appendChild(script); } else openRazorpay(checkoutResult); } else { refreshPayments(); showToast('Payment recorded and invoice created.'); } } catch (error) { showToast(error instanceof Error ? error.message : 'Could not create the payment.', 'error'); } };
-  const openRazorpay = (result: Payment & { razorpay: { keyId: string; orderId: string; amount: number; currency: string } }) => { if (!window.Razorpay) { showToast('Razorpay checkout could not load.', 'error'); return; } const checkout = new window.Razorpay({ key: result.razorpay.keyId, amount: result.razorpay.amount, currency: result.razorpay.currency, name: 'Halo Salon', description: 'Salon appointment', order_id: result.razorpay.orderId, handler: response => { void request<Payment>('/payments/razorpay/verify', { method: 'POST', body: JSON.stringify(response) }).then(() => { refreshPayments(); showToast('Payment successful.'); }).catch(error => showToast(error instanceof Error ? error.message : 'Payment verification failed.', 'error')); }, modal: { ondismiss: () => showToast('Payment cancelled.') } }); checkout.open(); };
-  const invoiceAppointment = (payment: Payment) => appointments.find(appointment => appointment.id === payment.appointmentId);
-  const downloadInvoice = (payment: Payment) => { const appointment = invoiceAppointment(payment); const invoice = [`Invoice ${payment.invoiceNumber}`, `Service: ${appointment?.service || 'Salon appointment'}`, `Date: ${appointment?.date || 'Not available'}`, `Time: ${appointment?.time || 'Not available'}`, `Subtotal: ₹${payment.subtotal.toLocaleString('en-IN')}`, `Discount: ₹${payment.discount.toLocaleString('en-IN')}`, `Tax: ₹${payment.tax.toLocaleString('en-IN')}`, `Total: ₹${payment.total.toLocaleString('en-IN')}`, `Status: ${payment.status}`].join('\n'); const blob = new Blob([invoice], { type: 'text/plain;charset=utf-8' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `${payment.invoiceNumber}.txt`; link.click(); URL.revokeObjectURL(url); };
+  const refreshPayments = () =>
+    void request<Payment[]>("/payments")
+      .then(setPayments)
+      .catch(() => setPayments([]));
+  useEffect(() => {
+    void request<Review[]>("/reviews")
+      .then(setReviews)
+      .catch(() => setReviews([]));
+    void request<typeof preferences>("/auth/preferences")
+      .then(setPreferences)
+      .catch(() => undefined);
+    if (role === "admin")
+      void request<AdminRequest[]>("/auth/admin-requests")
+        .then(setAdminRequests)
+        .catch(() => setAdminRequests([]));
+    refreshPayments();
+    if (localStorage.getItem("halo-push-dismissed") === "true")
+      setPushStatus("dismissed");
+    void (async () => {
+      if (!("serviceWorker" in navigator)) return;
+      const registration =
+        await navigator.serviceWorker.getRegistration("/sw.js");
+      const subscription = await registration?.pushManager.getSubscription();
+      if (
+        subscription ||
+        ("Notification" in window && Notification.permission === "granted")
+      )
+        setPushStatus("enabled");
+    })();
+  }, [role]);
+  const updateAdminRequest = async (id: string, approved: boolean) => {
+    try {
+      await request(`/auth/admin-requests/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ approved }),
+      });
+      setAdminRequests((items) => items.filter((item) => item.id !== id));
+      showToast(
+        approved ? "Admin access approved." : "Admin request rejected.",
+      );
+    } catch {
+      showToast("Could not update admin access.", "error");
+    }
+  };
+  const submitReview = async () => {
+    if (!comment.trim()) return;
+    try {
+      const saved = await request<Review>("/reviews", {
+        method: "POST",
+        body: JSON.stringify({
+          rating: Number(rating),
+          comment: comment.trim(),
+          appointmentId: appointments[0]?.id,
+        }),
+      });
+      setReviews((items) => [
+        saved,
+        ...items.filter((item) => item.id !== saved.id),
+      ]);
+      setComment("");
+      setMessage("");
+      showToast("Review and rating saved for approval.");
+    } catch {
+      setMessage("Sign in to submit a review.");
+      showToast("Could not submit the review.", "error");
+    }
+  };
+  const updateReview = async (id: string, status: "Published" | "Rejected") => {
+    try {
+      const saved = await request<Review>(`/reviews/${id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+      setReviews((items) =>
+        items.map((item) => (item.id === id ? saved : item)),
+      );
+      showToast(`Review ${status.toLowerCase()}.`);
+    } catch {
+      setMessage("Could not update this review.");
+      showToast("Could not update this review.", "error");
+    }
+  };
+  const savePreferences = async () => {
+    try {
+      setPreferences(
+        await request<typeof preferences>("/auth/preferences", {
+          method: "PUT",
+          body: JSON.stringify(preferences),
+        }),
+      );
+      setMessage("");
+      showToast("Notification preferences saved.");
+    } catch {
+      setMessage("Could not save notification preferences.");
+      showToast("Could not save notification preferences.", "error");
+    }
+  };
+  const enableBrowserNotifications = async () => {
+    try {
+      await enablePushNotifications();
+      setPushStatus("enabled");
+      showToast("Browser notifications enabled.");
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Could not enable browser notifications.",
+        "error",
+      );
+    }
+  };
+  const createPayment = async (appointment: Appointment) => {
+    try {
+      const result = await request<
+        Payment & {
+          razorpay?: {
+            keyId: string;
+            orderId: string;
+            amount: number;
+            currency: string;
+          };
+        }
+      >("/payments/intent", {
+        method: "POST",
+        body: JSON.stringify({
+          appointmentId: appointment.id,
+          idempotencyKey: `${appointment.id}-checkout-${Date.now()}`,
+        }),
+      });
+      if (result.razorpay) {
+        const checkoutResult = result as Payment & {
+          razorpay: {
+            keyId: string;
+            orderId: string;
+            amount: number;
+            currency: string;
+          };
+        };
+        if (!window.Razorpay) {
+          const script = document.createElement("script");
+          script.src = "https://checkout.razorpay.com/v1/checkout.js";
+          script.onload = () => openRazorpay(checkoutResult);
+          document.body.appendChild(script);
+        } else openRazorpay(checkoutResult);
+      } else {
+        refreshPayments();
+        showToast("Payment recorded and invoice created.");
+      }
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Could not create the payment.",
+        "error",
+      );
+    }
+  };
+  const openRazorpay = (
+    result: Payment & {
+      razorpay: {
+        keyId: string;
+        orderId: string;
+        amount: number;
+        currency: string;
+      };
+    },
+  ) => {
+    if (!window.Razorpay) {
+      showToast("Razorpay checkout could not load.", "error");
+      return;
+    }
+    const checkout = new window.Razorpay({
+      key: result.razorpay.keyId,
+      amount: result.razorpay.amount,
+      currency: result.razorpay.currency,
+      name: "Halo Salon",
+      description: "Salon appointment",
+      order_id: result.razorpay.orderId,
+      handler: (response) => {
+        void request<Payment>("/payments/razorpay/verify", {
+          method: "POST",
+          body: JSON.stringify(response),
+        })
+          .then(() => {
+            refreshPayments();
+            showToast("Payment successful.");
+          })
+          .catch((error) =>
+            showToast(
+              error instanceof Error
+                ? error.message
+                : "Payment verification failed.",
+              "error",
+            ),
+          );
+      },
+      modal: { ondismiss: () => showToast("Payment cancelled.") },
+    });
+    checkout.open();
+  };
+  const invoiceAppointment = (payment: Payment) =>
+    appointments.find(
+      (appointment) => appointment.id === payment.appointmentId,
+    );
+  const downloadInvoice = (payment: Payment) => {
+    const appointment = invoiceAppointment(payment);
+    const invoice = [
+      `Invoice ${payment.invoiceNumber}`,
+      `Service: ${appointment?.service || "Salon appointment"}`,
+      `Date: ${appointment?.date || "Not available"}`,
+      `Time: ${appointment?.time || "Not available"}`,
+      `Subtotal: ₹${payment.subtotal.toLocaleString("en-IN")}`,
+      `Discount: ₹${payment.discount.toLocaleString("en-IN")}`,
+      `Tax: ₹${payment.tax.toLocaleString("en-IN")}`,
+      `Total: ₹${payment.total.toLocaleString("en-IN")}`,
+      `Status: ${payment.status}`,
+    ].join("\n");
+    const blob = new Blob([invoice], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${payment.invoiceNumber}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
-  return <section className="page tools"><ShellTitle eyebrow={role === 'admin' ? 'STUDIO MANAGEMENT' : 'YOUR ACCOUNT'} title={role === 'admin' ? 'Keep the conversation thoughtful.' : 'Keep your salon relationship close.'} copy={role === 'admin' ? 'Review guest feedback and keep the studio experience consistent.' : 'Manage feedback, notifications, and appointment payment records.'} action={<span className="guest-pill">{role === 'admin' ? 'ADMIN' : 'GUEST'}</span>} /><div className="data-grid">
-    <section className="panel form-panel"><div className="section-label"><span className="round-icon peach"><MessageSquare size={16} /></span><div><b>{role === 'admin' ? 'Review moderation' : 'Share your experience'}</b><small>{role === 'admin' ? 'Publish or reject submitted feedback.' : 'Your review is sent to the salon for approval.'}</small></div></div>{role === 'admin' ? reviews.map(review => <div className="review-row" key={review.id}><div><b>{review.guestName} · {'★'.repeat(review.rating)}</b><p>{review.comment}</p><small>{review.status}</small></div>{review.status === 'Pending' && <span><button className="icon-button" title="Publish review" onClick={() => void updateReview(review.id, 'Published')}><Check size={16} /></button><button className="icon-button" title="Reject review" onClick={() => void updateReview(review.id, 'Rejected')}><X size={16} /></button></span>}</div>) : <><div className="rating-picker">{[1, 2, 3, 4, 5].map(value => <button type="button" key={value} title={`${value} stars`} onClick={() => setRating(value)}><Star size={24} fill={value <= rating ? 'currentColor' : 'none'} /></button>)}</div><textarea className="appointment-notes" value={comment} onChange={event => setComment(event.target.value)} placeholder="Tell us about your visit..." /><button className="primary" onClick={() => void submitReview()}><MessageSquare size={16} />Submit review</button></>}</section>
-    <div><section className="panel form-panel"><div className="section-label"><span className="round-icon sage"><Bell size={16} /></span><div><b>Notification preferences</b><small>Choose which reminders you want to receive.</small></div></div><label className="preference-row"><input type="checkbox" checked={preferences.email} onChange={event => setPreferences(current => ({ ...current, email: event.target.checked }))} /><span>Email reminders</span></label><label className="preference-row"><input type="checkbox" checked={preferences.appointmentReminders} onChange={event => setPreferences(current => ({ ...current, appointmentReminders: event.target.checked }))} /><span>Appointment reminders</span></label><button className="soft wide" onClick={savePreferences}><Save size={15} />Save preferences</button>{pushStatus !== 'dismissed' && <div className="push-opt-in"><b>Stay updated with Halo</b><small>Get appointment reminders and know when your hairstyle preview is ready.</small>{pushStatus === 'enabled' ? <span>Browser notifications enabled.</span> : <div><button className="primary" onClick={() => void enableBrowserNotifications()}><Bell size={15} />Enable notifications</button><button className="text-button" onClick={() => { localStorage.setItem('halo-push-dismissed', 'true'); setPushStatus('dismissed'); }}>Not now</button></div>}</div>}</section>
-      <section className="panel form-panel invoice-panel"><div className="section-label"><span className="round-icon butter"><CreditCard size={16} /></span><div><b>Payments and invoices</b><small>{process.env.NEXT_PUBLIC_PAYMENTS_ENABLED === 'true' ? 'Secure payments powered by Razorpay.' : 'Online payments are disabled. Guests can pay at the salon.'}</small></div></div>{appointments.filter(appointment => appointment.status !== 'Cancelled').slice(0, 5).map(appointment => { const payment = payments.find(item => item.appointmentId === appointment.id); return <div className="invoice-row" key={appointment.id}><div><b>{appointment.service}</b><small>{appointment.date} · {appointment.status} · {payment ? payment.invoiceNumber : 'No invoice yet'}</small></div>{payment ? <span className={`payment-status ${payment.status.toLowerCase()}`}>{payment.paymentMethod === 'PAY_AT_SALON' ? 'Pay at salon' : payment.status} · ₹{payment.total.toLocaleString('en-IN')}<button className="icon-button" title="Download invoice" onClick={() => downloadInvoice(payment)}><Download size={13} /></button><button className="icon-button" title="Print invoice" onClick={() => window.print()}><Printer size={13} /></button></span> : <button className="soft invoice-pay" onClick={() => void createPayment(appointment)}><FileText size={14} />{process.env.NEXT_PUBLIC_PAYMENTS_ENABLED === 'true' ? 'Pay online' : 'Pay at salon / invoice'}</button>}</div>; })}{!appointments.length && <p>No appointment invoices yet.</p>}{payments.length > appointments.length && payments.filter(payment => !invoiceAppointment(payment)).map(payment => <div className="invoice-row" key={payment.id}><div><b>{payment.invoiceNumber}</b><small>Payment record</small></div><span className={`payment-status ${payment.status.toLowerCase()}`}>{payment.status} · ₹{payment.total.toLocaleString('en-IN')}<button className="icon-button" title="Download invoice" onClick={() => downloadInvoice(payment)}><Download size={13} /></button><button className="icon-button" title="Print invoice" onClick={() => window.print()}><Printer size={13} /></button></span></div>)}</section></div>
-  </div>{role === 'admin' && adminRequests.length > 0 && <section className="panel form-panel"><div className="section-label"><span className="round-icon butter"><LockKeyhole size={16} /></span><div><b>Admin access requests</b><small>Approve trusted salon administrators before they can sign in.</small></div></div>{adminRequests.map(item => <div className="review-row" key={item.id}><div><b>{item.name}</b><p>{item.email}</p><small>{item.adminApprovalStatus}</small></div><span><button className="icon-button" title="Approve admin" onClick={() => void updateAdminRequest(item.id, true)}><Check size={16} /></button><button className="icon-button" title="Reject admin" onClick={() => void updateAdminRequest(item.id, false)}><X size={16} /></button></span></div>)}</section>}{message && <p className="save-error">{message}</p>}</section>;
+  return (
+    <section className="page tools">
+      <ShellTitle
+        eyebrow={role === "admin" ? "STUDIO MANAGEMENT" : "YOUR ACCOUNT"}
+        title={
+          role === "admin"
+            ? "Keep the conversation thoughtful."
+            : "Keep your salon relationship close."
+        }
+        copy={
+          role === "admin"
+            ? "Review guest feedback and keep the studio experience consistent."
+            : "Manage feedback, notifications, and appointment payment records."
+        }
+        action={
+          <span className="guest-pill">
+            {role === "admin" ? "ADMIN" : "GUEST"}
+          </span>
+        }
+      />
+      <div className="data-grid">
+        <section className="panel form-panel">
+          <div className="section-label">
+            <span className="round-icon peach">
+              <MessageSquare size={16} />
+            </span>
+            <div>
+              <b>
+                {role === "admin"
+                  ? "Review moderation"
+                  : "Share your experience"}
+              </b>
+              <small>
+                {role === "admin"
+                  ? "Publish or reject submitted feedback."
+                  : "Your review is sent to the salon for approval."}
+              </small>
+            </div>
+          </div>
+          {role === "admin" ? (
+            reviews.map((review) => (
+              <div className="review-row" key={review.id}>
+                <div>
+                  <b>
+                    {review.guestName} · {"★".repeat(review.rating)}
+                  </b>
+                  <p>{review.comment}</p>
+                  <small>{review.status}</small>
+                </div>
+                {review.status === "Pending" && (
+                  <span>
+                    <button
+                      className="icon-button"
+                      title="Publish review"
+                      onClick={() => void updateReview(review.id, "Published")}
+                    >
+                      <Check size={16} />
+                    </button>
+                    <button
+                      className="icon-button"
+                      title="Reject review"
+                      onClick={() => void updateReview(review.id, "Rejected")}
+                    >
+                      <X size={16} />
+                    </button>
+                  </span>
+                )}
+              </div>
+            ))
+          ) : (
+            <>
+              <div className="rating-picker">
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <button
+                    type="button"
+                    key={value}
+                    title={`${value} stars`}
+                    onClick={() => setRating(value)}
+                  >
+                    <Star
+                      size={24}
+                      fill={value <= rating ? "currentColor" : "none"}
+                    />
+                  </button>
+                ))}
+              </div>
+              <textarea
+                className="appointment-notes"
+                value={comment}
+                onChange={(event) => setComment(event.target.value)}
+                placeholder="Tell us about your visit..."
+              />
+              <button className="primary" onClick={() => void submitReview()}>
+                <MessageSquare size={16} />
+                Submit review
+              </button>
+            </>
+          )}
+        </section>
+        <div>
+          <section className="panel form-panel">
+            <div className="section-label">
+              <span className="round-icon sage">
+                <Bell size={16} />
+              </span>
+              <div>
+                <b>Notification preferences</b>
+                <small>Choose which reminders you want to receive.</small>
+              </div>
+            </div>
+            <label className="preference-row">
+              <input
+                type="checkbox"
+                checked={preferences.email}
+                onChange={(event) =>
+                  setPreferences((current) => ({
+                    ...current,
+                    email: event.target.checked,
+                  }))
+                }
+              />
+              <span>Email reminders</span>
+            </label>
+            <label className="preference-row">
+              <input
+                type="checkbox"
+                checked={preferences.appointmentReminders}
+                onChange={(event) =>
+                  setPreferences((current) => ({
+                    ...current,
+                    appointmentReminders: event.target.checked,
+                  }))
+                }
+              />
+              <span>Appointment reminders</span>
+            </label>
+            <button className="soft wide" onClick={savePreferences}>
+              <Save size={15} />
+              Save preferences
+            </button>
+            {pushStatus !== "dismissed" && (
+              <div className="push-opt-in">
+                <b>Stay updated with Halo</b>
+                <small>
+                  Get appointment reminders and know when your hairstyle preview
+                  is ready.
+                </small>
+                {pushStatus === "enabled" ? (
+                  <span>Browser notifications enabled.</span>
+                ) : (
+                  <div>
+                    <button
+                      className="primary"
+                      onClick={() => void enableBrowserNotifications()}
+                    >
+                      <Bell size={15} />
+                      Enable notifications
+                    </button>
+                    <button
+                      className="text-button"
+                      onClick={() => {
+                        localStorage.setItem("halo-push-dismissed", "true");
+                        setPushStatus("dismissed");
+                      }}
+                    >
+                      Not now
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+          <section className="panel form-panel invoice-panel">
+            <div className="section-label">
+              <span className="round-icon butter">
+                <CreditCard size={16} />
+              </span>
+              <div>
+                <b>Payments and invoices</b>
+                <small>
+                  {process.env.NEXT_PUBLIC_PAYMENTS_ENABLED === "true"
+                    ? "Secure payments powered by Razorpay."
+                    : "Online payments are disabled. Guests can pay at the salon."}
+                </small>
+              </div>
+            </div>
+            {appointments
+              .filter((appointment) => appointment.status !== "Cancelled")
+              .slice(0, 5)
+              .map((appointment) => {
+                const payment = payments.find(
+                  (item) => item.appointmentId === appointment.id,
+                );
+                return (
+                  <div className="invoice-row" key={appointment.id}>
+                    <div>
+                      <b>{appointment.service}</b>
+                      <small>
+                        {appointment.date} · {appointment.status} ·{" "}
+                        {payment ? payment.invoiceNumber : "No invoice yet"}
+                      </small>
+                    </div>
+                    {payment ? (
+                      <span
+                        className={`payment-status ${payment.status.toLowerCase()}`}
+                      >
+                        {payment.paymentMethod === "PAY_AT_SALON"
+                          ? "Pay at salon"
+                          : payment.status}{" "}
+                        · ₹{payment.total.toLocaleString("en-IN")}
+                        <button
+                          className="icon-button"
+                          title="Download invoice"
+                          onClick={() => downloadInvoice(payment)}
+                        >
+                          <Download size={13} />
+                        </button>
+                        <button
+                          className="icon-button"
+                          title="Print invoice"
+                          onClick={() => window.print()}
+                        >
+                          <Printer size={13} />
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        className="soft invoice-pay"
+                        onClick={() => void createPayment(appointment)}
+                      >
+                        <FileText size={14} />
+                        {process.env.NEXT_PUBLIC_PAYMENTS_ENABLED === "true"
+                          ? "Pay online"
+                          : "Pay at salon / invoice"}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            {!appointments.length && <p>No appointment invoices yet.</p>}
+            {payments.length > appointments.length &&
+              payments
+                .filter((payment) => !invoiceAppointment(payment))
+                .map((payment) => (
+                  <div className="invoice-row" key={payment.id}>
+                    <div>
+                      <b>{payment.invoiceNumber}</b>
+                      <small>Payment record</small>
+                    </div>
+                    <span
+                      className={`payment-status ${payment.status.toLowerCase()}`}
+                    >
+                      {payment.status} · ₹
+                      {payment.total.toLocaleString("en-IN")}
+                      <button
+                        className="icon-button"
+                        title="Download invoice"
+                        onClick={() => downloadInvoice(payment)}
+                      >
+                        <Download size={13} />
+                      </button>
+                      <button
+                        className="icon-button"
+                        title="Print invoice"
+                        onClick={() => window.print()}
+                      >
+                        <Printer size={13} />
+                      </button>
+                    </span>
+                  </div>
+                ))}
+          </section>
+        </div>
+      </div>
+      {role === "admin" && adminRequests.length > 0 && (
+        <section className="panel form-panel">
+          <div className="section-label">
+            <span className="round-icon butter">
+              <LockKeyhole size={16} />
+            </span>
+            <div>
+              <b>Admin access requests</b>
+              <small>
+                Approve trusted salon administrators before they can sign in.
+              </small>
+            </div>
+          </div>
+          {adminRequests.map((item) => (
+            <div className="review-row" key={item.id}>
+              <div>
+                <b>{item.name}</b>
+                <p>{item.email}</p>
+                <small>{item.adminApprovalStatus}</small>
+              </div>
+              <span>
+                <button
+                  className="icon-button"
+                  title="Approve admin"
+                  onClick={() => void updateAdminRequest(item.id, true)}
+                >
+                  <Check size={16} />
+                </button>
+                <button
+                  className="icon-button"
+                  title="Reject admin"
+                  onClick={() => void updateAdminRequest(item.id, false)}
+                >
+                  <X size={16} />
+                </button>
+              </span>
+            </div>
+          ))}
+        </section>
+      )}
+      {message && <p className="save-error">{message}</p>}
+    </section>
+  );
 }

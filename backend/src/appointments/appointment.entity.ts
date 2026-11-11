@@ -1,22 +1,31 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from "typeorm";
 
-@Entity('appointments')
+@Entity("appointments")
 export class Appointment {
-  @PrimaryGeneratedColumn('uuid') id!: string;
-  @Column({ type: 'uuid', nullable: true }) salonId!: string | null;
-  @Column({ default: 'Ananya Rao' }) guestName!: string;
-  @Column({ default: '' }) guestEmail!: string;
-  @Column({ default: '' }) guestPhone!: string;
-  @Column({ type: 'uuid', nullable: true }) customerId!: string | null;
+  @PrimaryGeneratedColumn("uuid") id!: string;
+  @Column({ type: "uuid", nullable: true }) salonId!: string | null;
+  @Column({ default: "Ananya Rao" }) guestName!: string;
+  @Column({ default: "" }) guestEmail!: string;
+  @Column({ default: "" }) guestPhone!: string;
+  @Column({ type: "uuid", nullable: true }) customerId!: string | null;
   @Column() service!: string;
-  @Column({ default: 'main' }) branchId!: string;
+  @Column({ default: "main" }) branchId!: string;
   @Column() date!: string;
   @Column() time!: string;
   @Column({ default: 60 }) durationMinutes!: number;
-  @Column({ type: 'int', default: 0 }) price!: number;
-  @Column({ default: 'Meera Nair' }) stylist!: string;
-  @Column({ default: '' }) notes!: string;
-  @Column({ default: 'Requested' }) status!: 'Requested' | 'Confirmed' | 'Cancelled';
+  @Column({ type: "int", default: 0 }) price!: number;
+  @Column({ default: "Meera Nair" }) stylist!: string;
+  @Column({ default: "" }) notes!: string;
+  @Column({ default: "Requested" }) status!:
+    | "Requested"
+    | "Confirmed"
+    | "Cancelled";
   @CreateDateColumn() createdAt!: Date;
   @UpdateDateColumn() updatedAt!: Date;
 }

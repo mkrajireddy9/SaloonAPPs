@@ -1,8 +1,61 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { API_URL } from '../../src/api';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { API_URL } from "../../src/api";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function VerifyEmail() { const { token } = useLocalSearchParams<{ token?: string }>(); const [message, setMessage] = useState('Verifying your email...'); useEffect(() => { if (!token) return setMessage('This verification link is missing a token.'); fetch(`${API_URL}/auth/verify-email?token=${encodeURIComponent(token)}`).then(async response => { const body = await response.json(); if (!response.ok) throw new Error(body.message || 'This verification link is invalid or expired.'); setMessage(body.message || 'Email verified successfully.'); }).catch(e => setMessage(e instanceof Error ? e.message : 'Verification failed.')); }, [token]); return <SafeAreaView style={s.safeArea}><View style={s.screen}><Text style={s.eyebrow}>ACCOUNT SECURITY</Text><Text style={s.title}>Email verification</Text><Text style={s.message}>{message}</Text><Pressable style={s.primary} onPress={() => router.replace('/(auth)/login')}><Text style={s.primaryText}>Back to sign in</Text></Pressable></View></SafeAreaView>; }
-const s = StyleSheet.create({ safeArea: { flex: 1, backgroundColor: '#f7f5f0' }, screen: { flex: 1, backgroundColor: '#f7f5f0', padding: 24, paddingTop: 40 }, eyebrow: { color: '#91b3a3', fontSize: 11, fontWeight: '700', letterSpacing: 1.5 }, title: { color: '#20352d', fontSize: 30, fontWeight: '700', marginTop: 12 }, message: { color: '#77817c', lineHeight: 22, marginTop: 20 }, primary: { backgroundColor: '#c55239', borderRadius: 9, minHeight: 50, alignItems: 'center', justifyContent: 'center', marginTop: 24 }, primaryText: { color: '#fff', fontWeight: '700' } });
+export default function VerifyEmail() {
+  const { token } = useLocalSearchParams<{ token?: string }>();
+  const [message, setMessage] = useState("Verifying your email...");
+  useEffect(() => {
+    if (!token) return setMessage("This verification link is missing a token.");
+    fetch(`${API_URL}/auth/verify-email?token=${encodeURIComponent(token)}`)
+      .then(async (response) => {
+        const body = await response.json();
+        if (!response.ok)
+          throw new Error(
+            body.message || "This verification link is invalid or expired.",
+          );
+        setMessage(body.message || "Email verified successfully.");
+      })
+      .catch((e) =>
+        setMessage(e instanceof Error ? e.message : "Verification failed."),
+      );
+  }, [token]);
+  return (
+    <SafeAreaView style={s.safeArea}>
+      <View style={s.screen}>
+        <Text style={s.eyebrow}>ACCOUNT SECURITY</Text>
+        <Text style={s.title}>Email verification</Text>
+        <Text style={s.message}>{message}</Text>
+        <Pressable
+          style={s.primary}
+          onPress={() => router.replace("/(auth)/login")}
+        >
+          <Text style={s.primaryText}>Back to sign in</Text>
+        </Pressable>
+      </View>
+    </SafeAreaView>
+  );
+}
+const s = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: "#f7f5f0" },
+  screen: { flex: 1, backgroundColor: "#f7f5f0", padding: 24, paddingTop: 40 },
+  eyebrow: {
+    color: "#91b3a3",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+  },
+  title: { color: "#20352d", fontSize: 30, fontWeight: "700", marginTop: 12 },
+  message: { color: "#77817c", lineHeight: 22, marginTop: 20 },
+  primary: {
+    backgroundColor: "#c55239",
+    borderRadius: 9,
+    minHeight: 50,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 24,
+  },
+  primaryText: { color: "#fff", fontWeight: "700" },
+});

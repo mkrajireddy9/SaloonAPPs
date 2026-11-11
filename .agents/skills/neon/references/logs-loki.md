@@ -84,7 +84,8 @@ const { data, error } = await neon.logs.loki.queryRange({
 });
 if (error) throw error;
 for (const { stream, values } of data.data.result) {
-  for (const [timestampNs, line] of values) console.log(timestampNs, stream.service_name, line);
+  for (const [timestampNs, line] of values)
+    console.log(timestampNs, stream.service_name, line);
 }
 
 await neon.logs.loki.labels({ projectId, branchId });

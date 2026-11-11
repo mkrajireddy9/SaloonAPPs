@@ -1,8 +1,95 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { API_URL } from '../../src/api';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { router, useLocalSearchParams } from "expo-router";
+import { useState } from "react";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { API_URL } from "../../src/api";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function ResetPassword() { const { token } = useLocalSearchParams<{ token?: string }>(); const [password, setPassword] = useState(''); const [message, setMessage] = useState(''); const [error, setError] = useState(''); const submit = async () => { setError(''); setMessage(''); if (!token || password.length < 8) return setError('Use a valid reset link and a password with at least 8 characters.'); try { const response = await fetch(`${API_URL}/auth/reset-password`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token, password }) }); const body = await response.json(); if (!response.ok) throw new Error(body.message || 'Unable to reset password.'); setMessage(body.message || 'Password reset successfully.'); } catch (e) { setError(e instanceof Error ? e.message : 'Unable to reset password.'); } }; return <SafeAreaView style={s.safeArea}><View style={s.screen}><Text style={s.eyebrow}>ACCOUNT SECURITY</Text><Text style={s.title}>Choose a new password</Text><Text style={s.copy}>Use at least 8 characters for your new password.</Text><TextInput value={password} onChangeText={setPassword} placeholder="New password" secureTextEntry style={s.input} /><Pressable style={s.primary} onPress={() => void submit()}><Text style={s.primaryText}>Save new password</Text></Pressable>{message ? <Text style={s.success}>{message}</Text> : null}{error ? <Text style={s.error}>{error}</Text> : null}<Pressable onPress={() => router.replace('/(auth)/login')}><Text style={s.link}>Back to sign in</Text></Pressable></View></SafeAreaView>; }
-const s = StyleSheet.create({ safeArea: { flex: 1, backgroundColor: '#f7f5f0' }, screen: { flex: 1, backgroundColor: '#f7f5f0', padding: 24, paddingTop: 40 }, eyebrow: { color: '#91b3a3', fontSize: 11, fontWeight: '700', letterSpacing: 1.5 }, title: { color: '#20352d', fontSize: 30, fontWeight: '700', marginTop: 12 }, copy: { color: '#77817c', lineHeight: 20, marginVertical: 18 }, input: { backgroundColor: '#fffdfa', borderColor: '#d9d6ce', borderWidth: 1, borderRadius: 9, padding: 14 }, primary: { backgroundColor: '#c55239', borderRadius: 9, minHeight: 50, alignItems: 'center', justifyContent: 'center', marginTop: 18 }, primaryText: { color: '#fff', fontWeight: '700' }, success: { color: '#4c947d', marginTop: 14 }, error: { color: '#c55239', marginTop: 14 }, link: { color: '#c55239', textAlign: 'center', marginTop: 24, fontWeight: '700' } });
+export default function ResetPassword() {
+  const { token } = useLocalSearchParams<{ token?: string }>();
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const submit = async () => {
+    setError("");
+    setMessage("");
+    if (!token || password.length < 8)
+      return setError(
+        "Use a valid reset link and a password with at least 8 characters.",
+      );
+    try {
+      const response = await fetch(`${API_URL}/auth/reset-password`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token, password }),
+      });
+      const body = await response.json();
+      if (!response.ok)
+        throw new Error(body.message || "Unable to reset password.");
+      setMessage(body.message || "Password reset successfully.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to reset password.");
+    }
+  };
+  return (
+    <SafeAreaView style={s.safeArea}>
+      <View style={s.screen}>
+        <Text style={s.eyebrow}>ACCOUNT SECURITY</Text>
+        <Text style={s.title}>Choose a new password</Text>
+        <Text style={s.copy}>
+          Use at least 8 characters for your new password.
+        </Text>
+        <TextInput
+          value={password}
+          onChangeText={setPassword}
+          placeholder="New password"
+          secureTextEntry
+          style={s.input}
+        />
+        <Pressable style={s.primary} onPress={() => void submit()}>
+          <Text style={s.primaryText}>Save new password</Text>
+        </Pressable>
+        {message ? <Text style={s.success}>{message}</Text> : null}
+        {error ? <Text style={s.error}>{error}</Text> : null}
+        <Pressable onPress={() => router.replace("/(auth)/login")}>
+          <Text style={s.link}>Back to sign in</Text>
+        </Pressable>
+      </View>
+    </SafeAreaView>
+  );
+}
+const s = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: "#f7f5f0" },
+  screen: { flex: 1, backgroundColor: "#f7f5f0", padding: 24, paddingTop: 40 },
+  eyebrow: {
+    color: "#91b3a3",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+  },
+  title: { color: "#20352d", fontSize: 30, fontWeight: "700", marginTop: 12 },
+  copy: { color: "#77817c", lineHeight: 20, marginVertical: 18 },
+  input: {
+    backgroundColor: "#fffdfa",
+    borderColor: "#d9d6ce",
+    borderWidth: 1,
+    borderRadius: 9,
+    padding: 14,
+  },
+  primary: {
+    backgroundColor: "#c55239",
+    borderRadius: 9,
+    minHeight: 50,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 18,
+  },
+  primaryText: { color: "#fff", fontWeight: "700" },
+  success: { color: "#4c947d", marginTop: 14 },
+  error: { color: "#c55239", marginTop: 14 },
+  link: {
+    color: "#c55239",
+    textAlign: "center",
+    marginTop: 24,
+    fontWeight: "700",
+  },
+});

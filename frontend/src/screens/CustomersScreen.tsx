@@ -1,45 +1,659 @@
-import { useEffect, useState } from 'react';
-import { CalendarDays, Download, Filter, History, Mail, Phone, Search, UserRound } from 'lucide-react';
-import { ShellTitle } from '../components/ShellTitle';
-import { useToast } from '../components/Toast';
-import { request } from '../api';
-import { Dropdown } from '../components/Dropdown';
-import { DatePicker } from '../components/DatePicker';
-import type { CustomerHistory, CustomerProfile, PaginatedCustomers, PaginatedHistory, Role, SalonConfig } from '../types';
+import { useEffect, useState } from "react";
+import {
+  CalendarDays,
+  Download,
+  Filter,
+  History,
+  Mail,
+  Phone,
+  Search,
+  UserRound,
+} from "lucide-react";
+import { ShellTitle } from "../components/ShellTitle";
+import { useToast } from "../components/Toast";
+import { request } from "../api";
+import { Dropdown } from "../components/Dropdown";
+import { DatePicker } from "../components/DatePicker";
+import type {
+  CustomerHistory,
+  CustomerProfile,
+  PaginatedCustomers,
+  PaginatedHistory,
+  Role,
+  SalonConfig,
+} from "../types";
 
-const emptyProfile: CustomerProfile = { id: '', name: '', email: '', phone: '', location: '', texture: '', length: '', preferredStylist: '', createdAt: '' };
-const queryParams = (filters: Record<string, string | number>) => new URLSearchParams(Object.entries(filters).filter(([, value]) => String(value).length > 0).map(([key, value]) => [key, String(value)])).toString();
+const emptyProfile: CustomerProfile = {
+  id: "",
+  name: "",
+  email: "",
+  phone: "",
+  location: "",
+  texture: "",
+  length: "",
+  preferredStylist: "",
+  createdAt: "",
+};
+const queryParams = (filters: Record<string, string | number>) =>
+  new URLSearchParams(
+    Object.entries(filters)
+      .filter(([, value]) => String(value).length > 0)
+      .map(([key, value]) => [key, String(value)]),
+  ).toString();
 
-export function CustomersScreen({ role, salon, onBack }: { role: Role; salon: SalonConfig; onBack: () => void }) { return role === 'admin' ? <AdminCustomers salon={salon} onBack={onBack} /> : <CustomerAccount salon={salon} onBack={onBack} />; }
+export function CustomersScreen({
+  role,
+  salon,
+  onBack,
+}: {
+  role: Role;
+  salon: SalonConfig;
+  onBack: () => void;
+}) {
+  return role === "admin" ? (
+    <AdminCustomers salon={salon} onBack={onBack} />
+  ) : (
+    <CustomerAccount salon={salon} onBack={onBack} />
+  );
+}
 
-function CustomerAccount({ salon, onBack }: { salon: SalonConfig; onBack: () => void }) {
+function CustomerAccount({
+  salon,
+  onBack,
+}: {
+  salon: SalonConfig;
+  onBack: () => void;
+}) {
   const { showToast } = useToast();
   const [profile, setProfile] = useState<CustomerProfile>(emptyProfile);
   const [draft, setDraft] = useState<CustomerProfile>(emptyProfile);
-  const [history, setHistory] = useState<PaginatedHistory>({ items: [], total: 0, page: 1, pageSize: 8, pageCount: 1 });
-  const [filters, setFilters] = useState({ dateFrom: '', dateTo: '', service: '', stylist: '', branchId: '', status: '' });
+  const [history, setHistory] = useState<PaginatedHistory>({
+    items: [],
+    total: 0,
+    page: 1,
+    pageSize: 8,
+    pageCount: 1,
+  });
+  const [filters, setFilters] = useState({
+    dateFrom: "",
+    dateTo: "",
+    service: "",
+    stylist: "",
+    branchId: "",
+    status: "",
+  });
   const [saving, setSaving] = useState(false);
-  useEffect(() => { void request<CustomerProfile>('/customers/me').then(saved => { setProfile(saved); setDraft(saved); }).catch(() => showToast('Could not load your customer profile.', 'error')); }, []);
-  useEffect(() => { void request<PaginatedHistory>(`/customers/me/history?${queryParams({ ...filters, page: 1, pageSize: 8 })}`).then(setHistory).catch(() => undefined); }, [filters]);
-  const update = (key: keyof CustomerProfile, value: string) => setDraft(current => ({ ...current, [key]: value }));
-  const save = async () => { setSaving(true); try { const saved = await request<CustomerProfile>('/customers/me', { method: 'PATCH', body: JSON.stringify({ name: draft.name, email: draft.email, phone: draft.phone, location: draft.location, texture: draft.texture, length: draft.length, preferredStylist: draft.preferredStylist }) }); setProfile(saved); setDraft(saved); showToast('Customer profile saved.'); } catch (error) { showToast(error instanceof Error ? error.message : 'Could not save your profile.', 'error'); } finally { setSaving(false); } };
-  return <section className="page customers"><ShellTitle eyebrow="YOUR ACCOUNT" title="Keep your details current." copy="Edit your contact details and keep a searchable record of every salon visit." back="Back to appointments" onBack={onBack} action={<span className="guest-pill">CUSTOMER PROFILE</span>} /><div className="customer-account-grid"><section className="panel form-panel customer-profile-form"><div className="section-label"><span className="round-icon peach"><UserRound size={16} /></span><div><b>Profile details</b><small>These details follow you into future bookings.</small></div></div><div className="form-two"><label className="field"><span>Full name</span><input value={draft.name} onChange={event => update('name', event.target.value)} /></label><label className="field"><span>Phone</span><input value={draft.phone} onChange={event => update('phone', event.target.value)} placeholder="+91 98450 12345" /></label></div><label className="field"><span>Email</span><input type="email" value={draft.email} onChange={event => update('email', event.target.value)} /></label><label className="field"><span>Location</span><input value={draft.location} onChange={event => update('location', event.target.value)} placeholder="City or neighbourhood" /></label><div className="form-two"><label className="field"><span>Hair texture</span><input value={draft.texture} onChange={event => update('texture', event.target.value)} placeholder="Wavy" /></label><label className="field"><span>Hair length</span><input value={draft.length} onChange={event => update('length', event.target.value)} placeholder="Shoulder length" /></label></div><label className="field"><span>Preferred stylist</span><Dropdown value={draft.preferredStylist} options={[{ value: '', label: 'No preference' }, ...salon.stylists.map(stylist => ({ value: stylist, label: stylist }))]} onChange={value => update('preferredStylist', value)} ariaLabel="Preferred stylist" /></label><button className="primary" aria-busy={saving} disabled={saving} onClick={() => void save()}>{saving ? 'Saving...' : 'Save profile'}</button></section><section className="panel customer-history"><div className="panel-head"><div><label>YOUR VISIT HISTORY</label><h2>Appointments, remembered</h2></div><History size={19} /></div><HistoryFilters filters={filters} setFilters={setFilters} salon={salon} /><HistoryList history={history.items} /><Pagination page={history.page} pageCount={history.pageCount} onChange={page => void request<PaginatedHistory>(`/customers/me/history?${queryParams({ ...filters, page, pageSize: 8 })}`).then(setHistory)} /></section></div></section>;
+  useEffect(() => {
+    void request<CustomerProfile>("/customers/me")
+      .then((saved) => {
+        setProfile(saved);
+        setDraft(saved);
+      })
+      .catch(() => showToast("Could not load your customer profile.", "error"));
+  }, []);
+  useEffect(() => {
+    void request<PaginatedHistory>(
+      `/customers/me/history?${queryParams({ ...filters, page: 1, pageSize: 8 })}`,
+    )
+      .then(setHistory)
+      .catch(() => undefined);
+  }, [filters]);
+  const update = (key: keyof CustomerProfile, value: string) =>
+    setDraft((current) => ({ ...current, [key]: value }));
+  const save = async () => {
+    setSaving(true);
+    try {
+      const saved = await request<CustomerProfile>("/customers/me", {
+        method: "PATCH",
+        body: JSON.stringify({
+          name: draft.name,
+          email: draft.email,
+          phone: draft.phone,
+          location: draft.location,
+          texture: draft.texture,
+          length: draft.length,
+          preferredStylist: draft.preferredStylist,
+        }),
+      });
+      setProfile(saved);
+      setDraft(saved);
+      showToast("Customer profile saved.");
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Could not save your profile.",
+        "error",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <section className="page customers">
+      <ShellTitle
+        eyebrow="YOUR ACCOUNT"
+        title="Keep your details current."
+        copy="Edit your contact details and keep a searchable record of every salon visit."
+        back="Back to appointments"
+        onBack={onBack}
+        action={<span className="guest-pill">CUSTOMER PROFILE</span>}
+      />
+      <div className="customer-account-grid">
+        <section className="panel form-panel customer-profile-form">
+          <div className="section-label">
+            <span className="round-icon peach">
+              <UserRound size={16} />
+            </span>
+            <div>
+              <b>Profile details</b>
+              <small>These details follow you into future bookings.</small>
+            </div>
+          </div>
+          <div className="form-two">
+            <label className="field">
+              <span>Full name</span>
+              <input
+                value={draft.name}
+                onChange={(event) => update("name", event.target.value)}
+              />
+            </label>
+            <label className="field">
+              <span>Phone</span>
+              <input
+                value={draft.phone}
+                onChange={(event) => update("phone", event.target.value)}
+                placeholder="+91 98450 12345"
+              />
+            </label>
+          </div>
+          <label className="field">
+            <span>Email</span>
+            <input
+              type="email"
+              value={draft.email}
+              onChange={(event) => update("email", event.target.value)}
+            />
+          </label>
+          <label className="field">
+            <span>Location</span>
+            <input
+              value={draft.location}
+              onChange={(event) => update("location", event.target.value)}
+              placeholder="City or neighbourhood"
+            />
+          </label>
+          <div className="form-two">
+            <label className="field">
+              <span>Hair texture</span>
+              <input
+                value={draft.texture}
+                onChange={(event) => update("texture", event.target.value)}
+                placeholder="Wavy"
+              />
+            </label>
+            <label className="field">
+              <span>Hair length</span>
+              <input
+                value={draft.length}
+                onChange={(event) => update("length", event.target.value)}
+                placeholder="Shoulder length"
+              />
+            </label>
+          </div>
+          <label className="field">
+            <span>Preferred stylist</span>
+            <Dropdown
+              value={draft.preferredStylist}
+              options={[
+                { value: "", label: "No preference" },
+                ...salon.stylists.map((stylist) => ({
+                  value: stylist,
+                  label: stylist,
+                })),
+              ]}
+              onChange={(value) => update("preferredStylist", value)}
+              ariaLabel="Preferred stylist"
+            />
+          </label>
+          <button
+            className="primary"
+            aria-busy={saving}
+            disabled={saving}
+            onClick={() => void save()}
+          >
+            {saving ? "Saving..." : "Save profile"}
+          </button>
+        </section>
+        <section className="panel customer-history">
+          <div className="panel-head">
+            <div>
+              <label>YOUR VISIT HISTORY</label>
+              <h2>Appointments, remembered</h2>
+            </div>
+            <History size={19} />
+          </div>
+          <HistoryFilters
+            filters={filters}
+            setFilters={setFilters}
+            salon={salon}
+          />
+          <HistoryList history={history.items} />
+          <Pagination
+            page={history.page}
+            pageCount={history.pageCount}
+            onChange={(page) =>
+              void request<PaginatedHistory>(
+                `/customers/me/history?${queryParams({ ...filters, page, pageSize: 8 })}`,
+              ).then(setHistory)
+            }
+          />
+        </section>
+      </div>
+    </section>
+  );
 }
 
-function AdminCustomers({ salon, onBack }: { salon: SalonConfig; onBack: () => void }) {
+function AdminCustomers({
+  salon,
+  onBack,
+}: {
+  salon: SalonConfig;
+  onBack: () => void;
+}) {
   const { showToast } = useToast();
-  const [filters, setFilters] = useState({ search: '', dateFrom: '', dateTo: '', service: '', stylist: '', branchId: '', status: '' });
-  const [customers, setCustomers] = useState<PaginatedCustomers>({ items: [], total: 0, page: 1, pageSize: 10, pageCount: 1 });
+  const [filters, setFilters] = useState({
+    search: "",
+    dateFrom: "",
+    dateTo: "",
+    service: "",
+    stylist: "",
+    branchId: "",
+    status: "",
+  });
+  const [customers, setCustomers] = useState<PaginatedCustomers>({
+    items: [],
+    total: 0,
+    page: 1,
+    pageSize: 10,
+    pageCount: 1,
+  });
   const [selected, setSelected] = useState<string | null>(null);
   const [history, setHistory] = useState<PaginatedHistory | null>(null);
-  const load = (page = 1) => void request<PaginatedCustomers>(`/customers?${queryParams({ ...filters, page, pageSize: 10 })}`).then(setCustomers).catch(() => showToast('Could not load customer records.', 'error'));
-  useEffect(() => { load(); }, []);
-  useEffect(() => { const timer = window.setTimeout(() => load(1), 180); return () => window.clearTimeout(timer); }, [filters]);
-  const selectCustomer = (id: string) => { setSelected(id); void request<PaginatedHistory>(`/customers/${id}/history?page=1&pageSize=8`).then(setHistory).catch(() => showToast('Could not load this customer history.', 'error')); };
-  const exportCustomers = async () => { try { const response = await fetch(`${(typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL) || 'http://localhost:3000'}/customers/export?${queryParams(filters)}`, { headers: { authorization: `Bearer ${localStorage.getItem('halo-token') || ''}` } }); if (!response.ok) throw new Error('Export failed'); const blob = await response.blob(); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'customers.csv'; link.click(); URL.revokeObjectURL(url); } catch { showToast('Could not export customer records.', 'error'); } };
-  return <section className="page customers"><ShellTitle eyebrow="CUSTOMER RECORDS" title="Know the people behind the bookings." copy="Search, filter, export, and review stable customer records from your salon workspace." back="Back to studio data" onBack={onBack} action={<button className="soft" onClick={() => void exportCustomers()}><Download size={15} />Export CSV</button>} /><section className="panel customer-directory"><div className="customer-filter-head"><div><label>THE CLIENT BOOK</label><h2>{customers.total} customer{customers.total === 1 ? '' : 's'}</h2></div><Filter size={18} /></div><div className="customer-filters"><label className="search-field"><Search size={15} /><input value={filters.search} onChange={event => setFilters(current => ({ ...current, search: event.target.value }))} placeholder="Search name, email, or phone" /></label><DatePicker value={filters.dateFrom} onChange={value => setFilters(current => ({ ...current, dateFrom: value }))} ariaLabel="Customer search start date" /><DatePicker value={filters.dateTo} onChange={value => setFilters(current => ({ ...current, dateTo: value }))} ariaLabel="Customer search end date" /><Dropdown value={filters.service} options={[{ value: '', label: 'All services' }, ...salon.services.map(service => ({ value: service, label: service }))]} onChange={value => setFilters(current => ({ ...current, service: value }))} ariaLabel="Filter customers by service" /><Dropdown value={filters.stylist} options={[{ value: '', label: 'All stylists' }, ...salon.stylists.map(stylist => ({ value: stylist, label: stylist }))]} onChange={value => setFilters(current => ({ ...current, stylist: value }))} ariaLabel="Filter customers by stylist" /><Dropdown value={filters.branchId} options={[{ value: '', label: 'All branches' }, ...(salon.branches || []).map(branch => ({ value: branch.id, label: branch.name }))]} onChange={value => setFilters(current => ({ ...current, branchId: value }))} ariaLabel="Filter customers by branch" /><Dropdown value={filters.status} options={[{ value: '', label: 'All statuses' }, { value: 'Requested', label: 'Requested' }, { value: 'Confirmed', label: 'Confirmed' }, { value: 'Cancelled', label: 'Cancelled' }]} onChange={value => setFilters(current => ({ ...current, status: value }))} ariaLabel="Filter customers by status" /><button type="button" className="text-button clear-customer-filters" onClick={() => setFilters({ search: '', dateFrom: '', dateTo: '', service: '', stylist: '', branchId: '', status: '' })}>Clear filters</button></div>{customers.items.map(customer => <div className={`customer-directory-row${selected === customer.id ? ' selected' : ''}`} key={customer.id} onClick={() => selectCustomer(customer.id)}><span className="avatar sage">{customer.name.split(' ').map(part => part[0]).join('').slice(0, 2)}</span><div><b>{customer.name}</b><small><Mail size={11} /> {customer.email} {customer.phone && <><Phone size={11} /> {customer.phone}</>}</small></div><span><small>Visits</small><b>{customer.filteredAppointmentCount}/{customer.appointmentCount}</b></span><span><small>Account status</small><b className={customer.active === false ? 'user-status-inactive' : 'user-status-active'}>{customer.active === false ? 'Deactivated' : 'Active'}</b><small>{customer.lastSeenAt ? new Date(customer.lastSeenAt).toLocaleString() : 'Not seen yet'}</small></span></div>)}{!customers.items.length && <p className="no-results">No customers match these filters.</p>}<Pagination page={customers.page} pageCount={customers.pageCount} onChange={load} /></section>{selected && history && <section className="panel customer-history admin-customer-history"><div className="panel-head"><div><label>CUSTOMER HISTORY</label><h2>Full appointment record</h2></div><CalendarDays size={19} /></div><HistoryList history={history.items} /><Pagination page={history.page} pageCount={history.pageCount} onChange={page => void request<PaginatedHistory>(`/customers/${selected}/history?page=${page}&pageSize=8`).then(setHistory)} /></section>}</section>;
+  const load = (page = 1) =>
+    void request<PaginatedCustomers>(
+      `/customers?${queryParams({ ...filters, page, pageSize: 10 })}`,
+    )
+      .then(setCustomers)
+      .catch(() => showToast("Could not load customer records.", "error"));
+  useEffect(() => {
+    load();
+  }, []);
+  useEffect(() => {
+    const timer = window.setTimeout(() => load(1), 180);
+    return () => window.clearTimeout(timer);
+  }, [filters]);
+  const selectCustomer = (id: string) => {
+    setSelected(id);
+    void request<PaginatedHistory>(`/customers/${id}/history?page=1&pageSize=8`)
+      .then(setHistory)
+      .catch(() => showToast("Could not load this customer history.", "error"));
+  };
+  const exportCustomers = async () => {
+    try {
+      const response = await fetch(
+        `${(typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL) || "http://localhost:3000"}/customers/export?${queryParams(filters)}`,
+        {
+          headers: {
+            authorization: `Bearer ${localStorage.getItem("halo-token") || ""}`,
+          },
+        },
+      );
+      if (!response.ok) throw new Error("Export failed");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "customers.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      showToast("Could not export customer records.", "error");
+    }
+  };
+  return (
+    <section className="page customers">
+      <ShellTitle
+        eyebrow="CUSTOMER RECORDS"
+        title="Know the people behind the bookings."
+        copy="Search, filter, export, and review stable customer records from your salon workspace."
+        back="Back to studio data"
+        onBack={onBack}
+        action={
+          <button className="soft" onClick={() => void exportCustomers()}>
+            <Download size={15} />
+            Export CSV
+          </button>
+        }
+      />
+      <section className="panel customer-directory">
+        <div className="customer-filter-head">
+          <div>
+            <label>THE CLIENT BOOK</label>
+            <h2>
+              {customers.total} customer{customers.total === 1 ? "" : "s"}
+            </h2>
+          </div>
+          <Filter size={18} />
+        </div>
+        <div className="customer-filters">
+          <label className="search-field">
+            <Search size={15} />
+            <input
+              value={filters.search}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  search: event.target.value,
+                }))
+              }
+              placeholder="Search name, email, or phone"
+            />
+          </label>
+          <DatePicker
+            value={filters.dateFrom}
+            onChange={(value) =>
+              setFilters((current) => ({ ...current, dateFrom: value }))
+            }
+            ariaLabel="Customer search start date"
+          />
+          <DatePicker
+            value={filters.dateTo}
+            onChange={(value) =>
+              setFilters((current) => ({ ...current, dateTo: value }))
+            }
+            ariaLabel="Customer search end date"
+          />
+          <Dropdown
+            value={filters.service}
+            options={[
+              { value: "", label: "All services" },
+              ...salon.services.map((service) => ({
+                value: service,
+                label: service,
+              })),
+            ]}
+            onChange={(value) =>
+              setFilters((current) => ({ ...current, service: value }))
+            }
+            ariaLabel="Filter customers by service"
+          />
+          <Dropdown
+            value={filters.stylist}
+            options={[
+              { value: "", label: "All stylists" },
+              ...salon.stylists.map((stylist) => ({
+                value: stylist,
+                label: stylist,
+              })),
+            ]}
+            onChange={(value) =>
+              setFilters((current) => ({ ...current, stylist: value }))
+            }
+            ariaLabel="Filter customers by stylist"
+          />
+          <Dropdown
+            value={filters.branchId}
+            options={[
+              { value: "", label: "All branches" },
+              ...(salon.branches || []).map((branch) => ({
+                value: branch.id,
+                label: branch.name,
+              })),
+            ]}
+            onChange={(value) =>
+              setFilters((current) => ({ ...current, branchId: value }))
+            }
+            ariaLabel="Filter customers by branch"
+          />
+          <Dropdown
+            value={filters.status}
+            options={[
+              { value: "", label: "All statuses" },
+              { value: "Requested", label: "Requested" },
+              { value: "Confirmed", label: "Confirmed" },
+              { value: "Cancelled", label: "Cancelled" },
+            ]}
+            onChange={(value) =>
+              setFilters((current) => ({ ...current, status: value }))
+            }
+            ariaLabel="Filter customers by status"
+          />
+          <button
+            type="button"
+            className="text-button clear-customer-filters"
+            onClick={() =>
+              setFilters({
+                search: "",
+                dateFrom: "",
+                dateTo: "",
+                service: "",
+                stylist: "",
+                branchId: "",
+                status: "",
+              })
+            }
+          >
+            Clear filters
+          </button>
+        </div>
+        {customers.items.map((customer) => (
+          <div
+            className={`customer-directory-row${selected === customer.id ? " selected" : ""}`}
+            key={customer.id}
+            onClick={() => selectCustomer(customer.id)}
+          >
+            <span className="avatar sage">
+              {customer.name
+                .split(" ")
+                .map((part) => part[0])
+                .join("")
+                .slice(0, 2)}
+            </span>
+            <div>
+              <b>{customer.name}</b>
+              <small>
+                <Mail size={11} /> {customer.email}{" "}
+                {customer.phone && (
+                  <>
+                    <Phone size={11} /> {customer.phone}
+                  </>
+                )}
+              </small>
+            </div>
+            <span>
+              <small>Visits</small>
+              <b>
+                {customer.filteredAppointmentCount}/{customer.appointmentCount}
+              </b>
+            </span>
+            <span>
+              <small>Account status</small>
+              <b
+                className={
+                  customer.active === false
+                    ? "user-status-inactive"
+                    : "user-status-active"
+                }
+              >
+                {customer.active === false ? "Deactivated" : "Active"}
+              </b>
+              <small>
+                {customer.lastSeenAt
+                  ? new Date(customer.lastSeenAt).toLocaleString()
+                  : "Not seen yet"}
+              </small>
+            </span>
+          </div>
+        ))}
+        {!customers.items.length && (
+          <p className="no-results">No customers match these filters.</p>
+        )}
+        <Pagination
+          page={customers.page}
+          pageCount={customers.pageCount}
+          onChange={load}
+        />
+      </section>
+      {selected && history && (
+        <section className="panel customer-history admin-customer-history">
+          <div className="panel-head">
+            <div>
+              <label>CUSTOMER HISTORY</label>
+              <h2>Full appointment record</h2>
+            </div>
+            <CalendarDays size={19} />
+          </div>
+          <HistoryList history={history.items} />
+          <Pagination
+            page={history.page}
+            pageCount={history.pageCount}
+            onChange={(page) =>
+              void request<PaginatedHistory>(
+                `/customers/${selected}/history?page=${page}&pageSize=8`,
+              ).then(setHistory)
+            }
+          />
+        </section>
+      )}
+    </section>
+  );
 }
 
-function HistoryFilters({ filters, setFilters, salon }: { filters: Record<string, string>; setFilters: (value: any) => void; salon: SalonConfig }) { const update = (key: string, value: string) => setFilters((current: any) => ({ ...current, [key]: value })); return <div className="customer-history-filters"><DatePicker value={filters.dateFrom} onChange={value => update('dateFrom', value)} ariaLabel="Filter start date" /><DatePicker value={filters.dateTo} onChange={value => update('dateTo', value)} ariaLabel="Filter end date" /><Dropdown value={filters.service} options={[{ value: '', label: 'All services' }, ...salon.services.map(service => ({ value: service, label: service }))]} onChange={value => update('service', value)} ariaLabel="Filter by service" /><Dropdown value={filters.stylist} options={[{ value: '', label: 'All stylists' }, ...salon.stylists.map(stylist => ({ value: stylist, label: stylist }))]} onChange={value => update('stylist', value)} ariaLabel="Filter by stylist" /><Dropdown value={filters.branchId} options={[{ value: '', label: 'All branches' }, ...(salon.branches || []).map(branch => ({ value: branch.id, label: branch.name }))]} onChange={value => update('branchId', value)} ariaLabel="Filter by branch" /><Dropdown value={filters.status} options={[{ value: '', label: 'All statuses' }, { value: 'Requested', label: 'Requested' }, { value: 'Confirmed', label: 'Confirmed' }, { value: 'Cancelled', label: 'Cancelled' }]} onChange={value => update('status', value)} ariaLabel="Filter by status" /></div>; }
-function HistoryList({ history }: { history: CustomerHistory[] }) { return <div className="customer-history-list">{history.map(item => <div className="customer-history-row" key={item.id}><div><b>{item.service}</b><small>{item.date} · {item.time} · {item.stylist}</small></div><span><b>₹{(item.price || 0).toLocaleString('en-IN')}</b><small>{item.status}</small></span></div>)}{!history.length && <p className="no-results">No appointments match these filters.</p>}</div>; }
-function Pagination({ page, pageCount, onChange }: { page: number; pageCount: number; onChange: (page: number) => void }) { return pageCount > 1 ? <div className="catalog-pagination"><span>Page {page} of {pageCount}</span><div><button className="text-button" disabled={page === 1} onClick={() => onChange(page - 1)}>Previous</button><button className="soft" disabled={page === pageCount} onClick={() => onChange(page + 1)}>Next</button></div></div> : null; }
+function HistoryFilters({
+  filters,
+  setFilters,
+  salon,
+}: {
+  filters: Record<string, string>;
+  setFilters: (value: any) => void;
+  salon: SalonConfig;
+}) {
+  const update = (key: string, value: string) =>
+    setFilters((current: any) => ({ ...current, [key]: value }));
+  return (
+    <div className="customer-history-filters">
+      <DatePicker
+        value={filters.dateFrom}
+        onChange={(value) => update("dateFrom", value)}
+        ariaLabel="Filter start date"
+      />
+      <DatePicker
+        value={filters.dateTo}
+        onChange={(value) => update("dateTo", value)}
+        ariaLabel="Filter end date"
+      />
+      <Dropdown
+        value={filters.service}
+        options={[
+          { value: "", label: "All services" },
+          ...salon.services.map((service) => ({
+            value: service,
+            label: service,
+          })),
+        ]}
+        onChange={(value) => update("service", value)}
+        ariaLabel="Filter by service"
+      />
+      <Dropdown
+        value={filters.stylist}
+        options={[
+          { value: "", label: "All stylists" },
+          ...salon.stylists.map((stylist) => ({
+            value: stylist,
+            label: stylist,
+          })),
+        ]}
+        onChange={(value) => update("stylist", value)}
+        ariaLabel="Filter by stylist"
+      />
+      <Dropdown
+        value={filters.branchId}
+        options={[
+          { value: "", label: "All branches" },
+          ...(salon.branches || []).map((branch) => ({
+            value: branch.id,
+            label: branch.name,
+          })),
+        ]}
+        onChange={(value) => update("branchId", value)}
+        ariaLabel="Filter by branch"
+      />
+      <Dropdown
+        value={filters.status}
+        options={[
+          { value: "", label: "All statuses" },
+          { value: "Requested", label: "Requested" },
+          { value: "Confirmed", label: "Confirmed" },
+          { value: "Cancelled", label: "Cancelled" },
+        ]}
+        onChange={(value) => update("status", value)}
+        ariaLabel="Filter by status"
+      />
+    </div>
+  );
+}
+function HistoryList({ history }: { history: CustomerHistory[] }) {
+  return (
+    <div className="customer-history-list">
+      {history.map((item) => (
+        <div className="customer-history-row" key={item.id}>
+          <div>
+            <b>{item.service}</b>
+            <small>
+              {item.date} · {item.time} · {item.stylist}
+            </small>
+          </div>
+          <span>
+            <b>₹{(item.price || 0).toLocaleString("en-IN")}</b>
+            <small>{item.status}</small>
+          </span>
+        </div>
+      ))}
+      {!history.length && (
+        <p className="no-results">No appointments match these filters.</p>
+      )}
+    </div>
+  );
+}
+function Pagination({
+  page,
+  pageCount,
+  onChange,
+}: {
+  page: number;
+  pageCount: number;
+  onChange: (page: number) => void;
+}) {
+  return pageCount > 1 ? (
+    <div className="catalog-pagination">
+      <span>
+        Page {page} of {pageCount}
+      </span>
+      <div>
+        <button
+          className="text-button"
+          disabled={page === 1}
+          onClick={() => onChange(page - 1)}
+        >
+          Previous
+        </button>
+        <button
+          className="soft"
+          disabled={page === pageCount}
+          onClick={() => onChange(page + 1)}
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  ) : null;
+}

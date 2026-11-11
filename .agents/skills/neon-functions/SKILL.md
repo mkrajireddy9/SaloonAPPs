@@ -221,11 +221,11 @@ functions: {
 }
 ```
 
-| `required` | Unset deploying the default branch | Unset deploying another branch | Unset in `neon dev` | `parseEnv(config, slug).function` |
-| --- | --- | --- | --- | --- |
-| `true` | fails before any change | fails before any change | fails before any function starts | `string` |
-| `"default-branch"` | fails before any change | removed from the deployment | runs without it | `string \| undefined` |
-| `false` | removed from the deployment | removed from the deployment | runs without it | `string \| undefined` |
+| `required`         | Unset deploying the default branch | Unset deploying another branch | Unset in `neon dev`              | `parseEnv(config, slug).function` |
+| ------------------ | ---------------------------------- | ------------------------------ | -------------------------------- | --------------------------------- |
+| `true`             | fails before any change            | fails before any change        | fails before any function starts | `string`                          |
+| `"default-branch"` | fails before any change            | removed from the deployment    | runs without it                  | `string \| undefined`             |
+| `false`            | removed from the deployment        | removed from the deployment    | runs without it                  | `string \| undefined`             |
 
 An undefined or empty value counts as unset; put a fallback in `value` (`process.env.X ?? "1"`). `"default-branch"` is the branch Neon marks as default, not a branch name. Add `onUndefined: "skip"` to a `required: false` or `"default-branch"` variable to keep its deployed value instead of removing it, for a value set with `neon functions deploy --env`. Keys `neon.ts` does not declare are left alone.
 

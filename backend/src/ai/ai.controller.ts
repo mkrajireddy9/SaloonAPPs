@@ -1,23 +1,66 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
-import { Roles } from '../auth/roles.decorator';
-import { UserRole } from '../auth/user.entity';
-import { AiService } from './ai.service';
-import { AnalyzeAiDto, HairProfileDto, QualityCheckDto, RecommendDto, SeeOnMeDto, StylistInstructionsDto, TryOnDto } from './ai.dto';
+import { Body, Controller, Post, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { JwtAuthGuard } from "../auth/auth.guard";
+import { RolesGuard } from "../auth/roles.guard";
+import { Roles } from "../auth/roles.decorator";
+import { UserRole } from "../auth/user.entity";
+import { AiService } from "./ai.service";
+import {
+  AnalyzeAiDto,
+  HairProfileDto,
+  QualityCheckDto,
+  RecommendDto,
+  SeeOnMeDto,
+  StylistInstructionsDto,
+  TryOnDto,
+} from "./ai.dto";
 
-@Controller('ai')
-@ApiTags('ai')
+@Controller("ai")
+@ApiTags("ai")
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
 export class AiController {
   constructor(private readonly service: AiService) {}
-  @Post('analyze') @ApiOperation({ summary: 'Analyze visible hair characteristics with Ollama or a safe fallback' }) analyze(@Body() dto: AnalyzeAiDto) { return this.service.analyze(dto); }
-  @Post('quality-check') @ApiOperation({ summary: 'Validate image capture readiness and return retake guidance' }) quality(@Body() dto: QualityCheckDto) { return this.service.quality(dto); }
-  @Post('try-on') @ApiOperation({ summary: 'Return a try-on provider response for a recommended style' }) tryOn(@Body() dto: TryOnDto) { return this.service.tryOn(dto); }
-  @Post('recommend') @ApiOperation({ summary: 'Return exactly five catalog-backed hairstyle recommendations' }) recommend(@Body() dto: RecommendDto) { return this.service.recommend(dto); }
-  @Post('see-on-me') @ApiOperation({ summary: 'Return the local zero-cost preview source' }) seeOnMe(@Body() dto: SeeOnMeDto) { return this.service.seeOnMe(dto); }
-  @Post('stylist-instructions') @ApiOperation({ summary: 'Create stylist instructions from a selected catalog style' }) stylistInstructions(@Body() dto: StylistInstructionsDto) { return this.service.stylistInstructions(dto); }
+  @Post("analyze")
+  @ApiOperation({
+    summary:
+      "Analyze visible hair characteristics with Ollama or a safe fallback",
+  })
+  analyze(@Body() dto: AnalyzeAiDto) {
+    return this.service.analyze(dto);
+  }
+  @Post("quality-check")
+  @ApiOperation({
+    summary: "Validate image capture readiness and return retake guidance",
+  })
+  quality(@Body() dto: QualityCheckDto) {
+    return this.service.quality(dto);
+  }
+  @Post("try-on")
+  @ApiOperation({
+    summary: "Return a try-on provider response for a recommended style",
+  })
+  tryOn(@Body() dto: TryOnDto) {
+    return this.service.tryOn(dto);
+  }
+  @Post("recommend")
+  @ApiOperation({
+    summary: "Return exactly five catalog-backed hairstyle recommendations",
+  })
+  recommend(@Body() dto: RecommendDto) {
+    return this.service.recommend(dto);
+  }
+  @Post("see-on-me")
+  @ApiOperation({ summary: "Return the local zero-cost preview source" })
+  seeOnMe(@Body() dto: SeeOnMeDto) {
+    return this.service.seeOnMe(dto);
+  }
+  @Post("stylist-instructions")
+  @ApiOperation({
+    summary: "Create stylist instructions from a selected catalog style",
+  })
+  stylistInstructions(@Body() dto: StylistInstructionsDto) {
+    return this.service.stylistInstructions(dto);
+  }
 }

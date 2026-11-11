@@ -1,2 +1,16 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
-export class AppointmentReminderPreferences2010000000000 implements MigrationInterface { name = 'AppointmentReminderPreferences2010000000000'; async up(queryRunner: QueryRunner) { await queryRunner.query(`UPDATE users SET "notificationPreferences" = "notificationPreferences" || '{"appointmentReminders":true}'::jsonb WHERE NOT ("notificationPreferences" ? 'appointmentReminders')`); } async down(queryRunner: QueryRunner) { await queryRunner.query(`UPDATE users SET "notificationPreferences" = "notificationPreferences" - 'appointmentReminders'`); } }
+import { MigrationInterface, QueryRunner } from "typeorm";
+export class AppointmentReminderPreferences2010000000000
+  implements MigrationInterface
+{
+  name = "AppointmentReminderPreferences2010000000000";
+  async up(queryRunner: QueryRunner) {
+    await queryRunner.query(
+      `UPDATE users SET "notificationPreferences" = "notificationPreferences" || '{"appointmentReminders":true}'::jsonb WHERE NOT ("notificationPreferences" ? 'appointmentReminders')`,
+    );
+  }
+  async down(queryRunner: QueryRunner) {
+    await queryRunner.query(
+      `UPDATE users SET "notificationPreferences" = "notificationPreferences" - 'appointmentReminders'`,
+    );
+  }
+}

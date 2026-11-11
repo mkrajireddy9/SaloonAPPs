@@ -1,12 +1,154 @@
-import { Link, router } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
-import { API_URL, setSession } from '../../src/api';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Link, router } from "expo-router";
+import { useState } from "react";
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+} from "react-native";
+import { API_URL, setSession } from "../../src/api";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Register() {
-  const [name, setName] = useState(''); const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
-  const submit = async () => { setError(''); if (!name.trim() || !email.trim() || password.length < 8) return setError('Enter your name, email, and a password with at least 8 characters.'); setBusy(true); try { const response = await fetch(`${API_URL}/auth/register`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: name.trim(), email: email.trim(), password, role: 'user' }) }); const body = await response.json(); if (!response.ok) throw new Error(Array.isArray(body.message) ? body.message.join(' ') : body.message || 'Unable to create account.'); await setSession(body.accessToken, body.refreshToken); router.replace('/(tabs)/directory'); } catch (e) { setError(e instanceof Error ? e.message : 'Unable to create account.'); } finally { setBusy(false); } };
-  return <SafeAreaView style={s.safeArea}><KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><ScrollView contentContainerStyle={s.content}><Text style={s.eyebrow}>GET STARTED</Text><Text style={s.title}>Create your guest account</Text><Text style={s.copy}>Your appointments, preferences, and salon history in one calm place.</Text><Text style={s.label}>Full name</Text><TextInput value={name} onChangeText={setName} placeholder="Your name" style={s.input} /><Text style={s.label}>Email address</Text><TextInput value={email} onChangeText={setEmail} placeholder="you@example.com" autoCapitalize="none" keyboardType="email-address" style={s.input} /><Text style={s.label}>Password</Text><TextInput value={password} onChangeText={setPassword} placeholder="At least 8 characters" secureTextEntry style={s.input} /><Pressable disabled={busy} style={s.primary} onPress={() => void submit()}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={s.primaryText}>Create account</Text>}</Pressable>{error ? <Text style={s.error}>{error}</Text> : null}<Link href="/(auth)/login" style={s.link}>Back to sign in</Link></ScrollView></KeyboardAvoidingView></SafeAreaView>;
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const submit = async () => {
+    setError("");
+    if (!name.trim() || !email.trim() || password.length < 8)
+      return setError(
+        "Enter your name, email, and a password with at least 8 characters.",
+      );
+    setBusy(true);
+    try {
+      const response = await fetch(`${API_URL}/auth/register`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          password,
+          role: "user",
+        }),
+      });
+      const body = await response.json();
+      if (!response.ok)
+        throw new Error(
+          Array.isArray(body.message)
+            ? body.message.join(" ")
+            : body.message || "Unable to create account.",
+        );
+      await setSession(body.accessToken, body.refreshToken);
+      router.replace("/(tabs)/directory");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to create account.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <SafeAreaView style={s.safeArea}>
+      <KeyboardAvoidingView
+        style={s.screen}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView contentContainerStyle={s.content}>
+          <Text style={s.eyebrow}>GET STARTED</Text>
+          <Text style={s.title}>Create your guest account</Text>
+          <Text style={s.copy}>
+            Your appointments, preferences, and salon history in one calm place.
+          </Text>
+          <Text style={s.label}>Full name</Text>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            placeholder="Your name"
+            style={s.input}
+          />
+          <Text style={s.label}>Email address</Text>
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder="you@example.com"
+            autoCapitalize="none"
+            keyboardType="email-address"
+            style={s.input}
+          />
+          <Text style={s.label}>Password</Text>
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            placeholder="At least 8 characters"
+            secureTextEntry
+            style={s.input}
+          />
+          <Pressable
+            disabled={busy}
+            style={s.primary}
+            onPress={() => void submit()}
+          >
+            {busy ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={s.primaryText}>Create account</Text>
+            )}
+          </Pressable>
+          {error ? <Text style={s.error}>{error}</Text> : null}
+          <Link href="/(auth)/login" style={s.link}>
+            Back to sign in
+          </Link>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
 }
-const s = StyleSheet.create({ safeArea: { flex: 1, backgroundColor: '#f7f5f0' }, screen: { flex: 1, backgroundColor: '#f7f5f0' }, content: { padding: 24, paddingTop: 40 }, eyebrow: { color: '#91b3a3', fontSize: 11, fontWeight: '700', letterSpacing: 1.5 }, title: { color: '#20352d', fontSize: 30, fontWeight: '700', marginTop: 12 }, copy: { color: '#77817c', lineHeight: 20, marginTop: 8, marginBottom: 18 }, label: { color: '#20352d', fontWeight: '700', fontSize: 12, marginTop: 12, marginBottom: 6 }, input: { backgroundColor: '#fffdfa', borderColor: '#d9d6ce', borderWidth: 1, borderRadius: 9, padding: 14, color: '#20352d' }, primary: { backgroundColor: '#c55239', borderRadius: 9, minHeight: 50, alignItems: 'center', justifyContent: 'center', marginTop: 22 }, primaryText: { color: '#fff', fontWeight: '700' }, error: { color: '#c55239', textAlign: 'center', marginTop: 12 }, link: { color: '#c55239', textAlign: 'center', marginTop: 18, fontWeight: '700' } });
+const s = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: "#f7f5f0" },
+  screen: { flex: 1, backgroundColor: "#f7f5f0" },
+  content: { padding: 24, paddingTop: 40 },
+  eyebrow: {
+    color: "#91b3a3",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+  },
+  title: { color: "#20352d", fontSize: 30, fontWeight: "700", marginTop: 12 },
+  copy: { color: "#77817c", lineHeight: 20, marginTop: 8, marginBottom: 18 },
+  label: {
+    color: "#20352d",
+    fontWeight: "700",
+    fontSize: 12,
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  input: {
+    backgroundColor: "#fffdfa",
+    borderColor: "#d9d6ce",
+    borderWidth: 1,
+    borderRadius: 9,
+    padding: 14,
+    color: "#20352d",
+  },
+  primary: {
+    backgroundColor: "#c55239",
+    borderRadius: 9,
+    minHeight: 50,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 22,
+  },
+  primaryText: { color: "#fff", fontWeight: "700" },
+  error: { color: "#c55239", textAlign: "center", marginTop: 12 },
+  link: {
+    color: "#c55239",
+    textAlign: "center",
+    marginTop: 18,
+    fontWeight: "700",
+  },
+});

@@ -1,74 +1,256 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ArrayNotEmpty, IsArray, IsBoolean, IsIn, IsNumber, IsObject, IsOptional, IsString, Matches, Max, Min, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsBoolean,
+  IsIn,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  Min,
+  MinLength,
+} from "class-validator";
 
 export class UpdateSalonDto {
-  @ApiPropertyOptional({ example: 'Halo Studio' })
-  @IsOptional() @IsString() @MinLength(2) name?: string;
-  @ApiPropertyOptional({ example: 'Indiranagar, Bengaluru' })
-  @IsOptional() @IsString() @MinLength(2) location?: string;
-  @ApiProperty({ example: ['Signature cut', 'Gloss refresh'] })
-  @IsArray() @ArrayNotEmpty() @IsString({ each: true }) @MinLength(2, { each: true }) services!: string[];
-  @ApiProperty({ example: ['Meera Nair', 'Arjun S.'] })
-  @IsArray() @ArrayNotEmpty() @IsString({ each: true }) @MinLength(2, { each: true }) stylists!: string[];
-  @ApiPropertyOptional({ example: { open: '09:00', close: '19:00' } })
-  @IsOptional() @IsObject() openingHours?: { open: string; close: string };
-  @ApiPropertyOptional({ example: ['Sunday'] })
-  @IsOptional() @IsArray() @IsString({ each: true }) closedDays?: string[];
-  @ApiPropertyOptional({ example: [{ name: 'Signature cut', durationMinutes: 60, price: 1840 }] })
-  @IsOptional() @IsArray() serviceDetails?: PriceListItemDto[];
-  @ApiPropertyOptional({ example: [{ id: 'loreal', name: "L'Oreal Professionnel", description: 'Professional colour and care products.', imageUrl: '/media/example', active: true }] })
-  @IsOptional() @IsArray() products?: ProductItemDto[];
-  @ApiPropertyOptional({ example: { 'Meera Nair': { workingDays: ['Monday', 'Tuesday'], leaveDates: [] } } })
-  @IsOptional() @IsObject() stylistSchedules?: Record<string, { workingDays: string[]; leaveDates: string[] }>;
-  @ApiPropertyOptional({ example: { 'Meera Nair': { bio: 'Specialises in textured cuts.', imageUrl: '/images/stylist-meera.jpg' } } })
-  @IsOptional() @IsObject() stylistProfiles?: Record<string, { bio: string; imageUrl: string }>;
-  @ApiPropertyOptional({ type: [Object], example: [{ id: 'main', name: 'Indiranagar', location: 'Bengaluru', openingHours: { open: '09:00', close: '19:00' }, closedDays: ['Sunday'] }] })
-  @IsOptional() @IsArray() branches?: SalonBranchDto[];
+  @ApiPropertyOptional({ example: "Halo Studio" })
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  name?: string;
+  @ApiPropertyOptional({ example: "Indiranagar, Bengaluru" })
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  location?: string;
+  @ApiProperty({ example: ["Signature cut", "Gloss refresh"] })
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsString({ each: true })
+  @MinLength(2, { each: true })
+  services!: string[];
+  @ApiProperty({ example: ["Meera Nair", "Arjun S."] })
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsString({ each: true })
+  @MinLength(2, { each: true })
+  stylists!: string[];
+  @ApiPropertyOptional({ example: { open: "09:00", close: "19:00" } })
+  @IsOptional()
+  @IsObject()
+  openingHours?: { open: string; close: string };
+  @ApiPropertyOptional({ example: ["Sunday"] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  closedDays?: string[];
+  @ApiPropertyOptional({
+    example: [{ name: "Signature cut", durationMinutes: 60, price: 1840 }],
+  })
+  @IsOptional()
+  @IsArray()
+  serviceDetails?: PriceListItemDto[];
+  @ApiPropertyOptional({
+    example: [
+      {
+        id: "loreal",
+        name: "L'Oreal Professionnel",
+        description: "Professional colour and care products.",
+        imageUrl: "/media/example",
+        active: true,
+      },
+    ],
+  })
+  @IsOptional()
+  @IsArray()
+  products?: ProductItemDto[];
+  @ApiPropertyOptional({
+    example: {
+      "Meera Nair": { workingDays: ["Monday", "Tuesday"], leaveDates: [] },
+    },
+  })
+  @IsOptional()
+  @IsObject()
+  stylistSchedules?: Record<
+    string,
+    { workingDays: string[]; leaveDates: string[] }
+  >;
+  @ApiPropertyOptional({
+    example: {
+      "Meera Nair": {
+        bio: "Specialises in textured cuts.",
+        imageUrl: "/images/stylist-meera.jpg",
+      },
+    },
+  })
+  @IsOptional()
+  @IsObject()
+  stylistProfiles?: Record<string, { bio: string; imageUrl: string }>;
+  @ApiPropertyOptional({
+    type: [Object],
+    example: [
+      {
+        id: "main",
+        name: "Indiranagar",
+        location: "Bengaluru",
+        openingHours: { open: "09:00", close: "19:00" },
+        closedDays: ["Sunday"],
+      },
+    ],
+  })
+  @IsOptional()
+  @IsArray()
+  branches?: SalonBranchDto[];
 }
 
 export class ProductItemDto {
-  @ApiProperty({ example: 'loreal' }) @IsString() @MinLength(1) id!: string;
-  @ApiProperty({ example: "L'Oreal Professionnel" }) @IsString() @MinLength(2) name!: string;
-  @ApiPropertyOptional({ example: 'Professional colour and care products.' }) @IsOptional() @IsString() description?: string;
-  @ApiPropertyOptional({ example: '/media/example' }) @IsOptional() @IsString() imageUrl?: string;
-  @ApiPropertyOptional({ example: true }) @IsOptional() @IsBoolean() active?: boolean;
+  @ApiProperty({ example: "loreal" }) @IsString() @MinLength(1) id!: string;
+  @ApiProperty({ example: "L'Oreal Professionnel" })
+  @IsString()
+  @MinLength(2)
+  name!: string;
+  @ApiPropertyOptional({ example: "Professional colour and care products." })
+  @IsOptional()
+  @IsString()
+  description?: string;
+  @ApiPropertyOptional({ example: "/media/example" })
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
 }
 
 export class SalonBranchDto {
-  @ApiProperty({ example: 'main' }) @IsString() @MinLength(1) id!: string;
-  @ApiProperty({ example: 'Indiranagar' }) @IsString() @MinLength(2) name!: string;
-  @ApiProperty({ example: 'Indiranagar, Bengaluru' }) @IsString() @MinLength(2) location!: string;
-  @ApiPropertyOptional({ example: '+91 98450 12345' }) @IsOptional() @IsString() contact?: string;
-  @ApiPropertyOptional({ example: true }) @IsOptional() @IsBoolean() active?: boolean;
-  @ApiProperty({ example: { open: '09:00', close: '19:00' } }) @IsObject() openingHours!: { open: string; close: string };
-  @ApiProperty({ example: ['Sunday'] }) @IsArray() @IsString({ each: true }) @IsIn(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'], { each: true }) closedDays!: string[];
-  @ApiPropertyOptional({ example: ['Signature cut'] }) @IsOptional() @IsArray() @IsString({ each: true }) services?: string[];
-  @ApiPropertyOptional({ example: ['Meera Nair'] }) @IsOptional() @IsArray() @IsString({ each: true }) stylists?: string[];
-  @ApiPropertyOptional({ example: 17.4483 }) @IsOptional() @IsNumber() @Min(-90) @Max(90) latitude?: number;
-  @ApiPropertyOptional({ example: 78.3915 }) @IsOptional() @IsNumber() @Min(-180) @Max(180) longitude?: number;
+  @ApiProperty({ example: "main" }) @IsString() @MinLength(1) id!: string;
+  @ApiProperty({ example: "Indiranagar" })
+  @IsString()
+  @MinLength(2)
+  name!: string;
+  @ApiProperty({ example: "Indiranagar, Bengaluru" })
+  @IsString()
+  @MinLength(2)
+  location!: string;
+  @ApiPropertyOptional({ example: "+91 98450 12345" })
+  @IsOptional()
+  @IsString()
+  contact?: string;
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+  @ApiProperty({ example: { open: "09:00", close: "19:00" } })
+  @IsObject()
+  openingHours!: { open: string; close: string };
+  @ApiProperty({ example: ["Sunday"] })
+  @IsArray()
+  @IsString({ each: true })
+  @IsIn(
+    [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
+    ],
+    { each: true },
+  )
+  closedDays!: string[];
+  @ApiPropertyOptional({ example: ["Signature cut"] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  services?: string[];
+  @ApiPropertyOptional({ example: ["Meera Nair"] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  stylists?: string[];
+  @ApiPropertyOptional({ example: 17.4483 })
+  @IsOptional()
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  latitude?: number;
+  @ApiPropertyOptional({ example: 78.3915 })
+  @IsOptional()
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  longitude?: number;
 }
 
 export class PriceListItemDto {
-  @ApiProperty({ example: 'Signature cut' }) @IsString() @MinLength(2) name!: string;
+  @ApiProperty({ example: "Signature cut" })
+  @IsString()
+  @MinLength(2)
+  name!: string;
   @ApiProperty({ example: 60 }) @IsNumber() @Min(1) durationMinutes!: number;
   @ApiProperty({ example: 1840 }) @IsNumber() @Min(0) price!: number;
-  @ApiPropertyOptional({ example: 15 }) @IsOptional() @IsNumber() @Min(0) @Max(100) discountPercent?: number;
-  @ApiPropertyOptional({ example: 1564 }) @IsOptional() @IsNumber() @Min(0) discountPrice?: number;
-  @ApiPropertyOptional({ example: 'New guest offer' }) @IsOptional() @IsString() offerText?: string;
-  @ApiPropertyOptional({ example: true }) @IsOptional() @IsBoolean() active?: boolean;
-  @ApiPropertyOptional({ example: '/images/signature-cut.jpg' }) @IsOptional() @IsString() imageUrl?: string;
+  @ApiPropertyOptional({ example: 15 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  discountPercent?: number;
+  @ApiPropertyOptional({ example: 1564 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  discountPrice?: number;
+  @ApiPropertyOptional({ example: "New guest offer" })
+  @IsOptional()
+  @IsString()
+  offerText?: string;
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+  @ApiPropertyOptional({ example: "/images/signature-cut.jpg" })
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
 }
 
 export class UpdatePriceListDto {
-  @ApiProperty({ type: [PriceListItemDto] }) @IsArray() items!: PriceListItemDto[];
+  @ApiProperty({ type: [PriceListItemDto] })
+  @IsArray()
+  items!: PriceListItemDto[];
 }
 
 export class UpdateSalonThemeDto {
-  @ApiPropertyOptional({ example: 'halo' }) @IsOptional() @IsString() brandName?: string;
-  @ApiPropertyOptional({ example: 'h' }) @IsOptional() @IsString() logoMark?: string;
-  @ApiPropertyOptional({ example: 'https://example.com/logo.png' }) @IsOptional() @IsString() logoUrl?: string;
-  @ApiPropertyOptional({ example: '#b9533a' }) @IsOptional() @IsString() primary?: string;
-  @ApiPropertyOptional({ example: '#20352d' }) @IsOptional() @IsString() sidebar?: string;
-  @ApiPropertyOptional({ example: '#f7f5f0' }) @IsOptional() @IsString() surface?: string;
-  @ApiPropertyOptional({ example: '#25372f' }) @IsOptional() @IsString() ink?: string;
+  @ApiPropertyOptional({ example: "halo" })
+  @IsOptional()
+  @IsString()
+  brandName?: string;
+  @ApiPropertyOptional({ example: "h" })
+  @IsOptional()
+  @IsString()
+  logoMark?: string;
+  @ApiPropertyOptional({ example: "https://example.com/logo.png" })
+  @IsOptional()
+  @IsString()
+  logoUrl?: string;
+  @ApiPropertyOptional({ example: "#b9533a" })
+  @IsOptional()
+  @IsString()
+  primary?: string;
+  @ApiPropertyOptional({ example: "#20352d" })
+  @IsOptional()
+  @IsString()
+  sidebar?: string;
+  @ApiPropertyOptional({ example: "#f7f5f0" })
+  @IsOptional()
+  @IsString()
+  surface?: string;
+  @ApiPropertyOptional({ example: "#25372f" })
+  @IsOptional()
+  @IsString()
+  ink?: string;
 }

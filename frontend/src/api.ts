@@ -1,31 +1,204 @@
-const API = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL) || 'http://localhost:3000';
+const API =
+  (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL) ||
+  "http://localhost:3000";
 export const PHONE_PATTERN = /^\+?[0-9 ()-]{7,20}$/;
-export function getApiErrorMessage(error: unknown, fallback = 'Something went wrong. Please try again.') {
+export function getApiErrorMessage(
+  error: unknown,
+  fallback = "Something went wrong. Please try again.",
+) {
   if (!(error instanceof Error)) return fallback;
-  if (/^Enter a valid mobile number|^That time is no longer available|^The email or password is incorrect|^Unable to reach the server|^Could not upload the file/i.test(error.message)) return error.message;
-  if (/failed to fetch|networkerror|load failed/i.test(error.message)) return 'Unable to reach the server. Please check your connection and try again.';
+  if (
+    /^Enter a valid mobile number|^That time is no longer available|^The email or password is incorrect|^Unable to reach the server|^Could not upload the file/i.test(
+      error.message,
+    )
+  )
+    return error.message;
+  if (/failed to fetch|networkerror|load failed/i.test(error.message))
+    return "Unable to reach the server. Please check your connection and try again.";
   try {
-    const payload = JSON.parse(error.message) as { message?: string | string[] };
-    const messages = Array.isArray(payload.message) ? payload.message : [payload.message];
-    const message = messages.filter(Boolean).join(' ');
-    if (/guestPhone|phone/i.test(message)) return 'Enter a valid mobile number, for example +91 98450 12345.';
-    if (/already requested|already booked|conflict/i.test(message)) return 'That time is no longer available. Please choose another slot.';
-    if (/unauthorized|invalid email|invalid password/i.test(message)) return 'The email or password is incorrect.';
-    if (message && !/statuscode|requestid|validation failed/i.test(message)) return message;
+    const payload = JSON.parse(error.message) as {
+      message?: string | string[];
+    };
+    const messages = Array.isArray(payload.message)
+      ? payload.message
+      : [payload.message];
+    const message = messages.filter(Boolean).join(" ");
+    if (/guestPhone|phone/i.test(message))
+      return "Enter a valid mobile number, for example +91 98450 12345.";
+    if (/already requested|already booked|conflict/i.test(message))
+      return "That time is no longer available. Please choose another slot.";
+    if (/unauthorized|invalid email|invalid password/i.test(message))
+      return "The email or password is incorrect.";
+    if (message && !/statuscode|requestid|validation failed/i.test(message))
+      return message;
   } catch {
-    return error.message && !/statuscode|requestid|validation failed/i.test(error.message) ? error.message : fallback;
+    return error.message &&
+      !/statuscode|requestid|validation failed/i.test(error.message)
+      ? error.message
+      : fallback;
   }
   return fallback;
 }
-export function clearAuthToken() { localStorage.removeItem('halo-token'); }
-export function setAuthToken(token: string) { localStorage.setItem('halo-token', token); }
-export function setAuthSession(accessToken: string, refreshToken: string) { setAuthToken(accessToken); localStorage.setItem('halo-refresh-token', refreshToken); }
-export function clearAuthSession() { localStorage.removeItem('halo-token'); localStorage.removeItem('halo-refresh-token'); }
-export async function rotateAccessToken() { const refreshToken = localStorage.getItem('halo-refresh-token'); if (!refreshToken) return false; const response = await fetch(`${API}/auth/refresh`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ refreshToken }) }); if (!response.ok) return false; const result = await response.json() as { accessToken: string; refreshToken: string }; setAuthSession(result.accessToken, result.refreshToken); return true; }
-export async function request<T>(path: string, options?: RequestInit): Promise<T> { try { const send = () => { const token = localStorage.getItem('halo-token'); const headers = { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}), ...(options?.headers || {}) }; return fetch(`${API}${path}`, { cache: 'no-store', ...options, headers }); }; let r = await send(); if (r.status === 401 && path !== '/auth/refresh' && await rotateAccessToken()) r = await send(); if (!r.ok) throw new Error(getApiErrorMessage(new Error(await r.text()))); return r.json(); } catch (error) { throw new Error(getApiErrorMessage(error)); } }
-export async function uploadFile(file: File, consentGiven = false): Promise<{ id: string; url: string; mimeType: string; size: number }> { try { const token = localStorage.getItem('halo-token'); const body = new FormData(); body.append('file', file); body.append('consentGiven', String(consentGiven)); let response = await fetch(`${API}/media/upload`, { method: 'POST', headers: token ? { authorization: `Bearer ${token}` } : {}, body }); if (response.status === 401 && await rotateAccessToken()) { const refreshed = localStorage.getItem('halo-token'); response = await fetch(`${API}/media/upload`, { method: 'POST', headers: refreshed ? { authorization: `Bearer ${refreshed}` } : {}, body }); } if (!response.ok) throw new Error(getApiErrorMessage(new Error(await response.text()), 'Could not upload the file. Please try again.')); return response.json(); } catch (error) { throw new Error(getApiErrorMessage(error, 'Could not upload the file. Please try again.')); } }
-export async function deleteMedia(source: string) { const match = source.match(/\/media\/([^/?]+)/); if (!match) return; await request(`/media/${match[1]}`, { method: 'DELETE' }); }
-export function authenticatedImageUrl(source: string) { if (!source || !source.includes('/media/')) return source; const normalized = source.startsWith('/media/') ? `${API}${source}` : source; const token = localStorage.getItem('halo-token'); return token ? `${normalized}${normalized.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}` : normalized; }
-function vapidKey(value: string) { const padding = '='.repeat((4 - value.length % 4) % 4); const raw = atob((value + padding).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(raw, char => char.charCodeAt(0)); }
-export async function enablePushNotifications() { if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) throw new Error('Browser notifications are not supported on this device.'); const permission = await Notification.requestPermission(); if (permission !== 'granted') throw new Error(permission === 'denied' ? 'Notifications are blocked in your browser settings.' : 'Notification permission was not granted.'); await navigator.serviceWorker.register('/sw.js'); const registration = await navigator.serviceWorker.ready; const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY; if (!key) throw new Error('Browser notifications are not configured yet.'); const existing = await registration.pushManager.getSubscription(); const subscription = existing || await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: vapidKey(key) }); const json = subscription.toJSON(); if (!json.endpoint || !json.keys?.p256dh || !json.keys.auth) throw new Error('The browser did not return a valid push subscription.'); await request('/notifications/push/subscribe', { method: 'POST', body: JSON.stringify({ endpoint: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth }) }); return true; }
-export async function disablePushNotifications() { const registration = await navigator.serviceWorker.getRegistration('/sw.js'); const subscription = await registration?.pushManager.getSubscription(); if (!subscription) return; await request('/notifications/push/unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint: subscription.endpoint, p256dh: subscription.toJSON().keys?.p256dh || 'disabled', auth: subscription.toJSON().keys?.auth || 'disabled' }) }); await subscription.unsubscribe(); }
+export function clearAuthToken() {
+  localStorage.removeItem("halo-token");
+}
+export function setAuthToken(token: string) {
+  localStorage.setItem("halo-token", token);
+}
+export function setAuthSession(accessToken: string, refreshToken: string) {
+  setAuthToken(accessToken);
+  localStorage.setItem("halo-refresh-token", refreshToken);
+}
+export function clearAuthSession() {
+  localStorage.removeItem("halo-token");
+  localStorage.removeItem("halo-refresh-token");
+}
+export async function rotateAccessToken() {
+  const refreshToken = localStorage.getItem("halo-refresh-token");
+  if (!refreshToken) return false;
+  const response = await fetch(`${API}/auth/refresh`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ refreshToken }),
+  });
+  if (!response.ok) return false;
+  const result = (await response.json()) as {
+    accessToken: string;
+    refreshToken: string;
+  };
+  setAuthSession(result.accessToken, result.refreshToken);
+  return true;
+}
+export async function request<T>(
+  path: string,
+  options?: RequestInit,
+): Promise<T> {
+  try {
+    const send = () => {
+      const token = localStorage.getItem("halo-token");
+      const headers = {
+        "content-type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+        ...(options?.headers || {}),
+      };
+      return fetch(`${API}${path}`, { cache: "no-store", ...options, headers });
+    };
+    let r = await send();
+    if (
+      r.status === 401 &&
+      path !== "/auth/refresh" &&
+      (await rotateAccessToken())
+    )
+      r = await send();
+    if (!r.ok) throw new Error(getApiErrorMessage(new Error(await r.text())));
+    return r.json();
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error));
+  }
+}
+export async function uploadFile(
+  file: File,
+  consentGiven = false,
+): Promise<{ id: string; url: string; mimeType: string; size: number }> {
+  try {
+    const token = localStorage.getItem("halo-token");
+    const body = new FormData();
+    body.append("file", file);
+    body.append("consentGiven", String(consentGiven));
+    let response = await fetch(`${API}/media/upload`, {
+      method: "POST",
+      headers: token ? { authorization: `Bearer ${token}` } : {},
+      body,
+    });
+    if (response.status === 401 && (await rotateAccessToken())) {
+      const refreshed = localStorage.getItem("halo-token");
+      response = await fetch(`${API}/media/upload`, {
+        method: "POST",
+        headers: refreshed ? { authorization: `Bearer ${refreshed}` } : {},
+        body,
+      });
+    }
+    if (!response.ok)
+      throw new Error(
+        getApiErrorMessage(
+          new Error(await response.text()),
+          "Could not upload the file. Please try again.",
+        ),
+      );
+    return response.json();
+  } catch (error) {
+    throw new Error(
+      getApiErrorMessage(error, "Could not upload the file. Please try again."),
+    );
+  }
+}
+export async function deleteMedia(source: string) {
+  const match = source.match(/\/media\/([^/?]+)/);
+  if (!match) return;
+  await request(`/media/${match[1]}`, { method: "DELETE" });
+}
+export function authenticatedImageUrl(source: string) {
+  if (!source || !source.includes("/media/")) return source;
+  const normalized = source.startsWith("/media/") ? `${API}${source}` : source;
+  const token = localStorage.getItem("halo-token");
+  return token
+    ? `${normalized}${normalized.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
+    : normalized;
+}
+function vapidKey(value: string) {
+  const padding = "=".repeat((4 - (value.length % 4)) % 4);
+  const raw = atob((value + padding).replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from(raw, (char) => char.charCodeAt(0));
+}
+export async function enablePushNotifications() {
+  if (
+    !("Notification" in window) ||
+    !("serviceWorker" in navigator) ||
+    !("PushManager" in window)
+  )
+    throw new Error("Browser notifications are not supported on this device.");
+  const permission = await Notification.requestPermission();
+  if (permission !== "granted")
+    throw new Error(
+      permission === "denied"
+        ? "Notifications are blocked in your browser settings."
+        : "Notification permission was not granted.",
+    );
+  await navigator.serviceWorker.register("/sw.js");
+  const registration = await navigator.serviceWorker.ready;
+  const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  if (!key) throw new Error("Browser notifications are not configured yet.");
+  const existing = await registration.pushManager.getSubscription();
+  const subscription =
+    existing ||
+    (await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: vapidKey(key),
+    }));
+  const json = subscription.toJSON();
+  if (!json.endpoint || !json.keys?.p256dh || !json.keys.auth)
+    throw new Error("The browser did not return a valid push subscription.");
+  await request("/notifications/push/subscribe", {
+    method: "POST",
+    body: JSON.stringify({
+      endpoint: json.endpoint,
+      p256dh: json.keys.p256dh,
+      auth: json.keys.auth,
+    }),
+  });
+  return true;
+}
+export async function disablePushNotifications() {
+  const registration = await navigator.serviceWorker.getRegistration("/sw.js");
+  const subscription = await registration?.pushManager.getSubscription();
+  if (!subscription) return;
+  await request("/notifications/push/unsubscribe", {
+    method: "POST",
+    body: JSON.stringify({
+      endpoint: subscription.endpoint,
+      p256dh: subscription.toJSON().keys?.p256dh || "disabled",
+      auth: subscription.toJSON().keys?.auth || "disabled",
+    }),
+  });
+  await subscription.unsubscribe();
+}

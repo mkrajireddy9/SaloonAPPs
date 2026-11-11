@@ -1,10 +1,138 @@
-import { ArrowRight, CalendarDays, Check, Plus } from 'lucide-react';
-import { ShellTitle } from '../components/ShellTitle';
-import type { Appointment } from '../types';
+import { ArrowRight, CalendarDays, Check, Plus } from "lucide-react";
+import { ShellTitle } from "../components/ShellTitle";
+import type { Appointment } from "../types";
 
-export function TodayScreen({ onNew, onPassport, onStudioData, appointments, onConfirmAppointment }: { onNew: () => void; onPassport: () => void; onStudioData: () => void; appointments: Appointment[]; onConfirmAppointment: (id: string) => void }) {
-  const dateLabel = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
-  const activeAppointments = appointments.filter(appointment => appointment.status !== 'Cancelled');
-  const initials = (name?: string) => (name || 'Guest').split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase();
-  return <section className="page"><ShellTitle eyebrow={`${dateLabel.toUpperCase()} · STUDIO`} title="Make room for good hair days." copy="Your consultation room is ready. Take a beat, then make the next guest feel seen." action={<button className="primary" onClick={onNew}><Plus size={17}/>New consultation</button>}/>{activeAppointments.length > 0 && <section className="panel request-banner"><div><label>APPOINTMENT REQUESTS</label><h2>{activeAppointments.length} guest{activeAppointments.length === 1 ? '' : 's'} have a booking.</h2></div><CalendarDays size={22}/></section>}<div className="today-grid"><section className="panel queue"><div className="panel-head"><div><label>THE ROOM TODAY</label><h2>Consultation queue</h2></div><span className="remaining"><i/>{activeAppointments.length} remaining</span></div>{activeAppointments.length === 0 && <div className="empty-appointments"><CalendarDays size={19}/><p>No appointments scheduled yet.<br/>New bookings will appear here.</p></div>}{activeAppointments.map(appointment => <div className="request-row" key={appointment.id}><span className="avatar peach">{initials(appointment.guestName)}</span><div><b>{appointment.service}</b><p>{appointment.date} · {appointment.time} · {appointment.guestName || 'Guest'}</p></div>{appointment.status === 'Requested' ? <button className="confirm-button" onClick={() => onConfirmAppointment(appointment.id)}><Check size={14}/>Confirm</button> : <em className="ready">Confirmed</em>}</div>)}{activeAppointments.length > 0 && <div className="queue-foot"><button onClick={onStudioData}>View studio data <ArrowRight size={15}/></button></div>}</section><div className="side-stack"><section className="panel confidence"><label>STUDIO STATUS</label><h2>Today at a glance</h2><div className="score"><strong>{activeAppointments.length}</strong><span>active<br/>appointments</span></div><div className="meter"><i style={{ width: `${Math.min(activeAppointments.length * 12, 100)}%` }}/></div><p>Live appointment data from your connected salon workspace.</p></section></div></div></section>;
+export function TodayScreen({
+  onNew,
+  onPassport,
+  onStudioData,
+  appointments,
+  onConfirmAppointment,
+}: {
+  onNew: () => void;
+  onPassport: () => void;
+  onStudioData: () => void;
+  appointments: Appointment[];
+  onConfirmAppointment: (id: string) => void;
+}) {
+  const dateLabel = new Date().toLocaleDateString("en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+  const activeAppointments = appointments.filter(
+    (appointment) => appointment.status !== "Cancelled",
+  );
+  const initials = (name?: string) =>
+    (name || "Guest")
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+  return (
+    <section className="page">
+      <ShellTitle
+        eyebrow={`${dateLabel.toUpperCase()} · STUDIO`}
+        title="Make room for good hair days."
+        copy="Your consultation room is ready. Take a beat, then make the next guest feel seen."
+        action={
+          <button className="primary" onClick={onNew}>
+            <Plus size={17} />
+            New consultation
+          </button>
+        }
+      />
+      {activeAppointments.length > 0 && (
+        <section className="panel request-banner">
+          <div>
+            <label>APPOINTMENT REQUESTS</label>
+            <h2>
+              {activeAppointments.length} guest
+              {activeAppointments.length === 1 ? "" : "s"} have a booking.
+            </h2>
+          </div>
+          <CalendarDays size={22} />
+        </section>
+      )}
+      <div className="today-grid">
+        <section className="panel queue">
+          <div className="panel-head">
+            <div>
+              <label>THE ROOM TODAY</label>
+              <h2>Consultation queue</h2>
+            </div>
+            <span className="remaining">
+              <i />
+              {activeAppointments.length} remaining
+            </span>
+          </div>
+          {activeAppointments.length === 0 && (
+            <div className="empty-appointments">
+              <CalendarDays size={19} />
+              <p>
+                No appointments scheduled yet.
+                <br />
+                New bookings will appear here.
+              </p>
+            </div>
+          )}
+          {activeAppointments.map((appointment) => (
+            <div className="request-row" key={appointment.id}>
+              <span className="avatar peach">
+                {initials(appointment.guestName)}
+              </span>
+              <div>
+                <b>{appointment.service}</b>
+                <p>
+                  {appointment.date} · {appointment.time} ·{" "}
+                  {appointment.guestName || "Guest"}
+                </p>
+              </div>
+              {appointment.status === "Requested" ? (
+                <button
+                  className="confirm-button"
+                  onClick={() => onConfirmAppointment(appointment.id)}
+                >
+                  <Check size={14} />
+                  Confirm
+                </button>
+              ) : (
+                <em className="ready">Confirmed</em>
+              )}
+            </div>
+          ))}
+          {activeAppointments.length > 0 && (
+            <div className="queue-foot">
+              <button onClick={onStudioData}>
+                View studio data <ArrowRight size={15} />
+              </button>
+            </div>
+          )}
+        </section>
+        <div className="side-stack">
+          <section className="panel confidence">
+            <label>STUDIO STATUS</label>
+            <h2>Today at a glance</h2>
+            <div className="score">
+              <strong>{activeAppointments.length}</strong>
+              <span>
+                active
+                <br />
+                appointments
+              </span>
+            </div>
+            <div className="meter">
+              <i
+                style={{
+                  width: `${Math.min(activeAppointments.length * 12, 100)}%`,
+                }}
+              />
+            </div>
+            <p>Live appointment data from your connected salon workspace.</p>
+          </section>
+        </div>
+      </div>
+    </section>
+  );
 }

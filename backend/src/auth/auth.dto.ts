@@ -1,54 +1,100 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
-import { UserRole } from './user.entity';
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import {
+  IsBoolean,
+  IsEmail,
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+} from "class-validator";
+import { UserRole } from "./user.entity";
 
 export class RegisterDto {
-  @ApiProperty({ example: 'Ananya Rao' })
-  @IsNotEmpty() @IsString() name!: string;
-  @ApiProperty({ example: 'ananya@example.com' })
-  @IsEmail() email!: string;
-  @ApiProperty({ example: 'strong-password' })
-  @MinLength(8) @IsString() password!: string;
+  @ApiProperty({ example: "Ananya Rao" })
+  @IsNotEmpty()
+  @IsString()
+  name!: string;
+  @ApiProperty({ example: "ananya@example.com" })
+  @IsEmail()
+  email!: string;
+  @ApiProperty({ example: "strong-password" })
+  @MinLength(8)
+  @IsString()
+  password!: string;
   @ApiPropertyOptional({ enum: UserRole, default: UserRole.USER })
-  @IsOptional() @IsIn([UserRole.USER, UserRole.ADMIN]) role?: UserRole;
-  @ApiPropertyOptional({ description: 'Required when registering an admin account.' })
-  @IsOptional() @IsString() inviteCode?: string;
+  @IsOptional()
+  @IsIn([UserRole.USER, UserRole.ADMIN])
+  role?: UserRole;
+  @ApiPropertyOptional({
+    description: "Required when registering an admin account.",
+  })
+  @IsOptional()
+  @IsString()
+  inviteCode?: string;
 }
 
 export class LoginDto {
-  @ApiPropertyOptional({ description: 'Salon tenant code, required for admin login.' })
-  @IsOptional() @IsString() tenantCode?: string;
-  @ApiProperty({ example: 'ananya@example.com' })
+  @ApiPropertyOptional({
+    description: "Salon tenant code, required for admin login.",
+  })
+  @IsOptional()
+  @IsString()
+  tenantCode?: string;
+  @ApiProperty({ example: "ananya@example.com" })
   @ApiPropertyOptional({ enum: UserRole, default: UserRole.USER })
-  @IsNotEmpty() @IsString() email!: string;
-  @ApiProperty({ example: 'strong-password' })
-  @IsNotEmpty() @IsString() password!: string;
+  @IsNotEmpty()
+  @IsString()
+  email!: string;
+  @ApiProperty({ example: "strong-password" })
+  @IsNotEmpty()
+  @IsString()
+  password!: string;
   @ApiPropertyOptional({ enum: UserRole, default: UserRole.USER })
-  @IsOptional() @IsIn([UserRole.USER, UserRole.ADMIN]) role?: UserRole;
+  @IsOptional()
+  @IsIn([UserRole.USER, UserRole.ADMIN])
+  role?: UserRole;
 }
 
 export class GoogleLoginDto {
-  @ApiProperty({ description: 'Google Identity Services ID token credential.' })
-  @IsNotEmpty() @IsString() credential!: string;
+  @ApiProperty({ description: "Google Identity Services ID token credential." })
+  @IsNotEmpty()
+  @IsString()
+  credential!: string;
   @ApiPropertyOptional({ enum: UserRole, default: UserRole.USER })
-  @IsOptional() @IsIn([UserRole.USER, UserRole.ADMIN]) role?: UserRole;
-  @ApiPropertyOptional({ description: 'Salon tenant code, required for admin login.' })
-  @IsOptional() @IsString() tenantCode?: string;
+  @IsOptional()
+  @IsIn([UserRole.USER, UserRole.ADMIN])
+  role?: UserRole;
+  @ApiPropertyOptional({
+    description: "Salon tenant code, required for admin login.",
+  })
+  @IsOptional()
+  @IsString()
+  tenantCode?: string;
 }
 
 export class RefreshTokenDto {
-  @ApiProperty({ example: 'refresh-token-from-login' })
-  @IsNotEmpty() @IsString() refreshToken!: string;
+  @ApiProperty({ example: "refresh-token-from-login" })
+  @IsNotEmpty()
+  @IsString()
+  refreshToken!: string;
 }
 
 export class NotificationPreferencesDto {
-  @ApiPropertyOptional({ default: true }) @IsOptional() @IsBoolean() email?: boolean;
-  @ApiPropertyOptional({ default: true }) @IsOptional() @IsBoolean() appointmentReminders?: boolean;
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  email?: boolean;
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  appointmentReminders?: boolean;
 }
 
 export class ForgotPasswordDto {
-  @ApiProperty({ example: 'guest@example.com' })
-  @IsEmail() email!: string;
+  @ApiProperty({ example: "guest@example.com" })
+  @IsEmail()
+  email!: string;
 }
 
 export class ResetPasswordDto {

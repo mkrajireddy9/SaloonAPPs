@@ -120,7 +120,9 @@ app.all("/mcp", async (c) => {
   const userId = c.get("auth").sub;
   // Build a McpServer whose tools close over userId; stateless transport per request.
   const server = createServer(userId);
-  const transport = new StreamableHTTPTransport({ sessionIdGenerator: undefined });
+  const transport = new StreamableHTTPTransport({
+    sessionIdGenerator: undefined,
+  });
   await server.connect(transport);
   return transport.handleRequest(c);
 });
@@ -146,7 +148,6 @@ app.all("/mcp", async (c) => {
   return transport.handleRequest(c);
 });
 ```
-
 
 This keeps the secret server-side, costs nothing to operate, and is trivial to rotate — a solid default until you need third-party clients to self-authorize, at which point reach for Option 1.
 

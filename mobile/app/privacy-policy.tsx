@@ -1,6 +1,127 @@
-import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from "expo-router";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function PrivacyPolicy() { return <SafeAreaView style={s.safeArea}><ScrollView style={s.screen} contentContainerStyle={s.content}><View style={s.nav}><Pressable style={s.backButton} onPress={() => router.back()}><Text style={s.back}>‹</Text></Pressable><Text style={s.navLabel}>LEGAL</Text></View><View style={s.hero}><Text style={s.eyebrow}>HALO / YOUR TRUST</Text><Text style={s.title}>Privacy policy</Text><Text style={s.subtitle}>A clear look at how Halo handles your information.</Text></View><Text style={s.updated}>LAST UPDATED · 10 NOVEMBER 2026</Text><View style={s.card}><Text style={s.cardTitle}>Your privacy matters</Text><Text style={s.body}>Halo uses the information you provide to support salon discovery, appointments, your profile, and your hair passport. Your account data is sent securely to the Halo API and is not stored directly by this mobile application.</Text></View><View style={s.card}><Text style={s.sectionNumber}>01</Text><Text style={s.heading}>Images and consent</Text><Text style={s.body}>Only upload images when you understand how they will be used for your consultation. The app will request explicit consent for supported image workflows.</Text></View><Text style={s.footer}>Questions about your data? Contact the Halo team through your salon.</Text></ScrollView></SafeAreaView>; }
-const s = StyleSheet.create({ safeArea: { flex: 1, backgroundColor: '#f7f5f0' }, screen: { flex: 1, backgroundColor: '#f7f5f0' }, content: { padding: 22, paddingBottom: 44 }, nav: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 }, backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#fffdfa', borderWidth: 1, borderColor: '#e4e1d9', alignItems: 'center', justifyContent: 'center', marginRight: 12 }, back: { color: '#20352d', fontSize: 29, lineHeight: 30, marginTop: -3 }, navLabel: { color: '#77817c', fontSize: 11, fontWeight: '800', letterSpacing: 1.8 }, hero: { backgroundColor: '#20352d', borderRadius: 22, padding: 22, marginBottom: 18 }, eyebrow: { color: '#a9c9ba', fontSize: 10, fontWeight: '800', letterSpacing: 1.5 }, title: { color: '#fff', fontSize: 31, fontWeight: '800', marginTop: 9 }, subtitle: { color: '#c8d2cb', fontSize: 14, lineHeight: 21, marginTop: 8 }, updated: { color: '#91b3a3', fontSize: 10, fontWeight: '800', letterSpacing: 1.2, marginBottom: 10 }, card: { backgroundColor: '#fffdfa', borderWidth: 1, borderColor: '#e4e1d9', borderRadius: 16, padding: 18, marginBottom: 12 }, cardTitle: { color: '#20352d', fontSize: 19, fontWeight: '800', marginBottom: 8 }, sectionNumber: { color: '#c55239', fontSize: 11, fontWeight: '800', letterSpacing: 1.5 }, heading: { color: '#20352d', fontSize: 18, fontWeight: '800', marginTop: 6, marginBottom: 4 }, body: { color: '#66756d', fontSize: 14, lineHeight: 22 }, footer: { color: '#9aa19c', textAlign: 'center', fontSize: 12, lineHeight: 18, marginTop: 12 } });
+export default function PrivacyPolicy() {
+  return (
+    <SafeAreaView style={s.safeArea}>
+      <ScrollView style={s.screen} contentContainerStyle={s.content}>
+        <View style={s.nav}>
+          <Pressable style={s.backButton} onPress={() => router.back()}>
+            <Text style={s.back}>‹</Text>
+          </Pressable>
+          <Text style={s.navLabel}>LEGAL</Text>
+        </View>
+        <View style={s.hero}>
+          <Text style={s.eyebrow}>HALO / YOUR TRUST</Text>
+          <Text style={s.title}>Privacy policy</Text>
+          <Text style={s.subtitle}>
+            A clear look at how Halo handles your information.
+          </Text>
+        </View>
+        <Text style={s.updated}>LAST UPDATED · 10 NOVEMBER 2026</Text>
+        <View style={s.card}>
+          <Text style={s.cardTitle}>Your privacy matters</Text>
+          <Text style={s.body}>
+            Halo uses the information you provide to support salon discovery,
+            appointments, your profile, and your hair passport. Your account
+            data is sent securely to the Halo API and is not stored directly by
+            this mobile application.
+          </Text>
+        </View>
+        <View style={s.card}>
+          <Text style={s.sectionNumber}>01</Text>
+          <Text style={s.heading}>Images and consent</Text>
+          <Text style={s.body}>
+            Only upload images when you understand how they will be used for
+            your consultation. The app will request explicit consent for
+            supported image workflows.
+          </Text>
+        </View>
+        <Text style={s.footer}>
+          Questions about your data? Contact the Halo team through your salon.
+        </Text>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+const s = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: "#f7f5f0" },
+  screen: { flex: 1, backgroundColor: "#f7f5f0" },
+  content: { padding: 22, paddingBottom: 44 },
+  nav: { flexDirection: "row", alignItems: "center", marginBottom: 18 },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#fffdfa",
+    borderWidth: 1,
+    borderColor: "#e4e1d9",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  back: { color: "#20352d", fontSize: 29, lineHeight: 30, marginTop: -3 },
+  navLabel: {
+    color: "#77817c",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.8,
+  },
+  hero: {
+    backgroundColor: "#20352d",
+    borderRadius: 22,
+    padding: 22,
+    marginBottom: 18,
+  },
+  eyebrow: {
+    color: "#a9c9ba",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+  },
+  title: { color: "#fff", fontSize: 31, fontWeight: "800", marginTop: 9 },
+  subtitle: { color: "#c8d2cb", fontSize: 14, lineHeight: 21, marginTop: 8 },
+  updated: {
+    color: "#91b3a3",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    marginBottom: 10,
+  },
+  card: {
+    backgroundColor: "#fffdfa",
+    borderWidth: 1,
+    borderColor: "#e4e1d9",
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 12,
+  },
+  cardTitle: {
+    color: "#20352d",
+    fontSize: 19,
+    fontWeight: "800",
+    marginBottom: 8,
+  },
+  sectionNumber: {
+    color: "#c55239",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+  },
+  heading: {
+    color: "#20352d",
+    fontSize: 18,
+    fontWeight: "800",
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  body: { color: "#66756d", fontSize: 14, lineHeight: 22 },
+  footer: {
+    color: "#9aa19c",
+    textAlign: "center",
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 12,
+  },
+});

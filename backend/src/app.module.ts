@@ -1,69 +1,189 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Consultation } from './consultations/consultation.entity';
-import { ConsultationModule } from './consultations/consultation.module';
-import { Appointment } from './appointments/appointment.entity';
-import { AppointmentModule } from './appointments/appointment.module';
-import { AuthModule } from './auth/auth.module';
-import { User } from './auth/user.entity';
-import { Salon } from './salon/salon.entity';
-import { SalonModule } from './salon/salon.module';
-import { Passport } from './passport/passport.entity';
-import { PassportModule } from './passport/passport.module';
-import { DashboardModule } from './dashboard/dashboard.module';
-import { InitialSchema1710000000000 } from './database/migrations/1710000000000-InitialSchema';
-import { ConsultationImages1720000000000 } from './database/migrations/1720000000000-ConsultationImages';
-import { SalonHours1730000000000 } from './database/migrations/1730000000000-SalonHours';
-import { BookingCatalog1740000000000 } from './database/migrations/1740000000000-BookingCatalog';
-import { SeedServiceCatalog1750000000000 } from './database/migrations/1750000000000-SeedServiceCatalog';
-import { AiModule } from './ai/ai.module';
-import { Review } from './reviews/review.entity';
-import { ReviewModule } from './reviews/review.module';
-import { Reviews1760000000000 } from './database/migrations/1760000000000-Reviews';
-import { SalonBranches1770000000000 } from './database/migrations/1770000000000-SalonBranches';
-import { StylistProfiles1780000000000 } from './database/migrations/1780000000000-StylistProfiles';
-import { NotificationPreferences1790000000000 } from './database/migrations/1790000000000-NotificationPreferences';
-import { SalonTheme1800000000000 } from './database/migrations/1800000000000-SalonTheme';
-import { FlorenceHairSalonPriceList1810000000000 } from './database/migrations/1810000000000-FlorenceHairSalonPriceList';
-import { AppointmentBranches1820000000000 } from './database/migrations/1820000000000-AppointmentBranches';
-import { Payment } from './payments/payment.entity';
-import { PaymentModule } from './payments/payment.module';
-import { Notification } from './notifications/notification.entity';
-import { PushSubscription } from './notifications/push-subscription.entity';
-import { NotificationModule } from './notifications/notification.module';
-import { PaymentsNotifications1830000000000 } from './database/migrations/1830000000000-PaymentsNotifications';
-import { MediaAsset } from './media/media.entity';
-import { MediaModule } from './media/media.module';
-import { MediaAssets1840000000000 } from './database/migrations/1840000000000-MediaAssets';
-import { resolve } from 'path';
-import { CustomerModule } from './customers/customer.module';
-import { CustomerProfiles1850000000000 } from './database/migrations/1850000000000-CustomerProfiles';
-import { HealthModule } from './health/health.module';
-import { AuditLog } from './audit/audit.entity';
-import { AuditModule } from './audit/audit.module';
-import { AuditLogs1860000000000 } from './database/migrations/1860000000000-AuditLogs';
-import { AuthRecovery1870000000000 } from './database/migrations/1870000000000-AuthRecovery';
-import { PaymentMethod1880000000000 } from './database/migrations/1880000000000-PaymentMethod';
-import { NotificationIdempotency1890000000000 } from './database/migrations/1890000000000-NotificationIdempotency';
-import { CloudMedia1900000000000 } from './database/migrations/1900000000000-CloudMedia';
-import { BookingConcurrency1910000000000 } from './database/migrations/1910000000000-BookingConcurrency';
-import { NotificationPhone1920000000000 } from './database/migrations/1920000000000-NotificationPhone';
-import { Banner } from './banners/banner.entity';
-import { BannerModule } from './banners/banner.module';
-import { Banners1930000000000 } from './database/migrations/1930000000000-Banners';
-import { SalonProducts1950000000000 } from './database/migrations/1950000000000-SalonProducts';
-import { MultiSalonOwnership1960000000000 } from './database/migrations/1960000000000-MultiSalonOwnership';
-import { ConsultationSalon1970000000000 } from './database/migrations/1970000000000-ConsultationSalon';
-import { BannerSalon1980000000000 } from './database/migrations/1980000000000-BannerSalon';
-import { MediaSalon1990000000000 } from './database/migrations/1990000000000-MediaSalon';
-import { RemainingSalonOwnership2000000000000 } from './database/migrations/2000000000000-RemainingSalonOwnership';
-import { PushSubscriptions2020000000000 } from './database/migrations/2020000000000-PushSubscriptions';
-import { AdminApproval2030000000000 } from './database/migrations/2030000000000-AdminApproval';
-import { SalonTenantCode2040000000000 } from './database/migrations/2040000000000-SalonTenantCode';
-import { AppointmentReminderPreferences2010000000000 } from './database/migrations/2010000000000-AppointmentReminderPreferences';
+import { Module } from "@nestjs/common";
+import { ConfigModule } from "@nestjs/config";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { Consultation } from "./consultations/consultation.entity";
+import { ConsultationModule } from "./consultations/consultation.module";
+import { Appointment } from "./appointments/appointment.entity";
+import { AppointmentModule } from "./appointments/appointment.module";
+import { AuthModule } from "./auth/auth.module";
+import { User } from "./auth/user.entity";
+import { Salon } from "./salon/salon.entity";
+import { SalonModule } from "./salon/salon.module";
+import { Passport } from "./passport/passport.entity";
+import { PassportModule } from "./passport/passport.module";
+import { DashboardModule } from "./dashboard/dashboard.module";
+import { InitialSchema1710000000000 } from "./database/migrations/1710000000000-InitialSchema";
+import { ConsultationImages1720000000000 } from "./database/migrations/1720000000000-ConsultationImages";
+import { SalonHours1730000000000 } from "./database/migrations/1730000000000-SalonHours";
+import { BookingCatalog1740000000000 } from "./database/migrations/1740000000000-BookingCatalog";
+import { SeedServiceCatalog1750000000000 } from "./database/migrations/1750000000000-SeedServiceCatalog";
+import { AiModule } from "./ai/ai.module";
+import { Review } from "./reviews/review.entity";
+import { ReviewModule } from "./reviews/review.module";
+import { Reviews1760000000000 } from "./database/migrations/1760000000000-Reviews";
+import { SalonBranches1770000000000 } from "./database/migrations/1770000000000-SalonBranches";
+import { StylistProfiles1780000000000 } from "./database/migrations/1780000000000-StylistProfiles";
+import { NotificationPreferences1790000000000 } from "./database/migrations/1790000000000-NotificationPreferences";
+import { SalonTheme1800000000000 } from "./database/migrations/1800000000000-SalonTheme";
+import { FlorenceHairSalonPriceList1810000000000 } from "./database/migrations/1810000000000-FlorenceHairSalonPriceList";
+import { AppointmentBranches1820000000000 } from "./database/migrations/1820000000000-AppointmentBranches";
+import { Payment } from "./payments/payment.entity";
+import { PaymentModule } from "./payments/payment.module";
+import { Notification } from "./notifications/notification.entity";
+import { PushSubscription } from "./notifications/push-subscription.entity";
+import { NotificationModule } from "./notifications/notification.module";
+import { PaymentsNotifications1830000000000 } from "./database/migrations/1830000000000-PaymentsNotifications";
+import { MediaAsset } from "./media/media.entity";
+import { MediaModule } from "./media/media.module";
+import { MediaAssets1840000000000 } from "./database/migrations/1840000000000-MediaAssets";
+import { resolve } from "path";
+import { CustomerModule } from "./customers/customer.module";
+import { CustomerProfiles1850000000000 } from "./database/migrations/1850000000000-CustomerProfiles";
+import { HealthModule } from "./health/health.module";
+import { AuditLog } from "./audit/audit.entity";
+import { AuditModule } from "./audit/audit.module";
+import { AuditLogs1860000000000 } from "./database/migrations/1860000000000-AuditLogs";
+import { AuthRecovery1870000000000 } from "./database/migrations/1870000000000-AuthRecovery";
+import { PaymentMethod1880000000000 } from "./database/migrations/1880000000000-PaymentMethod";
+import { NotificationIdempotency1890000000000 } from "./database/migrations/1890000000000-NotificationIdempotency";
+import { CloudMedia1900000000000 } from "./database/migrations/1900000000000-CloudMedia";
+import { BookingConcurrency1910000000000 } from "./database/migrations/1910000000000-BookingConcurrency";
+import { NotificationPhone1920000000000 } from "./database/migrations/1920000000000-NotificationPhone";
+import { Banner } from "./banners/banner.entity";
+import { BannerModule } from "./banners/banner.module";
+import { Banners1930000000000 } from "./database/migrations/1930000000000-Banners";
+import { SalonProducts1950000000000 } from "./database/migrations/1950000000000-SalonProducts";
+import { MultiSalonOwnership1960000000000 } from "./database/migrations/1960000000000-MultiSalonOwnership";
+import { ConsultationSalon1970000000000 } from "./database/migrations/1970000000000-ConsultationSalon";
+import { BannerSalon1980000000000 } from "./database/migrations/1980000000000-BannerSalon";
+import { MediaSalon1990000000000 } from "./database/migrations/1990000000000-MediaSalon";
+import { RemainingSalonOwnership2000000000000 } from "./database/migrations/2000000000000-RemainingSalonOwnership";
+import { PushSubscriptions2020000000000 } from "./database/migrations/2020000000000-PushSubscriptions";
+import { AdminApproval2030000000000 } from "./database/migrations/2030000000000-AdminApproval";
+import { SalonTenantCode2040000000000 } from "./database/migrations/2040000000000-SalonTenantCode";
+import { AppointmentReminderPreferences2010000000000 } from "./database/migrations/2010000000000-AppointmentReminderPreferences";
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true, envFilePath: [resolve(__dirname, '../.env'), resolve(process.cwd(), '.env'), resolve(process.cwd(), '../.env')], validate: values => { if (values.NODE_ENV === 'production') { for (const key of ['DATABASE_URL', 'JWT_SECRET', 'ADMIN_INVITE_CODE', 'FRONTEND_URL']) if (!values[key] || values[key].includes('replace-with')) throw new Error(`${key} must be configured in production`); if (!values.RESEND_API_KEY || !values.EMAIL_FROM || values.EMAIL_FROM.includes('verified-domain.com')) throw new Error('RESEND_API_KEY and a verified EMAIL_FROM sender are required in production'); if (values.PAYMENTS_ENABLED === 'true' && (values.PAYMENT_PROVIDER === 'local' || !values.PAYMENT_WEBHOOK_SECRET || (values.PAYMENT_PROVIDER === 'razorpay' ? (!values.RAZORPAY_KEY_ID || !values.RAZORPAY_KEY_SECRET) : (!values.PAYMENT_PROVIDER_URL || !values.PAYMENT_PROVIDER_SECRET)))) throw new Error('Choose a real payment provider and configure its URL, secret, and webhook secret before enabling online payments'); if (values.MEDIA_STORAGE === 'cloudinary' && (!values.CLOUDINARY_CLOUD_NAME || !values.CLOUDINARY_API_KEY || !values.CLOUDINARY_API_SECRET)) throw new Error('Cloudinary credentials are required when cloud media storage is enabled'); } return values; } }), TypeOrmModule.forRoot({ type: 'postgres', url: process.env.DATABASE_URL, entities: [Consultation, Appointment, User, Salon, Passport, Review, Payment, Notification, PushSubscription, MediaAsset, AuditLog, Banner], migrations: [InitialSchema1710000000000, ConsultationImages1720000000000, SalonHours1730000000000, BookingCatalog1740000000000, SeedServiceCatalog1750000000000, Reviews1760000000000, SalonBranches1770000000000, StylistProfiles1780000000000, NotificationPreferences1790000000000, SalonTheme1800000000000, FlorenceHairSalonPriceList1810000000000, AppointmentBranches1820000000000, PaymentsNotifications1830000000000, MediaAssets1840000000000, CustomerProfiles1850000000000, AuditLogs1860000000000, AuthRecovery1870000000000, PaymentMethod1880000000000, NotificationIdempotency1890000000000, CloudMedia1900000000000, BookingConcurrency1910000000000, NotificationPhone1920000000000, Banners1930000000000, SalonProducts1950000000000, MultiSalonOwnership1960000000000, ConsultationSalon1970000000000, BannerSalon1980000000000, MediaSalon1990000000000, RemainingSalonOwnership2000000000000, AppointmentReminderPreferences2010000000000, PushSubscriptions2020000000000, AdminApproval2030000000000], migrationsRun: true, synchronize: false }), AuditModule, ConsultationModule, AppointmentModule, AuthModule, SalonModule, PassportModule, DashboardModule, AiModule, ReviewModule, PaymentModule, NotificationModule, MediaModule, CustomerModule, HealthModule, BannerModule],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: [
+        resolve(__dirname, "../.env"),
+        resolve(process.cwd(), ".env"),
+        resolve(process.cwd(), "../.env"),
+      ],
+      validate: (values) => {
+        if (values.NODE_ENV === "production") {
+          for (const key of [
+            "DATABASE_URL",
+            "JWT_SECRET",
+            "ADMIN_INVITE_CODE",
+            "FRONTEND_URL",
+          ])
+            if (!values[key] || values[key].includes("replace-with"))
+              throw new Error(`${key} must be configured in production`);
+          if (
+            !values.RESEND_API_KEY ||
+            !values.EMAIL_FROM ||
+            values.EMAIL_FROM.includes("verified-domain.com")
+          )
+            throw new Error(
+              "RESEND_API_KEY and a verified EMAIL_FROM sender are required in production",
+            );
+          if (
+            values.PAYMENTS_ENABLED === "true" &&
+            (values.PAYMENT_PROVIDER === "local" ||
+              !values.PAYMENT_WEBHOOK_SECRET ||
+              (values.PAYMENT_PROVIDER === "razorpay"
+                ? !values.RAZORPAY_KEY_ID || !values.RAZORPAY_KEY_SECRET
+                : !values.PAYMENT_PROVIDER_URL ||
+                  !values.PAYMENT_PROVIDER_SECRET))
+          )
+            throw new Error(
+              "Choose a real payment provider and configure its URL, secret, and webhook secret before enabling online payments",
+            );
+          if (
+            values.MEDIA_STORAGE === "cloudinary" &&
+            (!values.CLOUDINARY_CLOUD_NAME ||
+              !values.CLOUDINARY_API_KEY ||
+              !values.CLOUDINARY_API_SECRET)
+          )
+            throw new Error(
+              "Cloudinary credentials are required when cloud media storage is enabled",
+            );
+        }
+        return values;
+      },
+    }),
+    TypeOrmModule.forRoot({
+      type: "postgres",
+      url: process.env.DATABASE_URL,
+      entities: [
+        Consultation,
+        Appointment,
+        User,
+        Salon,
+        Passport,
+        Review,
+        Payment,
+        Notification,
+        PushSubscription,
+        MediaAsset,
+        AuditLog,
+        Banner,
+      ],
+      migrations: [
+        InitialSchema1710000000000,
+        ConsultationImages1720000000000,
+        SalonHours1730000000000,
+        BookingCatalog1740000000000,
+        SeedServiceCatalog1750000000000,
+        Reviews1760000000000,
+        SalonBranches1770000000000,
+        StylistProfiles1780000000000,
+        NotificationPreferences1790000000000,
+        SalonTheme1800000000000,
+        FlorenceHairSalonPriceList1810000000000,
+        AppointmentBranches1820000000000,
+        PaymentsNotifications1830000000000,
+        MediaAssets1840000000000,
+        CustomerProfiles1850000000000,
+        AuditLogs1860000000000,
+        AuthRecovery1870000000000,
+        PaymentMethod1880000000000,
+        NotificationIdempotency1890000000000,
+        CloudMedia1900000000000,
+        BookingConcurrency1910000000000,
+        NotificationPhone1920000000000,
+        Banners1930000000000,
+        SalonProducts1950000000000,
+        MultiSalonOwnership1960000000000,
+        ConsultationSalon1970000000000,
+        BannerSalon1980000000000,
+        MediaSalon1990000000000,
+        RemainingSalonOwnership2000000000000,
+        AppointmentReminderPreferences2010000000000,
+        PushSubscriptions2020000000000,
+        AdminApproval2030000000000,
+      ],
+      migrationsRun: true,
+      synchronize: false,
+    }),
+    AuditModule,
+    ConsultationModule,
+    AppointmentModule,
+    AuthModule,
+    SalonModule,
+    PassportModule,
+    DashboardModule,
+    AiModule,
+    ReviewModule,
+    PaymentModule,
+    NotificationModule,
+    MediaModule,
+    CustomerModule,
+    HealthModule,
+    BannerModule,
+  ],
 })
 export class AppModule {}

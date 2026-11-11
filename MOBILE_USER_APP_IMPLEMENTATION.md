@@ -13,31 +13,31 @@ This document tracks the user-only React Native/Expo implementation. It is updat
 
 ## Audit inventory
 
-| Web feature | Web route/screen | API | Mobile status |
-| --- | --- | --- | --- |
-| Login | `/` | `POST /auth/login` | Existing prototype; being rebuilt |
-| Registration | Login screen | `POST /auth/register` | Missing |
-| Google login | Login screen | `POST /auth/google` | Dependency exists; integration pending |
-| Forgot password | `/forgot-password` | `POST /auth/forgot-password` | Missing |
-| Reset password | `/reset-password` | `POST /auth/reset-password` | Missing |
-| Email verification | `/verify-email` | `GET /auth/verify-email` | Missing |
-| Session persistence and refresh | App bootstrap | `POST /auth/refresh` | Partial; refresh handling pending |
-| Salon directory and location | `salons` | `GET /salon/directory` | Partial |
-| Salon selection | Salon directory | `GET /salon/:id` | Partial |
-| Booking | `appointments` | `GET /appointments/slots`, `POST /appointments` | Partial |
-| Appointment list | `appointments` | `GET /appointments` | Partial |
-| Reschedule and cancel | Appointment cards | `PATCH /appointments/:id/reschedule`, `PATCH /appointments/:id/cancel` | Partial |
-| Profile | `account` | `GET/PATCH /customers/me` | Read-only prototype |
-| Appointment history | Account/customer history | `GET /customers/me/history` | Missing |
-| Hair passport | Passport experience/API | `GET/PUT /passport` | Partial |
-| Prices and offers | `price-list` | `GET /salon/price-list` | Basic list exists |
-| Products | `products` | `GET /salon` | Basic list exists |
-| Reviews | Tools | `GET/POST /reviews` | Partial |
-| Payments and invoices | Tools | `GET /payments`, `POST /payments/intent` | Partial; checkout limitation documented below |
-| Notification preferences | Tools | `GET/PUT /auth/preferences` | Partial |
-| Notification history | Notification panel | `GET /notifications` | Missing |
-| Push notifications | Web push tools | `/notifications/push/*` | Expo push integration pending |
-| Legal pages | `/privacy-policy`, `/terms`, `/photo-consent` | None | Missing |
+| Web feature                     | Web route/screen                              | API                                                                    | Mobile status                                 |
+| ------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------- |
+| Login                           | `/`                                           | `POST /auth/login`                                                     | Existing prototype; being rebuilt             |
+| Registration                    | Login screen                                  | `POST /auth/register`                                                  | Missing                                       |
+| Google login                    | Login screen                                  | `POST /auth/google`                                                    | Dependency exists; integration pending        |
+| Forgot password                 | `/forgot-password`                            | `POST /auth/forgot-password`                                           | Missing                                       |
+| Reset password                  | `/reset-password`                             | `POST /auth/reset-password`                                            | Missing                                       |
+| Email verification              | `/verify-email`                               | `GET /auth/verify-email`                                               | Missing                                       |
+| Session persistence and refresh | App bootstrap                                 | `POST /auth/refresh`                                                   | Partial; refresh handling pending             |
+| Salon directory and location    | `salons`                                      | `GET /salon/directory`                                                 | Partial                                       |
+| Salon selection                 | Salon directory                               | `GET /salon/:id`                                                       | Partial                                       |
+| Booking                         | `appointments`                                | `GET /appointments/slots`, `POST /appointments`                        | Partial                                       |
+| Appointment list                | `appointments`                                | `GET /appointments`                                                    | Partial                                       |
+| Reschedule and cancel           | Appointment cards                             | `PATCH /appointments/:id/reschedule`, `PATCH /appointments/:id/cancel` | Partial                                       |
+| Profile                         | `account`                                     | `GET/PATCH /customers/me`                                              | Read-only prototype                           |
+| Appointment history             | Account/customer history                      | `GET /customers/me/history`                                            | Missing                                       |
+| Hair passport                   | Passport experience/API                       | `GET/PUT /passport`                                                    | Partial                                       |
+| Prices and offers               | `price-list`                                  | `GET /salon/price-list`                                                | Basic list exists                             |
+| Products                        | `products`                                    | `GET /salon`                                                           | Basic list exists                             |
+| Reviews                         | Tools                                         | `GET/POST /reviews`                                                    | Partial                                       |
+| Payments and invoices           | Tools                                         | `GET /payments`, `POST /payments/intent`                               | Partial; checkout limitation documented below |
+| Notification preferences        | Tools                                         | `GET/PUT /auth/preferences`                                            | Partial                                       |
+| Notification history            | Notification panel                            | `GET /notifications`                                                   | Missing                                       |
+| Push notifications              | Web push tools                                | `/notifications/push/*`                                                | Expo push integration pending                 |
+| Legal pages                     | `/privacy-policy`, `/terms`, `/photo-consent` | None                                                                   | Missing                                       |
 
 Admin-only web functionality (dashboard, consultations, scan/AI, salon administration, customer administration, banners, approvals, and refunds) is excluded.
 

@@ -137,7 +137,9 @@ import { neon } from "files-sdk/neon";
 const files = new Files({ adapter: neon({ bucket: "images" }) });
 
 // Upload — body may be a Buffer, Uint8Array, Blob, File, ReadableStream, or string
-await files.upload("generated/cat.jpg", fileBuffer, { contentType: "image/jpeg" });
+await files.upload("generated/cat.jpg", fileBuffer, {
+  contentType: "image/jpeg",
+});
 
 // Download
 const file = await files.download("generated/cat.jpg");
