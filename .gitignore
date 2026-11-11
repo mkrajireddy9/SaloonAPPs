@@ -13,3 +13,5 @@ frontend/.next-production/
 
 frontend/public/images/halo-promo-hair.png
 .neon
+frontend/.next-local/
+frontend/.next/

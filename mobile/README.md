@@ -1,6 +1,6 @@
 # Halo Salon Mobile
 
-The mobile app is a native Expo client for iOS and Android. It shares the Halo API with the web app and includes customer booking, appointments, profile/passport, payments, reviews, and admin studio tools.
+The mobile app is a user-only Expo client for iOS and Android. It shares the Halo API with the web app and does not expose Admin navigation or Admin workflows.
 
 ## Test on an iPhone with Expo Go
 

@@ -20,7 +20,7 @@ export class LoginDto {
   @IsOptional() @IsString() tenantCode?: string;
   @ApiProperty({ example: 'ananya@example.com' })
   @ApiPropertyOptional({ enum: UserRole, default: UserRole.USER })
-  @IsEmail() email!: string;
+  @IsNotEmpty() @IsString() email!: string;
   @ApiProperty({ example: 'strong-password' })
   @IsNotEmpty() @IsString() password!: string;
   @ApiPropertyOptional({ enum: UserRole, default: UserRole.USER })
