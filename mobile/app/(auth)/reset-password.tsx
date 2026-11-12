@@ -9,7 +9,9 @@ export default function ResetPassword() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [submitted, setSubmitted] = useState(false);
   const submit = async () => {
+    setSubmitted(true);
     setError("");
     setMessage("");
     if (!token || password.length < 8)
@@ -44,7 +46,7 @@ export default function ResetPassword() {
           onChangeText={setPassword}
           placeholder="New password"
           secureTextEntry
-          style={s.input}
+          style={[s.input, submitted && password.length < 8 && s.inputError]}
         />
         <Pressable style={s.primary} onPress={() => void submit()}>
           <Text style={s.primaryText}>Save new password</Text>
@@ -78,6 +80,7 @@ const s = StyleSheet.create({
     borderRadius: 9,
     padding: 14,
   },
+  inputError: { borderColor: "#c55239", backgroundColor: "#fff4ef" },
   primary: {
     backgroundColor: "#c55239",
     borderRadius: 9,

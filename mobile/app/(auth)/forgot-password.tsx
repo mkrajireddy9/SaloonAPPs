@@ -8,9 +8,15 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [submitted, setSubmitted] = useState(false);
   const submit = async () => {
+    setSubmitted(true);
     setMessage("");
     setError("");
+    if (!email.trim()) {
+      setError("Enter your email address.");
+      return;
+    }
     try {
       const response = await fetch(`${API_URL}/auth/forgot-password`, {
         method: "POST",
@@ -45,7 +51,7 @@ export default function ForgotPassword() {
           placeholder="you@example.com"
           autoCapitalize="none"
           keyboardType="email-address"
-          style={s.input}
+          style={[s.input, submitted && !email.trim() && s.inputError]}
         />
         <Pressable style={s.primary} onPress={() => void submit()}>
           <Text style={s.primaryText}>Send reset link</Text>
@@ -79,6 +85,7 @@ const s = StyleSheet.create({
     borderRadius: 9,
     padding: 14,
   },
+  inputError: { borderColor: "#c55239", backgroundColor: "#fff4ef" },
   primary: {
     backgroundColor: "#c55239",
     borderRadius: 9,

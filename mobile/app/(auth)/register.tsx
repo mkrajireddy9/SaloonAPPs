@@ -27,7 +27,9 @@ export default function Register() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [submitted, setSubmitted] = useState(false);
   const submit = async () => {
+    setSubmitted(true);
     setError("");
     setMessage("");
     if (!name.trim() || !email.trim() || password.length < 8)
@@ -115,7 +117,7 @@ export default function Register() {
             value={name}
             onChangeText={setName}
             placeholder="Your name"
-            style={s.input}
+            style={[s.input, submitted && !name.trim() && s.inputError]}
           />
           {role === "admin" ? (
             <>
@@ -124,14 +126,14 @@ export default function Register() {
                 value={salonName}
                 onChangeText={setSalonName}
                 placeholder="Your salon name"
-                style={s.input}
+                style={[s.input, submitted && !salonName.trim() && s.inputError]}
               />
               <Text style={s.label}>Salon location</Text>
               <TextInput
                 value={salonLocation}
                 onChangeText={setSalonLocation}
                 placeholder="City or address"
-                style={s.input}
+                style={[s.input, submitted && !salonLocation.trim() && s.inputError]}
               />
             </>
           ) : null}
@@ -142,7 +144,7 @@ export default function Register() {
             placeholder="you@example.com"
             autoCapitalize="none"
             keyboardType="email-address"
-            style={s.input}
+            style={[s.input, submitted && !email.trim() && s.inputError]}
           />
           <Text style={s.label}>Password</Text>
           <TextInput
@@ -150,7 +152,7 @@ export default function Register() {
             onChangeText={setPassword}
             placeholder="At least 8 characters"
             secureTextEntry
-            style={s.input}
+            style={[s.input, submitted && password.length < 8 && s.inputError]}
           />
           <Pressable
             disabled={busy}
@@ -213,6 +215,7 @@ const s = StyleSheet.create({
     padding: 14,
     color: "#20352d",
   },
+  inputError: { borderColor: "#c55239", backgroundColor: "#fff4ef" },
   primary: {
     backgroundColor: "#c55239",
     borderRadius: 9,

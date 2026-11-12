@@ -5051,6 +5051,15 @@ select:focus {
   border-color: #c95b46;
   background: #fff8f5;
 }
+.login-form > input.has-error {
+  border-color: #c95b46;
+  background: #fff8f5;
+  box-shadow: 0 0 0 3px #c95b4620;
+}
+.login-form > input.has-error:focus {
+  border-color: #b14938;
+  box-shadow: 0 0 0 3px #c95b4630;
+}
 .field-error {
   display: block;
   color: #b14938;

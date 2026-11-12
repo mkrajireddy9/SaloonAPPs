@@ -47,6 +47,7 @@ export function LoginScreen({
   const [salonName, setSalonName] = useState("");
   const [salonLocation, setSalonLocation] = useState("");
   const [registering, setRegistering] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [theme, setTheme] = useState<ThemeConfig>(defaultTheme);
   const [settingsOpen, setSettingsOpen] = useState(false);
   useEffect(() => {
@@ -113,6 +114,20 @@ export function LoginScreen({
     <span className="brand-mark">{theme.logoMark}</span>
   );
   const googleConfigured = Boolean(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
+  const missing = {
+    name: registering && !name.trim(),
+    salonName: registering && role === "admin" && !salonName.trim(),
+    salonLocation: registering && role === "admin" && !salonLocation.trim(),
+    email: !email.trim(),
+    password: !password,
+  };
+  const submitForm = () => {
+    setSubmitted(true);
+    if (Object.values(missing).some(Boolean)) return;
+    if (registering)
+      return void onRegister(name, email, password, role, salonName, salonLocation);
+    return void onLogin(email, password, role, theme);
+  };
   return (
     <main className="login-page" style={cssVars}>
       <button
@@ -178,7 +193,10 @@ export function LoginScreen({
           <div className="role-toggle">
             <button
               className={role === "user" ? "selected" : ""}
-              onClick={() => setRole("user")}
+              onClick={() => {
+                setRole("user");
+                setSubmitted(false);
+              }}
             >
               <UserRound size={16} />
               <span>
@@ -188,7 +206,10 @@ export function LoginScreen({
             </button>
             <button
               className={role === "admin" ? "selected" : ""}
-              onClick={() => setRole("admin")}
+              onClick={() => {
+                setRole("admin");
+                setSubmitted(false);
+              }}
             >
               <LockKeyhole size={16} />
               <span>
@@ -201,6 +222,7 @@ export function LoginScreen({
             <>
               <label className="login-label">Full name</label>
               <input
+                className={submitted && missing.name ? "has-error" : ""}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 placeholder="Enter your name"
@@ -212,6 +234,7 @@ export function LoginScreen({
             <>
               <label className="login-label">Salon name</label>
               <input
+                className={submitted && missing.salonName ? "has-error" : ""}
                 value={salonName}
                 onChange={(event) => setSalonName(event.target.value)}
                 placeholder="Enter your salon name"
@@ -219,6 +242,7 @@ export function LoginScreen({
               />
               <label className="login-label">Salon location</label>
               <input
+                className={submitted && missing.salonLocation ? "has-error" : ""}
                 value={salonLocation}
                 onChange={(event) => setSalonLocation(event.target.value)}
                 placeholder="City or full salon address"
@@ -228,6 +252,7 @@ export function LoginScreen({
           )}
           <label className="login-label">Email address</label>
           <input
+            className={submitted && missing.email ? "has-error" : ""}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder="Enter your email"
@@ -235,6 +260,7 @@ export function LoginScreen({
           />
           <label className="login-label">Password</label>
           <input
+            className={submitted && missing.password ? "has-error" : ""}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             placeholder="Enter your password"
@@ -258,18 +284,7 @@ export function LoginScreen({
           )}
           <button
             className="primary wide login-submit"
-            onClick={() =>
-              registering
-                ? void onRegister(
-                    name,
-                    email,
-                    password,
-                    role,
-                    salonName,
-                    salonLocation,
-                  )
-                : void onLogin(email, password, role, theme)
-            }
+            onClick={submitForm}
           >
             {registering
               ? role === "admin"
@@ -303,7 +318,10 @@ export function LoginScreen({
           <button
             className="text-button"
             type="button"
-            onClick={() => setRegistering((value) => !value)}
+            onClick={() => {
+              setRegistering((value) => !value);
+              setSubmitted(false);
+            }}
           >
             {registering ? "Back to sign in" : "Create an account"}
           </button>

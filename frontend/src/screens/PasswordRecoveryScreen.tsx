@@ -15,6 +15,7 @@ export function PasswordRecoveryScreen({
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   useEffect(() => {
     if (mode === "verify" && token)
       void request<{ message: string }>(
@@ -24,6 +25,11 @@ export function PasswordRecoveryScreen({
         .catch(() => setError("This verification link is invalid or expired."));
   }, [mode, token]);
   const submit = async () => {
+    setSubmitted(true);
+    if ((mode === "forgot" && !email.trim()) || (mode === "reset" && password.length < 8)) {
+      setError(mode === "forgot" ? "Enter your email address." : "Use at least 8 characters for your new password.");
+      return;
+    }
     if (submitting || message) return;
     setError("");
     setSubmitting(true);
@@ -77,6 +83,7 @@ export function PasswordRecoveryScreen({
                   </p>
                   <label className="login-label">Email address</label>
                   <input
+                    className={submitted && !email.trim() ? "has-error" : ""}
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     type="email"
@@ -92,6 +99,7 @@ export function PasswordRecoveryScreen({
                   </p>
                   <label className="login-label">New password</label>
                   <input
+                    className={submitted && password.length < 8 ? "has-error" : ""}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     type="password"

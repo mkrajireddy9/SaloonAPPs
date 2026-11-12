@@ -21,7 +21,9 @@ export default function Login() {
   const [tenantCode, setTenantCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [submitted, setSubmitted] = useState(false);
   const submit = async () => {
+    setSubmitted(true);
     setError("");
     if (!email.trim() || !password)
       return setError("Enter your email and password.");
@@ -118,7 +120,7 @@ export default function Login() {
             placeholder="you@example.com"
             autoCapitalize="none"
             keyboardType="default"
-            style={s.input}
+            style={[s.input, submitted && !email.trim() && s.inputError]}
           />
           <Text style={s.label}>Password</Text>
           <TextInput
@@ -126,7 +128,7 @@ export default function Login() {
             onChangeText={setPassword}
             placeholder="Your password"
             secureTextEntry
-            style={s.input}
+            style={[s.input, submitted && !password && s.inputError]}
           />
           <Pressable
             disabled={busy}
@@ -221,6 +223,7 @@ const s = StyleSheet.create({
     padding: 14,
     color: "#20352d",
   },
+  inputError: { borderColor: "#c55239", backgroundColor: "#fff4ef" },
   primary: {
     backgroundColor: "#c55239",
     borderRadius: 9,
