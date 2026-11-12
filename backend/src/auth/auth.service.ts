@@ -205,6 +205,31 @@ export class AuthService implements OnModuleInit {
     return this.issueToken(user);
   }
 
+  async validateAccessSession(payload: {
+    sub?: string;
+    role?: UserRole;
+    salonId?: string | null;
+    platformAdmin?: boolean;
+  }) {
+    if (payload.sub === "platform-admin") {
+      if (process.env.NODE_ENV === "production" || payload.platformAdmin !== true)
+        throw new UnauthorizedException("Platform session is invalid");
+      return;
+    }
+    const user = await this.users.findOne({ where: { id: payload.sub } });
+    if (!user || !user.active)
+      throw new UnauthorizedException("This account has been deactivated");
+    if (user.role !== payload.role || user.salonId !== (payload.salonId || null))
+      throw new UnauthorizedException("This session is no longer valid");
+    if (user.role === UserRole.ADMIN) {
+      if (!user.salonId)
+        throw new UnauthorizedException("This admin has no assigned salon");
+      const salon = await this.salons.findOne({ where: { id: user.salonId } });
+      if (!salon?.active)
+        throw new UnauthorizedException("This salon tenant is inactive");
+    }
+  }
+
   async googleLogin(dto: GoogleLoginDto) {
     const clientId = process.env.GOOGLE_CLIENT_ID;
     if (!clientId)
