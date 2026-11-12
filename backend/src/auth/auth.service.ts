@@ -24,8 +24,6 @@ import { Salon } from "../salon/salon.entity";
 
 @Injectable()
 export class AuthService implements OnModuleInit {
-  private static readonly LOCAL_TEST_USER_ID =
-    "00000000-0000-4000-8000-000000000001";
   private readonly logger = new Logger(AuthService.name);
   constructor(
     @InjectRepository(User) private readonly users: Repository<User>,
@@ -123,16 +121,6 @@ export class AuthService implements OnModuleInit {
 
   async login(dto: LoginDto) {
     const email = dto.email.toLowerCase().trim();
-    if (
-      process.env.NODE_ENV !== "production" &&
-      process.env.ALLOW_TEST_LOGIN === "true" &&
-      (email === "test" || email === "test@test.com") &&
-      dto.password === "test"
-    ) {
-      return this.issueLocalTestToken(
-        dto.role === UserRole.ADMIN ? UserRole.ADMIN : UserRole.USER,
-      );
-    }
     const user = await this.users
       .createQueryBuilder("user")
       .addSelect("user.passwordHash")
@@ -472,14 +460,6 @@ export class AuthService implements OnModuleInit {
     }
     if (payload.type !== "refresh" || !payload.sub)
       throw new UnauthorizedException("Invalid refresh token");
-    if (
-      payload.sub === AuthService.LOCAL_TEST_USER_ID &&
-      process.env.NODE_ENV !== "production" &&
-      process.env.ALLOW_TEST_LOGIN === "true"
-    )
-      return this.issueLocalTestToken(
-        payload.role === UserRole.ADMIN ? UserRole.ADMIN : UserRole.USER,
-      );
     const user = await this.users
       .createQueryBuilder("user")
       .addSelect("user.refreshTokenHash")
@@ -566,19 +546,6 @@ export class AuthService implements OnModuleInit {
     };
     await this.users.save(user);
     return user.notificationPreferences;
-  }
-
-  private async issueLocalTestToken(role: UserRole) {
-    const salon =
-      role === UserRole.ADMIN ? await this.salons.findOne({ where: {} }) : null;
-    const user = {
-      id: AuthService.LOCAL_TEST_USER_ID,
-      name: role === UserRole.ADMIN ? "Local Test Admin" : "Local Test User",
-      email: "test@test.com",
-      role,
-      salonId: salon?.id || null,
-    } as User;
-    return this.issueToken(user, false);
   }
 
   issueToken(user: User, persist = true) {

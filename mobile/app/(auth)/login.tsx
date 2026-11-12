@@ -23,16 +23,12 @@ export default function Login() {
     setError("");
     if (!email.trim() || !password)
       return setError("Enter your email and password.");
-    const loginEmail =
-      email.trim().toLowerCase() === "test" && password === "test"
-        ? "test@test.com"
-        : email.trim();
     setBusy(true);
     try {
       const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email: loginEmail, password, role: "user" }),
+        body: JSON.stringify({ email: email.trim(), password, role: "user" }),
       });
       const body = await response.json();
       if (!response.ok)
@@ -68,11 +64,11 @@ export default function Login() {
           <Text style={s.copy}>
             Choose a salon, request a visit, and keep your hair story close.
           </Text>
-          <Text style={s.label}>Email address or local username</Text>
+          <Text style={s.label}>Email address</Text>
           <TextInput
             value={email}
             onChangeText={setEmail}
-            placeholder="you@example.com or test"
+            placeholder="you@example.com"
             autoCapitalize="none"
             keyboardType="default"
             style={s.input}

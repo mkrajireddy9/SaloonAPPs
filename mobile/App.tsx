@@ -618,28 +618,6 @@ function AppContent() {
     </SafeAreaView>
   );
 }
-function DemoBootstrap() {
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    SecureStore.setItemAsync("halo-access-token", "mobile-demo-token").finally(
-      () => setReady(true),
-    );
-  }, []);
-  return ready ? (
-    <AppContent />
-  ) : (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: C.paper,
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <ActivityIndicator color={C.accent} />
-    </View>
-  );
-}
 export default function App() {
   return (
     <SafeAreaProvider>
@@ -648,11 +626,7 @@ export default function App() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
       >
-        {process.env.EXPO_PUBLIC_DEMO_MODE === "true" ? (
-          <DemoBootstrap />
-        ) : (
-          <AppContent />
-        )}
+        <AppContent />
       </KeyboardAvoidingView>
     </SafeAreaProvider>
   );

@@ -369,15 +369,12 @@ function AppContent() {
     tenantCode = "",
   ) => {
     setLoginError("");
-    const localTestLogin =
-      email.trim().toLowerCase() === "test" && password === "test";
     const tenant =
-      selectedRole === "admin" && !localTestLogin
+      selectedRole === "admin"
         ? tenantCode.trim() ||
           window.prompt("Enter your salon tenant code") ||
           ""
         : undefined;
-    const loginEmail = localTestLogin ? "test@test.com" : email.trim();
     try {
       const result = await request<{
         accessToken: string;
@@ -386,14 +383,14 @@ function AppContent() {
       }>("/auth/login", {
         method: "POST",
         body: JSON.stringify({
-          email: loginEmail,
+        email: email.trim(),
           password,
           role: selectedRole,
           tenantCode: tenant,
         }),
       });
       setAuthSession(result.accessToken, result.refreshToken);
-      if (result.user.role === "admin" && !localTestLogin)
+      if (result.user.role === "admin")
         await request("/salon/theme", {
           method: "PUT",
           body: JSON.stringify(loginTheme),
