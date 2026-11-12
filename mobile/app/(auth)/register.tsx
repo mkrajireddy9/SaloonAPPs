@@ -22,6 +22,7 @@ export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [salonName, setSalonName] = useState("");
   const [salonLocation, setSalonLocation] = useState("");
   const [busy, setBusy] = useState(false);
@@ -147,13 +148,23 @@ export default function Register() {
             style={[s.input, submitted && !email.trim() && s.inputError]}
           />
           <Text style={s.label}>Password</Text>
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            placeholder="At least 8 characters"
-            secureTextEntry
-            style={[s.input, submitted && password.length < 8 && s.inputError]}
-          />
+          <View style={s.passwordRow}>
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              placeholder="At least 8 characters"
+              secureTextEntry={!showPassword}
+              style={[s.input, s.passwordInput, submitted && password.length < 8 && s.inputError]}
+            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+              onPress={() => setShowPassword((value) => !value)}
+              style={s.passwordToggle}
+            >
+              <Text style={s.passwordToggleText}>{showPassword ? "Hide" : "Show"}</Text>
+            </Pressable>
+          </View>
           <Pressable
             disabled={busy}
             style={s.primary}
@@ -216,6 +227,10 @@ const s = StyleSheet.create({
     color: "#20352d",
   },
   inputError: { borderColor: "#c55239", backgroundColor: "#fff4ef" },
+  passwordRow: { position: "relative", justifyContent: "center" },
+  passwordInput: { paddingRight: 62 },
+  passwordToggle: { position: "absolute", right: 12, padding: 6 },
+  passwordToggleText: { color: "#c55239", fontWeight: "700", fontSize: 12 },
   primary: {
     backgroundColor: "#c55239",
     borderRadius: 9,

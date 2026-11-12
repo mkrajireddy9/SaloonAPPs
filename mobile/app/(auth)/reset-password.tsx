@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function ResetPassword() {
   const { token } = useLocalSearchParams<{ token?: string }>();
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -41,13 +42,23 @@ export default function ResetPassword() {
         <Text style={s.copy}>
           Use at least 8 characters for your new password.
         </Text>
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          placeholder="New password"
-          secureTextEntry
-          style={[s.input, submitted && password.length < 8 && s.inputError]}
-        />
+        <View style={s.passwordRow}>
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            placeholder="New password"
+            secureTextEntry={!showPassword}
+            style={[s.input, s.passwordInput, submitted && password.length < 8 && s.inputError]}
+          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+            onPress={() => setShowPassword((value) => !value)}
+            style={s.passwordToggle}
+          >
+            <Text style={s.passwordToggleText}>{showPassword ? "Hide" : "Show"}</Text>
+          </Pressable>
+        </View>
         <Pressable style={s.primary} onPress={() => void submit()}>
           <Text style={s.primaryText}>Save new password</Text>
         </Pressable>
@@ -81,6 +92,10 @@ const s = StyleSheet.create({
     padding: 14,
   },
   inputError: { borderColor: "#c55239", backgroundColor: "#fff4ef" },
+  passwordRow: { position: "relative", justifyContent: "center" },
+  passwordInput: { paddingRight: 62 },
+  passwordToggle: { position: "absolute", right: 12, padding: 6 },
+  passwordToggleText: { color: "#c55239", fontWeight: "700", fontSize: 12 },
   primary: {
     backgroundColor: "#c55239",
     borderRadius: 9,
