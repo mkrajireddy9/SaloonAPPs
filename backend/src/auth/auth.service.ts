@@ -140,8 +140,6 @@ export class AuthService implements OnModuleInit {
       .getOne();
     if (!user || !(await bcrypt.compare(dto.password, user.passwordHash)))
       throw new UnauthorizedException("Invalid email or password");
-    if (user.role === UserRole.ADMIN)
-      await this.assertTenant(user.salonId, dto.tenantCode);
     if (!user.active)
       throw new UnauthorizedException("This account has been deactivated");
     if (
@@ -153,6 +151,8 @@ export class AuthService implements OnModuleInit {
           ? "Your admin registration was rejected."
           : "Your admin registration is awaiting approval.",
       );
+    if (user.role === UserRole.ADMIN)
+      await this.assertTenant(user.salonId, dto.tenantCode);
     if (process.env.NODE_ENV === "production" && !user.emailVerified)
       throw new UnauthorizedException(
         "Please verify your email before signing in",
