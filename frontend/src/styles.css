@@ -7061,8 +7061,135 @@ button[aria-busy="true"]::after {
 .empty-platform-salons { grid-column: 1 / -1; padding: 36px; text-align: center; color: #718078; }
 .empty-platform-salons b { display: block; margin: 8px 0 4px; color: #20352d; }
 .empty-platform-salons p { margin: 0; }
+.platform-overview-page .metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 24px 0;
+}
+.platform-overview-page .metric-card {
+  min-height: 132px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.platform-overview-page .metric-card svg { color: var(--rust); flex: 0 0 auto; }
+.platform-overview-page .metric-card b {
+  color: var(--ink);
+  font-size: 30px;
+  line-height: 1;
+}
+.platform-overview-page .metric-card span {
+  color: #77817c;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.platform-overview-page .form-panel { margin-top: 18px; }
+.platform-overview-page .review-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 0;
+  border-top: 1px solid #e2e0d9;
+}
+.platform-overview-page .review-row p { margin: 5px 0 0; color: #77817c; }
+.platform-overview-page .review-row strong { color: var(--rust); white-space: nowrap; }
+.platform-charts-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, .8fr) minmax(0, 1.2fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.platform-chart-card { padding: 22px; }
+.chart-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+.chart-heading > div { display: grid; gap: 5px; }
+.chart-heading b { color: var(--ink); font-size: 15px; }
+.chart-heading small { color: #77817c; font-size: 11px; }
+.chart-heading > svg { color: var(--rust); flex: 0 0 auto; }
+.health-chart { display: flex; align-items: center; gap: 24px; min-height: 142px; }
+.health-donut {
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+.health-donut > div {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: #fdfcf9;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+.health-donut b { color: var(--ink); font-size: 23px; line-height: 1; }
+.health-donut span { color: #77817c; font-size: 10px; margin-top: 4px; }
+.health-legend { display: grid; gap: 12px; min-width: 0; }
+.health-legend span { display: flex; align-items: center; gap: 8px; color: #65726b; font-size: 12px; }
+.health-legend strong { margin-left: auto; color: var(--ink); }
+.health-legend small { color: #8a958e; font-size: 11px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+.legend-dot.active { background: var(--rust); }
+.legend-dot.inactive { background: #dfe8e2; border: 1px solid #c9d6cd; }
+.bar-chart { display: grid; gap: 15px; }
+.bar-row { display: grid; gap: 7px; }
+.bar-label { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; }
+.bar-label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #65726b; }
+.bar-label b { color: var(--ink); }
+.bar-track { height: 8px; border-radius: 99px; background: #e7eee9; overflow: hidden; }
+.bar-track i { display: block; height: 100%; border-radius: inherit; background: var(--rust); }
+.revenue-chart-card { margin-bottom: 14px; }
+.revenue-bars {
+  height: 180px;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  gap: 12px;
+  padding: 0 6px;
+  border-bottom: 1px solid #e2e0d9;
+}
+.revenue-bar-item {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+.revenue-bar-value { color: #65726b; font-size: 10px; white-space: nowrap; }
+.revenue-bar-track { width: min(42px, 70%); height: 120px; display: flex; align-items: flex-end; background: #edf2ee; border-radius: 7px 7px 0 0; overflow: hidden; }
+.revenue-bar-track i { width: 100%; min-height: 3px; display: block; background: var(--rust); border-radius: 7px 7px 0 0; }
+.revenue-bar-item > span { max-width: 100%; color: #65726b; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chart-empty { margin: 0; color: #77817c; }
 @media (max-width: 720px) {
   .platform-salon-form,
   .platform-salon-list { grid-template-columns: 1fr; }
   .platform-salon-form button { width: 100%; }
+}
+@media (max-width: 900px) {
+  .platform-overview-page .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .platform-charts-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .platform-overview-page .metrics-grid { grid-template-columns: 1fr; }
+  .platform-overview-page .review-row { align-items: flex-start; }
+  .health-chart { gap: 16px; }
+  .health-donut { width: 112px; height: 112px; }
+  .health-donut > div { width: 76px; height: 76px; }
+  .revenue-bars { gap: 6px; }
 }
