@@ -14,6 +14,7 @@ export function PasswordRecoveryScreen({
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   useEffect(() => {
     if (mode === "verify" && token)
       void request<{ message: string }>(
@@ -23,8 +24,9 @@ export function PasswordRecoveryScreen({
         .catch(() => setError("This verification link is invalid or expired."));
   }, [mode, token]);
   const submit = async () => {
+    if (submitting || message) return;
     setError("");
-    setMessage("");
+    setSubmitting(true);
     try {
       const result =
         mode === "forgot"
@@ -41,6 +43,8 @@ export function PasswordRecoveryScreen({
       setError(
         "We could not complete that request. Please check the details and try again.",
       );
+    } finally {
+      setSubmitting(false);
     }
   };
   return (
@@ -77,6 +81,7 @@ export function PasswordRecoveryScreen({
                     onChange={(event) => setEmail(event.target.value)}
                     type="email"
                     autoComplete="email"
+                    disabled={submitting || Boolean(message)}
                   />
                 </>
               )}
@@ -91,12 +96,22 @@ export function PasswordRecoveryScreen({
                     onChange={(event) => setPassword(event.target.value)}
                     type="password"
                     autoComplete="new-password"
+                    disabled={submitting || Boolean(message)}
                   />
                 </>
               )}
-              <button className="primary wide" onClick={() => void submit()}>
+              <button
+                className="primary wide"
+                onClick={() => void submit()}
+                disabled={submitting || Boolean(message)}
+                aria-busy={submitting}
+              >
                 <Check size={16} />
-                {mode === "forgot" ? "Send reset link" : "Save new password"}
+                {submitting
+                  ? "Please wait..."
+                  : mode === "forgot"
+                    ? "Send reset link"
+                    : "Save new password"}
               </button>
               {message && <p className="demo-hint">{message}</p>}
               {error && <p className="login-error">{error}</p>}

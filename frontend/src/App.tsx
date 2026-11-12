@@ -597,9 +597,9 @@ function AppContent() {
     }));
   };
   const saveProducts = async (products: import("./types").ProductItem[]) => {
-    const saved = await request<SalonConfig>("/salon", {
+    const saved = await request<SalonConfig>("/salon/products", {
       method: "PUT",
-      body: JSON.stringify({ ...salon, products }),
+      body: JSON.stringify({ products }),
     });
     setSalon(saved);
   };
@@ -660,6 +660,17 @@ function AppContent() {
       );
     }
   };
+  const resendVerification = async (email: string) => {
+    try {
+      const result = await request<{ message: string }>(
+        "/auth/resend-verification",
+        { method: "POST", body: JSON.stringify({ email }) },
+      );
+      setLoginError(result.message);
+    } catch {
+      setLoginError("We could not resend the verification email. Please try again.");
+    }
+  };
   if (!role) {
     const path = window.location.pathname;
     if (path === "/forgot-password")
@@ -697,6 +708,7 @@ function AppContent() {
         onLogin={authenticateWithTenant}
         onGoogleLogin={authenticateGoogle}
         onRegister={register}
+        onResendVerification={resendVerification}
         error={loginError}
       />
     );

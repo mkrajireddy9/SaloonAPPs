@@ -136,6 +136,12 @@ export class ProductItemDto {
   active?: boolean;
 }
 
+export class UpdateProductsDto {
+  @ApiProperty({ type: [ProductItemDto] })
+  @IsArray()
+  products!: ProductItemDto[];
+}
+
 export class SalonBranchDto {
   @ApiProperty({ example: "main" }) @IsString() @MinLength(1) id!: string;
   @ApiProperty({ example: "Indiranagar" })

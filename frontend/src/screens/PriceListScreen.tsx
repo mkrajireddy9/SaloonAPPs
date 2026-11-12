@@ -38,13 +38,17 @@ export function PriceListScreen({
   onSave?: (items: PriceListItem[]) => void | Promise<void>;
 }) {
   const [draft, setDraft] = useState(items);
+  const [numericDraft, setNumericDraft] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [page, setPage] = useState(1);
   const { showToast } = useToast();
-  useEffect(() => setDraft(items), [items]);
+  useEffect(() => {
+    setDraft(items);
+    setNumericDraft({});
+  }, [items]);
   useEffect(() => setPage(1), [query, category]);
   const update = (index: number, changes: Partial<PriceListItem>) =>
     setDraft((current) =>
@@ -52,6 +56,25 @@ export function PriceListScreen({
         itemIndex === index ? { ...item, ...changes } : item,
       ),
     );
+  const numericValue = (
+    index: number,
+    field: keyof Pick<PriceListItem, "durationMinutes" | "price" | "discountPercent" | "discountPrice">,
+    value?: number,
+  ) => numericDraft[`${field}-${index}`] ?? String(value ?? "");
+  const updateNumeric = (
+    index: number,
+    field: keyof Pick<PriceListItem, "durationMinutes" | "price" | "discountPercent" | "discountPrice">,
+    raw: string,
+  ) => {
+    setNumericDraft((current) => ({ ...current, [`${field}-${index}`]: raw }));
+    update(index, { [field]: raw === "" ? 0 : Number(raw) });
+  };
+  const finishNumeric = (index: number, field: string) =>
+    setNumericDraft((current) => {
+      const next = { ...current };
+      delete next[`${field}-${index}`];
+      return next;
+    });
   const add = () => setDraft((current) => [...current, blankItem()]);
   const remove = (index: number) =>
     setDraft((current) =>
@@ -210,7 +233,7 @@ export function PriceListScreen({
           {pageItems.map((item) => {
             const index = draft.indexOf(item);
             return (
-              <div className="price-editor-row" key={`${item.name}-${index}`}>
+              <div className="price-editor-row" key={`price-row-${index}`}>
                 <div className="price-editor-main">
                   <input
                     value={item.name}
@@ -226,12 +249,11 @@ export function PriceListScreen({
                       <input
                         type="number"
                         min="1"
-                        value={item.durationMinutes}
+                        value={numericValue(index, "durationMinutes", item.durationMinutes)}
                         onChange={(event) =>
-                          update(index, {
-                            durationMinutes: Number(event.target.value),
-                          })
+                          updateNumeric(index, "durationMinutes", event.target.value)
                         }
+                        onBlur={() => finishNumeric(index, "durationMinutes")}
                       />
                       <small>min</small>
                     </div>
@@ -241,10 +263,11 @@ export function PriceListScreen({
                     <input
                       type="number"
                       min="0"
-                      value={item.price}
+                      value={numericValue(index, "price", item.price)}
                       onChange={(event) =>
-                        update(index, { price: Number(event.target.value) })
+                        updateNumeric(index, "price", event.target.value)
                       }
+                      onBlur={() => finishNumeric(index, "price")}
                     />
                   </label>
                   <label>
@@ -255,12 +278,11 @@ export function PriceListScreen({
                         type="number"
                         min="0"
                         max="100"
-                        value={item.discountPercent || 0}
+                        value={numericValue(index, "discountPercent", item.discountPercent || 0)}
                         onChange={(event) =>
-                          update(index, {
-                            discountPercent: Number(event.target.value),
-                          })
+                          updateNumeric(index, "discountPercent", event.target.value)
                         }
+                        onBlur={() => finishNumeric(index, "discountPercent")}
                       />
                     </div>
                   </label>
@@ -269,12 +291,11 @@ export function PriceListScreen({
                     <input
                       type="number"
                       min="0"
-                      value={item.discountPrice || 0}
+                      value={numericValue(index, "discountPrice", item.discountPrice || 0)}
                       onChange={(event) =>
-                        update(index, {
-                          discountPrice: Number(event.target.value),
-                        })
+                        updateNumeric(index, "discountPrice", event.target.value)
                       }
+                      onBlur={() => finishNumeric(index, "discountPrice")}
                     />
                   </label>
                   <input

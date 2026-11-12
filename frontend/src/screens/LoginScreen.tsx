@@ -17,6 +17,7 @@ export function LoginScreen({
   onLogin,
   onGoogleLogin,
   onRegister,
+  onResendVerification,
   error,
 }: {
   onLogin: (
@@ -35,6 +36,7 @@ export function LoginScreen({
     salonName: string,
     salonLocation: string,
   ) => void | Promise<void>;
+  onResendVerification: (email: string) => void | Promise<void>;
   error?: string;
 }) {
   const { showToast } = useToast();
@@ -289,6 +291,15 @@ export function LoginScreen({
               </button>
             ))}
           {error && <p className="login-error">{error}</p>}
+          {error?.toLowerCase().includes("verify your email") && email.trim() && (
+            <button
+              className="text-button verification-resend"
+              type="button"
+              onClick={() => void onResendVerification(email.trim())}
+            >
+              Resend verification email
+            </button>
+          )}
           <button
             className="text-button"
             type="button"

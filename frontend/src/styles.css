@@ -6331,6 +6331,12 @@ button:hover:not(:disabled) svg {
 .login-error {
   margin-top: 13px;
 }
+.verification-resend {
+  margin-top: 10px;
+  padding: 0;
+  font-size: 11px;
+  font-weight: 700;
+}
 .login-customize {
   top: 24px;
   right: 28px;
@@ -6376,6 +6382,40 @@ button:hover:not(:disabled) svg {
   letter-spacing: 0.15px;
   pointer-events: none;
 }
+.recovery-page {
+  display: grid;
+  grid-template-columns: 1fr;
+  place-items: center;
+  padding: 32px 24px 64px;
+  background:
+    radial-gradient(circle at 50% 0%, #fffdfa 0, #f7f6f2 48%, #f0eee8 100%);
+}
+.recovery-page .login-panel {
+  width: min(100%, 560px);
+  padding: 0;
+}
+.recovery-page .login-form {
+  width: 100%;
+  max-width: none;
+  padding: 42px 44px 46px;
+  background: #fffdfa;
+  border: 1px solid #e1ded6;
+  border-radius: 18px;
+  box-shadow: 0 18px 48px #29392c12;
+}
+.recovery-page .login-form > .text-button:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 40px;
+  padding: 0;
+  font-size: 12px;
+}
+.recovery-page .login-form h2 { margin-top: 12px; }
+.recovery-page .login-copy { max-width: 420px; margin-bottom: 28px; }
+.recovery-page .login-form > input { width: 100%; }
+.recovery-page .login-error { display: block; }
+.recovery-page .demo-hint { line-height: 1.5; }
 .app::after {
   content: "© 2026 Halo Salon. All rights reserved.";
   position: fixed;
@@ -6390,6 +6430,9 @@ button:hover:not(:disabled) svg {
   z-index: 2;
 }
 @media (max-width: 720px) {
+  .recovery-page { padding: 20px 16px 52px; }
+  .recovery-page .login-panel { min-height: auto; }
+  .recovery-page .login-form { padding: 30px 24px 34px; }
   .login-page::after {
     left: 0;
     right: 0;

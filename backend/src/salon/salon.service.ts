@@ -8,6 +8,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import {
   SalonBranchDto,
+  ProductItemDto,
   UpdatePriceListDto,
   UpdateSalonDto,
   UpdateSalonThemeDto,
@@ -288,6 +289,18 @@ export class SalonService {
       stylists,
       branches,
     });
+    return this.repo.save(salon);
+  }
+
+  async updateProducts(products: ProductItemDto[], salonId?: string) {
+    const salon = await this.get(salonId);
+    salon.products = products.map((product) => ({
+      id: product.id.trim(),
+      name: product.name.trim(),
+      description: product.description?.trim() || "",
+      imageUrl: product.imageUrl?.trim() || "",
+      active: product.active !== false,
+    }));
     return this.repo.save(salon);
   }
 
