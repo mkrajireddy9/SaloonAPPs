@@ -3811,6 +3811,15 @@ header {
 .salon-setup .setup-item .form-two input {
   min-width: 0;
 }
+.branch-coordinates {
+  margin-top: 10px;
+}
+.branch-location-help {
+  display: block;
+  margin-top: 7px;
+  color: #7b877f;
+  font-size: 11px;
+}
 .salon-setup .setup-item .tags {
   gap: 7px;
   margin: 0 0 10px;
@@ -6969,4 +6978,91 @@ button[aria-busy="true"]::after {
   min-height: 40px;
   display: flex;
   justify-content: center;
+}
+
+.platform-salons-page {
+  max-width: 1120px;
+}
+.platform-salon-create {
+  padding: 24px;
+  margin-top: 24px;
+}
+.platform-salon-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 12px;
+  margin-top: 22px;
+}
+.platform-salon-form input {
+  min-width: 0;
+  border: 1px solid #d8d5cd;
+  border-radius: 10px;
+  background: #fffefa;
+  padding: 12px 14px;
+  color: var(--ink, #20352d);
+  font: inherit;
+}
+.platform-salon-form input:focus {
+  outline: 2px solid #b8d1c7;
+  border-color: #72a18a;
+}
+.platform-salon-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.platform-salon-card {
+  padding: 22px;
+}
+.platform-salon-card-head,
+.tenant-code-row,
+.platform-salon-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.platform-salon-card h2 {
+  margin: 12px 0 4px;
+  font-size: 20px;
+}
+.platform-salon-card p {
+  margin: 0;
+  color: #718078;
+}
+.platform-salon-id {
+  color: #718078;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.status-chip.active { color: #356b51; background: #e1f0e8; }
+.status-chip.inactive { color: #9a5749; background: #f6e4df; }
+.tenant-code-row {
+  border-top: 1px solid #ebe8e1;
+  border-bottom: 1px solid #ebe8e1;
+  margin: 20px 0 16px;
+  padding: 14px 0;
+}
+.tenant-code-row div { display: grid; gap: 5px; }
+.tenant-code-row small { color: #8a958e; font-size: 10px; letter-spacing: .08em; }
+.tenant-code-row strong { letter-spacing: .12em; }
+.platform-salon-actions { justify-content: flex-start; flex-wrap: wrap; }
+.platform-salon-actions button { display: inline-flex; align-items: center; gap: 7px; }
+.empty-platform-salons { grid-column: 1 / -1; padding: 36px; text-align: center; color: #718078; }
+.empty-platform-salons b { display: block; margin: 8px 0 4px; color: #20352d; }
+.empty-platform-salons p { margin: 0; }
+@media (max-width: 720px) {
+  .platform-salon-form,
+  .platform-salon-list { grid-template-columns: 1fr; }
+  .platform-salon-form button { width: 100%; }
 }

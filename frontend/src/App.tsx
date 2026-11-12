@@ -14,6 +14,7 @@ import { ToolsScreen } from "./screens/ToolsScreen";
 import { PriceListScreen } from "./screens/PriceListScreen";
 import { ProductsScreen } from "./screens/ProductsScreen";
 import { CustomersScreen } from "./screens/CustomersScreen";
+import { PlatformSalonsScreen } from "./screens/PlatformSalonsScreen";
 import type {
   Appointment,
   Consultation,
@@ -166,6 +167,7 @@ function AppContent() {
       "price-list",
       "products",
       "tools",
+      "platform-salons",
       "customers",
       "account",
       "ai-hairstyle",
@@ -722,6 +724,9 @@ function AppContent() {
             onBack={() => navigate("studio")}
           />
         )}{" "}
+        {role === "admin" && view === "platform-salons" && (
+          <PlatformSalonsScreen onBack={() => navigate("today")} />
+        )} {" "}
         {role === "admin" && view === "salon" && (
           <SalonSetupScreen
             config={salon}
