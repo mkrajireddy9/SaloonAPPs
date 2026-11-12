@@ -3,6 +3,7 @@ import {
   Injectable,
   ServiceUnavailableException,
 } from "@nestjs/common";
+import { randomBytes } from "crypto";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import {
@@ -112,7 +113,10 @@ export class SalonService {
   }
 
   async listPublic(latitude?: number, longitude?: number, radiusKm = 25) {
-    const salons = await this.repo.find({ order: { name: "ASC" } });
+    const salons = await this.repo.find({
+      where: { active: true },
+      order: { name: "ASC" },
+    });
     const hasLocation = Number.isFinite(latitude) && Number.isFinite(longitude);
     const distance = (branch: { latitude?: number; longitude?: number }) => {
       if (
@@ -169,8 +173,49 @@ export class SalonService {
   }
   async getById(id: string) {
     const salon = await this.repo.findOne({ where: { id } });
-    if (!salon) throw new ServiceUnavailableException("Salon is not available");
+    if (!salon || !salon.active)
+      throw new ServiceUnavailableException("Salon is not available");
     return salon;
+  }
+
+  async listPlatform() {
+    return this.repo.find({ order: { createdAt: "DESC" } });
+  }
+
+  async createPlatform(name: string, location: string) {
+    const tenantCode = `salon-${randomBytes(4).toString("hex")}`;
+    return this.repo.save(
+      this.repo.create({
+        name: name.trim(),
+        location: location.trim(),
+        tenantCode,
+        active: true,
+        ownerId: null,
+        services: [],
+        stylists: [],
+        serviceDetails: [],
+        products: [],
+        stylistSchedules: {},
+        stylistProfiles: {},
+        branches: [],
+        openingHours: { open: "09:00", close: "19:00" },
+        closedDays: [],
+      }),
+    );
+  }
+
+  async setPlatformStatus(id: string, active: boolean) {
+    const salon = await this.repo.findOne({ where: { id } });
+    if (!salon) throw new ServiceUnavailableException("Salon is not available");
+    salon.active = active;
+    return this.repo.save(salon);
+  }
+
+  async rotatePlatformTenantCode(id: string) {
+    const salon = await this.repo.findOne({ where: { id } });
+    if (!salon) throw new ServiceUnavailableException("Salon is not available");
+    salon.tenantCode = `salon-${randomBytes(4).toString("hex")}`;
+    return this.repo.save(salon);
   }
 
   async update(dto: UpdateSalonDto, salonId?: string) {

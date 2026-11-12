@@ -61,9 +61,19 @@ export class AuthService implements OnModuleInit {
 
   async register(dto: RegisterDto) {
     const email = dto.email.toLowerCase().trim();
+    if (!this.limited(`register:${email}`, 5))
+      throw new UnauthorizedException("Too many registration attempts. Try again later.");
     if (await this.users.findOne({ where: { email } }))
       throw new ConflictException("An account with this email already exists");
     const role = dto.role || UserRole.USER;
+    if (
+      role === UserRole.ADMIN &&
+      process.env.NODE_ENV === "production" &&
+      !dto.tenantCode?.trim()
+    )
+      throw new UnauthorizedException(
+        "A salon tenant code is required for admin registration",
+      );
     if (
       role === UserRole.ADMIN &&
       (!process.env.ADMIN_INVITE_CODE ||
@@ -76,6 +86,16 @@ export class AuthService implements OnModuleInit {
       role === UserRole.ADMIN
         ? AdminApprovalStatus.PENDING
         : AdminApprovalStatus.NOT_REQUIRED;
+    let tenantSalon: Salon | null = null;
+    if (role === UserRole.ADMIN && dto.tenantCode) {
+      tenantSalon = await this.salons.findOne({
+        where: { tenantCode: dto.tenantCode.trim().toLowerCase() },
+      });
+      if (!tenantSalon || tenantSalon.active === false)
+        throw new UnauthorizedException("Invalid or inactive salon tenant code");
+      if (tenantSalon.ownerId)
+        throw new ConflictException("This salon already has an assigned admin");
+    }
     const user = await this.users.save(
       this.users.create({
         name: dto.name.trim(),
@@ -89,24 +109,28 @@ export class AuthService implements OnModuleInit {
       }),
     );
     if (role === UserRole.ADMIN) {
-      const salon = await this.salons.save(
-        this.salons.create({
-          tenantCode: this.tenantCode(dto.name),
-          name: `${dto.name.trim()}'s Salon`,
-          location: "Add your salon location",
-          ownerId: user.id,
-          services: [],
-          stylists: [],
-          products: [],
-          serviceDetails: [],
-          stylistSchedules: {},
-          stylistProfiles: {},
-          branches: [],
-          openingHours: { open: "09:00", close: "19:00" },
-          closedDays: [],
-        }),
-      );
+      const salon = tenantSalon || await this.salons.save(
+            this.salons.create({
+              tenantCode: this.tenantCode(dto.name),
+              name: `${dto.name.trim()}'s Salon`,
+              location: "Add your salon location",
+              ownerId: user.id,
+              services: [],
+              stylists: [],
+              products: [],
+              serviceDetails: [],
+              stylistSchedules: {},
+              stylistProfiles: {},
+              branches: [],
+              openingHours: { open: "09:00", close: "19:00" },
+              closedDays: [],
+            }),
+          );
       user.salonId = salon.id;
+      if (dto.tenantCode) {
+        salon.ownerId = user.id;
+        await this.salons.save(salon);
+      }
       await this.users.save(user);
     }
     await this.issueEmailVerification(user);
@@ -121,6 +145,8 @@ export class AuthService implements OnModuleInit {
 
   async login(dto: LoginDto) {
     const email = dto.email.toLowerCase().trim();
+    if (!this.limited(`login:${email}`, 10))
+      throw new UnauthorizedException("Too many login attempts. Try again later.");
     if (
       (dto.role === UserRole.ADMIN || dto.role === UserRole.PLATFORM_ADMIN) &&
       process.env.PLATFORM_ADMIN_TEST_LOGIN === "true" &&
@@ -146,8 +172,11 @@ export class AuthService implements OnModuleInit {
           ? "Your admin registration was rejected."
           : "Your admin registration is awaiting approval.",
       );
-    if (user.role === UserRole.ADMIN)
-      await this.assertTenant(user.salonId, dto.tenantCode);
+    if (user.role === UserRole.ADMIN) {
+      const salon = await this.assertTenant(user.salonId, dto.tenantCode);
+      if (!salon.active)
+        throw new UnauthorizedException("This salon tenant is inactive");
+    }
     if (process.env.NODE_ENV === "production" && !user.emailVerified)
       throw new UnauthorizedException(
         "Please verify your email before signing in",
@@ -286,8 +315,11 @@ export class AuthService implements OnModuleInit {
     }
     if (!user.active)
       throw new UnauthorizedException("This account has been deactivated");
-    if (user.role === UserRole.ADMIN)
-      await this.assertTenant(user.salonId, dto.tenantCode);
+    if (user.role === UserRole.ADMIN) {
+      const salon = await this.assertTenant(user.salonId, dto.tenantCode);
+      if (!salon.active)
+        throw new UnauthorizedException("This salon tenant is inactive");
+    }
     return this.issueToken(user);
   }
 
@@ -308,6 +340,7 @@ export class AuthService implements OnModuleInit {
     });
     if (!salon || salon.id !== salonId)
       throw new UnauthorizedException("Invalid salon tenant code");
+    return salon;
   }
 
   private hashToken(token: string) {
@@ -505,9 +538,9 @@ export class AuthService implements OnModuleInit {
     return { success: true };
   }
 
-  async setActive(id: string, active: boolean) {
+  async setActive(id: string, active: boolean, salonId?: string) {
     const user = await this.users.findOne({
-      where: { id, role: UserRole.USER },
+      where: { id, role: UserRole.USER, ...(salonId ? { salonId } : {}) },
     });
     if (!user) throw new UnauthorizedException("User not found");
     user.active = active;

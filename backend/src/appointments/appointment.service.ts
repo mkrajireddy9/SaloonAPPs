@@ -11,7 +11,7 @@ import {
   UpdateAppointmentStatusDto,
 } from "./appointment.dto";
 import { Appointment } from "./appointment.entity";
-import { UserRole } from "../auth/user.entity";
+import { isAdminRole, UserRole } from "../auth/user.entity";
 import { User } from "../auth/user.entity";
 import { Salon } from "../salon/salon.entity";
 import { NotificationService } from "../notifications/notification.service";
@@ -52,6 +52,8 @@ export class AppointmentService {
       : await this.salons.findOne({ where: {} });
     if (!salon)
       throw new ConflictException("Salon booking settings are not configured");
+    if (!salon.active)
+      throw new ConflictException("This salon is not accepting appointments");
     const branch = this.getBranch(salon, branchId);
     const weekday = new Date(`${date}T00:00:00`).toLocaleDateString("en-US", {
       weekday: "long",
@@ -96,7 +98,7 @@ export class AppointmentService {
   }) {
     return this.repo.find({
       where:
-        user.role === UserRole.ADMIN
+        isAdminRole(user.role)
           ? { salonId: user.salonId || undefined }
           : user.id
             ? { customerId: user.id }
@@ -134,6 +136,8 @@ export class AppointmentService {
       : await this.salons.findOne({ where: {} });
     if (!salon)
       throw new ConflictException("Salon booking settings are not configured");
+    if (!salon.active)
+      throw new ConflictException("This salon is not accepting appointments");
     const branch = this.getBranch(salon, dto.branchId);
     const requestedServices = dto.service
       .split(",")
@@ -257,7 +261,7 @@ export class AppointmentService {
   ) {
     const appointment = await this.repo.findOne({
       where:
-        user.role === UserRole.ADMIN
+        isAdminRole(user.role)
           ? { id, ...(user.salonId ? { salonId: user.salonId } : {}) }
           : user.id
             ? { id, customerId: user.id }
@@ -281,7 +285,7 @@ export class AppointmentService {
   ) {
     const appointment = await this.repo.findOne({
       where:
-        user.role === UserRole.ADMIN
+        isAdminRole(user.role)
           ? { id, ...(user.salonId ? { salonId: user.salonId } : {}) }
           : user.id
             ? { id, customerId: user.id }
@@ -371,6 +375,7 @@ export class AppointmentService {
       ? await this.salons.findOne({ where: { id: salonId } })
       : await this.salons.findOne({ where: {} });
     if (!salon) return [];
+    if (!salon.active) return [];
     const branch = this.getBranch(salon, branchId);
     const weekday = new Date(`${date}T00:00:00`).toLocaleDateString("en-US", {
       weekday: "long",

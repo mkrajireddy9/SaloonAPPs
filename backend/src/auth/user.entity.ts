@@ -17,6 +17,10 @@ export enum AdminApprovalStatus {
   REJECTED = "rejected",
 }
 
+export function isAdminRole(role?: UserRole) {
+  return role === UserRole.ADMIN || role === UserRole.PLATFORM_ADMIN;
+}
+
 @Entity("users")
 export class User {
   @PrimaryGeneratedColumn("uuid") id!: string;

@@ -13,6 +13,7 @@ export class Salon {
     | string
     | null;
   @Column({ type: "uuid", nullable: true }) ownerId!: string | null;
+  @Column({ default: true }) active!: boolean;
   @Column({ default: "Halo Studio" }) name!: string;
   @Column({ default: "Indiranagar, Bengaluru" }) location!: string;
   @Column({ type: "jsonb", default: "[]" }) services!: string[];

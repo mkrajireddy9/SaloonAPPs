@@ -98,20 +98,24 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  setStatus(@Param("id") id: string, @Body() body: { active: boolean }) {
-    return this.service.setActive(id, body.active === true);
+  setStatus(
+    @Param("id") id: string,
+    @Body() body: { active: boolean },
+    @Req() request: { user: { salonId?: string } },
+  ) {
+    return this.service.setActive(id, body.active === true, request.user.salonId);
   }
   @Get("admin-requests")
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.PLATFORM_ADMIN)
   adminRequests() {
     return this.service.listAdminRequests();
   }
   @Patch("admin-requests/:id")
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.PLATFORM_ADMIN)
   approveAdmin(@Param("id") id: string, @Body() body: { approved: boolean }) {
     return this.service.approveAdmin(id, body.approved === true);
   }

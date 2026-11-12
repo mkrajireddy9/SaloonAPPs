@@ -32,6 +32,12 @@ export class RegisterDto {
   @IsOptional()
   @IsString()
   inviteCode?: string;
+  @ApiPropertyOptional({
+    description: "Tenant code assigned by the platform for an existing salon.",
+  })
+  @IsOptional()
+  @IsString()
+  tenantCode?: string;
 }
 
 export class LoginDto {

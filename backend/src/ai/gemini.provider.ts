@@ -66,6 +66,11 @@ export class GeminiProvider {
         "Free AI quota temporarily unavailable. Please try again later.",
         HttpStatus.TOO_MANY_REQUESTS,
       );
+    if (response.status === 429)
+      throw new HttpException(
+        "Free AI preview quota temporarily unavailable. Please try again later.",
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     if (!response.ok) {
       const detail = (await response.text())
         .replace(/AIza[\w-]+/g, "[redacted]")

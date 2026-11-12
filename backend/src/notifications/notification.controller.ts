@@ -9,7 +9,7 @@ import {
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/auth.guard";
-import { UserRole } from "../auth/user.entity";
+import { isAdminRole, UserRole } from "../auth/user.entity";
 import { Roles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
 import { NotificationService } from "./notification.service";
@@ -56,7 +56,7 @@ export class NotificationController {
   ) {
     return this.service.list(
       request.user.email,
-      request.user.role === UserRole.ADMIN,
+      isAdminRole(request.user.role),
       request.user.salonId,
     );
   }

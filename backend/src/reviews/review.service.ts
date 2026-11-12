@@ -7,7 +7,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { CreateReviewDto, UpdateReviewStatusDto } from "./review.dto";
 import { Review } from "./review.entity";
-import { UserRole } from "../auth/user.entity";
+import { isAdminRole, UserRole } from "../auth/user.entity";
 import { Appointment } from "../appointments/appointment.entity";
 
 @Injectable()
@@ -19,7 +19,7 @@ export class ReviewService {
   ) {}
   list(user?: { email: string; role: UserRole; salonId?: string }) {
     const salonFilter = user?.salonId ? 'review."salonId" = :salonId' : "1=1";
-    if (user?.role === UserRole.ADMIN)
+    if (isAdminRole(user?.role))
       return this.repo
         .createQueryBuilder("review")
         .where(salonFilter, { salonId: user.salonId })

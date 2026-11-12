@@ -53,7 +53,9 @@ function AppContent() {
       };
       return payload.exp && payload.exp * 1000 < Date.now()
         ? null
-        : payload.role || null;
+        : payload.role
+          ? workspaceRole(payload.role)
+          : null;
     } catch {
       return null;
     }
@@ -597,6 +599,7 @@ function AppContent() {
     password: string,
     selectedRole: Role,
     inviteCode: string,
+    tenantCode: string,
   ) => {
     setLoginError("");
     try {
@@ -614,6 +617,7 @@ function AppContent() {
           password,
           role: selectedRole,
           inviteCode,
+          tenantCode: tenantCode.trim() || undefined,
         }),
       });
       if (result.pendingApproval) {

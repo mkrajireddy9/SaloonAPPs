@@ -9,7 +9,7 @@ import { createHmac } from "crypto";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Appointment } from "../appointments/appointment.entity";
-import { UserRole } from "../auth/user.entity";
+import { isAdminRole, UserRole } from "../auth/user.entity";
 import {
   CreatePaymentDto,
   PaymentWebhookDto,
@@ -31,19 +31,19 @@ export class PaymentService {
     user: { email: string; role: UserRole; salonId?: string },
   ) {
     if (
-      user.role === UserRole.ADMIN &&
+      isAdminRole(user.role) &&
       user.salonId &&
       payment.salonId !== user.salonId
     )
       throw new ForbiddenException("You cannot access this payment");
-    if (user.role !== UserRole.ADMIN && payment.guestEmail !== user.email)
+    if (!isAdminRole(user.role) && payment.guestEmail !== user.email)
       throw new ForbiddenException("You cannot access this payment");
   }
 
   async list(user: { email: string; role: UserRole; salonId?: string }) {
     return this.payments.find({
       where:
-        user.role === UserRole.ADMIN
+        isAdminRole(user.role)
           ? { salonId: user.salonId || undefined }
           : { guestEmail: user.email, salonId: user.salonId || undefined },
       order: { createdAt: "DESC" },
@@ -64,13 +64,13 @@ export class PaymentService {
     const appointment = await this.appointments.findOne({
       where: {
         id: dto.appointmentId,
-        ...(user.role === UserRole.ADMIN && user.salonId
+        ...(isAdminRole(user.role) && user.salonId
           ? { salonId: user.salonId }
           : {}),
       },
     });
     if (!appointment) throw new NotFoundException("Appointment not found");
-    if (user.role !== UserRole.ADMIN && appointment.guestEmail !== user.email)
+    if (!isAdminRole(user.role) && appointment.guestEmail !== user.email)
       throw new ForbiddenException("You cannot pay for this appointment");
     if (appointment.status === "Cancelled")
       throw new ConflictException("Cancelled appointments cannot be paid");

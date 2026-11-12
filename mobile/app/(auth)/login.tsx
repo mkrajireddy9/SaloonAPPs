@@ -15,8 +15,10 @@ import { API_URL, setSession } from "../../src/api";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Login() {
+  const [role, setRole] = useState<"user" | "admin">("user");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [tenantCode, setTenantCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const submit = async () => {
@@ -28,7 +30,12 @@ export default function Login() {
       const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), password, role: "user" }),
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          role,
+          tenantCode: role === "admin" ? tenantCode.trim() : undefined,
+        }),
       });
       const body = await response.json();
       if (!response.ok)
@@ -38,7 +45,7 @@ export default function Login() {
             : body.message || "Unable to sign in.",
         );
       await setSession(body.accessToken, body.refreshToken);
-      router.replace("/(tabs)/directory");
+      router.replace(body.user?.role === "user" ? "/(tabs)/directory" : "/admin");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to sign in.");
     } finally {
@@ -64,6 +71,34 @@ export default function Login() {
           <Text style={s.copy}>
             Choose a salon, request a visit, and keep your hair story close.
           </Text>
+          <View style={s.roles}>
+            <Pressable
+              style={[s.role, role === "user" && s.selected]}
+              onPress={() => setRole("user")}
+            >
+              <Text style={s.roleTitle}>Guest</Text>
+              <Text style={s.roleCopy}>Book an appointment</Text>
+            </Pressable>
+            <Pressable
+              style={[s.role, role === "admin" && s.selected]}
+              onPress={() => setRole("admin")}
+            >
+              <Text style={s.roleTitle}>Admin</Text>
+              <Text style={s.roleCopy}>Manage the studio</Text>
+            </Pressable>
+          </View>
+          {role === "admin" && (
+            <>
+              <Text style={s.label}>Salon tenant code</Text>
+              <TextInput
+                value={tenantCode}
+                onChangeText={setTenantCode}
+                placeholder="Leave empty for platform admin"
+                autoCapitalize="none"
+                style={s.input}
+              />
+            </>
+          )}
           <Text style={s.label}>Email address</Text>
           <TextInput
             value={email}
@@ -89,7 +124,9 @@ export default function Login() {
             {busy ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={s.primaryText}>Continue</Text>
+              <Text style={s.primaryText}>
+                Continue as {role === "admin" ? "admin" : "guest"}
+              </Text>
             )}
           </Pressable>
           {error ? <Text style={s.error}>{error}</Text> : null}
@@ -137,6 +174,18 @@ const s = StyleSheet.create({
   },
   title: { color: "#20352d", fontSize: 30, fontWeight: "700", marginTop: 10 },
   copy: { color: "#77817c", lineHeight: 20, marginTop: 8, marginBottom: 18 },
+  roles: { flexDirection: "row", gap: 10, marginTop: 4, marginBottom: 8 },
+  role: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#d9d6ce",
+    borderRadius: 9,
+    padding: 12,
+    backgroundColor: "#fffdfa",
+  },
+  selected: { borderColor: "#c55239", backgroundColor: "#fff4ef" },
+  roleTitle: { color: "#20352d", fontWeight: "700" },
+  roleCopy: { color: "#77817c", fontSize: 10, marginTop: 4 },
   label: {
     color: "#20352d",
     fontWeight: "700",

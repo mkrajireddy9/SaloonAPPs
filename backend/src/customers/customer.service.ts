@@ -51,9 +51,15 @@ export class CustomerService {
     );
   }
 
-  private async appointmentsFor(user: { id: string; email: string }) {
+  private async appointmentsFor(
+    user: { id: string; email: string },
+    salonId?: string,
+  ) {
     const records = await this.appointments.find({
-      where: [{ customerId: user.id }, { guestEmail: user.email }],
+      where: [
+        { customerId: user.id, ...(salonId ? { salonId } : {}) },
+        { guestEmail: user.email, ...(salonId ? { salonId } : {}) },
+      ],
       order: { date: "DESC", time: "DESC" },
     });
     return [...new Map(records.map((item) => [item.id, item])).values()];
@@ -101,11 +107,12 @@ export class CustomerService {
     query: CustomerHistoryQueryDto,
     salonId?: string,
   ) {
-    const customer = await this.users.findOne({
-      where: { id, role: UserRole.USER, ...(salonId ? { salonId } : {}) },
-    });
+    const customer = await this.users.findOne({ where: { id, role: UserRole.USER } });
     if (!customer) throw new NotFoundException("Customer account not found");
-    return this.paginatedHistory(await this.appointmentsFor(customer), query);
+    const appointments = await this.appointmentsFor(customer, salonId);
+    if (salonId && !appointments.length)
+      throw new NotFoundException("Customer is not part of this salon");
+    return this.paginatedHistory(appointments, query);
   }
 
   private paginatedHistory(
@@ -125,14 +132,15 @@ export class CustomerService {
 
   async list(query: CustomerHistoryQueryDto, salonId?: string) {
     const customers = await this.users.find({
-      where: { role: UserRole.USER, ...(salonId ? { salonId } : {}) },
+      where: { role: UserRole.USER },
       order: { createdAt: "DESC" },
     });
     const search = query.search?.trim().toLowerCase();
     const records = (
       await Promise.all(
         customers.map(async (customer) => {
-          const appointments = await this.appointmentsFor(customer);
+          const appointments = await this.appointmentsFor(customer, salonId);
+          if (salonId && !appointments.length) return null;
           const filtered = appointments.filter((item) =>
             this.matches(item, query),
           );

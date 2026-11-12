@@ -33,6 +33,7 @@ export function LoginScreen({
     password: string,
     role: Role,
     inviteCode: string,
+    tenantCode: string,
   ) => void | Promise<void>;
   error?: string;
 }) {
@@ -214,6 +215,24 @@ export function LoginScreen({
                 placeholder="Enter invite code"
                 type="password"
               />
+              <label className="login-label">Salon tenant code</label>
+              <input
+                value={tenantCode}
+                onChange={(event) => setTenantCode(event.target.value)}
+                placeholder="Enter the code from platform admin"
+                type="text"
+              />
+            </>
+          )}
+          {!registering && role === "admin" && (
+            <>
+              <label className="login-label">Salon tenant code</label>
+              <input
+                value={tenantCode}
+                onChange={(event) => setTenantCode(event.target.value)}
+                placeholder="Leave empty for platform admin"
+                type="text"
+              />
             </>
           )}
           <label className="login-label">Email address</label>
@@ -250,8 +269,15 @@ export function LoginScreen({
             className="primary wide login-submit"
             onClick={() =>
               registering
-                ? void onRegister(name, email, password, role, inviteCode)
-                : void onLogin(email, password, role, theme)
+                ? void onRegister(
+                    name,
+                    email,
+                    password,
+                    role,
+                    inviteCode,
+                    tenantCode,
+                  )
+                : void onLogin(email, password, role, theme, tenantCode)
             }
           >
             {registering

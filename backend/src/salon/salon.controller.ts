@@ -3,6 +3,8 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
+  Post,
   Put,
   Query,
   Req,
@@ -17,6 +19,7 @@ import {
   UpdatePriceListDto,
   UpdateSalonDto,
   UpdateSalonThemeDto,
+  CreatePlatformSalonDto,
 } from "./salon.dto";
 import { SalonService } from "./salon.service";
 
@@ -25,6 +28,37 @@ import { SalonService } from "./salon.service";
 @ApiBearerAuth()
 export class SalonController {
   constructor(private readonly service: SalonService) {}
+
+  @Get("platform/salons")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  listPlatform() {
+    return this.service.listPlatform();
+  }
+
+  @Post("platform/salons")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  createPlatform(@Body() dto: CreatePlatformSalonDto) {
+    return this.service.createPlatform(dto.name, dto.location);
+  }
+
+  @Patch("platform/salons/:id/status")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  setPlatformStatus(
+    @Param("id") id: string,
+    @Body() body: { active: boolean },
+  ) {
+    return this.service.setPlatformStatus(id, body.active === true);
+  }
+
+  @Post("platform/salons/:id/rotate-tenant-code")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  rotateTenantCode(@Param("id") id: string) {
+    return this.service.rotatePlatformTenantCode(id);
+  }
 
   @Get()
   @UseGuards(JwtAuthGuard)

@@ -14,6 +14,17 @@ import {
   MinLength,
 } from "class-validator";
 
+export class CreatePlatformSalonDto {
+  @ApiProperty({ example: "Halo Studio" })
+  @IsString()
+  @MinLength(2)
+  name!: string;
+  @ApiProperty({ example: "Indiranagar, Bengaluru" })
+  @IsString()
+  @MinLength(2)
+  location!: string;
+}
+
 export class UpdateSalonDto {
   @ApiPropertyOptional({ example: "Halo Studio" })
   @IsOptional()

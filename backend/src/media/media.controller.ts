@@ -24,7 +24,7 @@ import {
 } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/auth.guard";
 import { JwtService } from "@nestjs/jwt";
-import { UserRole } from "../auth/user.entity";
+import { isAdminRole, UserRole } from "../auth/user.entity";
 import { MediaService } from "./media.service";
 
 const { diskStorage } = require("multer") as {
@@ -107,7 +107,7 @@ export class MediaController {
     const asset = await this.service.get(
       id,
       user.email,
-      user.role === UserRole.ADMIN,
+      isAdminRole(user.role),
       user.salonId || null,
     );
     if (asset.storageProvider === "cloudinary" && asset.publicId)
@@ -129,7 +129,7 @@ export class MediaController {
     return this.service.remove(
       id,
       request.user.email,
-      request.user.role === UserRole.ADMIN,
+      isAdminRole(request.user.role),
       request.user.salonId || null,
     );
   }
