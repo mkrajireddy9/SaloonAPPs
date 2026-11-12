@@ -606,6 +606,7 @@ export class AuthService implements OnModuleInit {
         name: user.name,
         email: user.email,
         role: user.role,
+        platformAdmin,
       },
     };
   }

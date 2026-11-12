@@ -377,7 +377,7 @@ function AppContent() {
       const result = await request<{
         accessToken: string;
         refreshToken: string;
-        user: { role: Role };
+        user: { role: Role; platformAdmin?: boolean };
       }>("/auth/login", {
         method: "POST",
         body: JSON.stringify({
@@ -388,7 +388,7 @@ function AppContent() {
         }),
       });
       setAuthSession(result.accessToken, result.refreshToken);
-      if (result.user.role === "admin")
+      if (result.user.role === "admin" && !result.user.platformAdmin)
         await request("/salon/theme", {
           method: "PUT",
           body: JSON.stringify(loginTheme),
