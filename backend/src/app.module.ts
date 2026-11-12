@@ -62,6 +62,14 @@ import { PushSubscriptions2020000000000 } from "./database/migrations/2020000000
 import { AdminApproval2030000000000 } from "./database/migrations/2030000000000-AdminApproval";
 import { SalonTenantCode2040000000000 } from "./database/migrations/2040000000000-SalonTenantCode";
 import { AppointmentReminderPreferences2010000000000 } from "./database/migrations/2010000000000-AppointmentReminderPreferences";
+import {
+  AiStyleSession,
+  AiStyleRecommendation,
+  AiGenerationJob,
+  AiUsageLog,
+} from "./ai/hairstyle.entity";
+import { HairstyleModule } from "./ai/hairstyle.module";
+import { AiHairstyle2050000000000 } from "./database/migrations/2050000000000-AiHairstyle";
 
 @Module({
   imports: [
@@ -131,6 +139,10 @@ import { AppointmentReminderPreferences2010000000000 } from "./database/migratio
         MediaAsset,
         AuditLog,
         Banner,
+        AiStyleSession,
+        AiStyleRecommendation,
+        AiGenerationJob,
+        AiUsageLog,
       ],
       migrations: [
         InitialSchema1710000000000,
@@ -165,6 +177,8 @@ import { AppointmentReminderPreferences2010000000000 } from "./database/migratio
         AppointmentReminderPreferences2010000000000,
         PushSubscriptions2020000000000,
         AdminApproval2030000000000,
+        SalonTenantCode2040000000000,
+        AiHairstyle2050000000000,
       ],
       migrationsRun: true,
       synchronize: false,
@@ -177,6 +191,7 @@ import { AppointmentReminderPreferences2010000000000 } from "./database/migratio
     PassportModule,
     DashboardModule,
     AiModule,
+    HairstyleModule,
     ReviewModule,
     PaymentModule,
     NotificationModule,

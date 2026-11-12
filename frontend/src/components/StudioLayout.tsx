@@ -37,7 +37,8 @@ export type View =
   | "products"
   | "tools"
   | "customers"
-  | "account";
+  | "account"
+  | "ai-hairstyle";
 export function StudioLayout({
   view,
   setView,
@@ -269,6 +270,12 @@ export function StudioLayout({
               />
               {guestSalonSelected && (
                 <>
+                  <Nav
+                    active={view === "ai-hairstyle"}
+                    icon={<Sparkles size={16} />}
+                    label="AI hairstyle studio"
+                    onClick={() => go("ai-hairstyle")}
+                  />
                   <Nav
                     active={view === "appointments"}
                     icon={<CalendarDays size={16} />}

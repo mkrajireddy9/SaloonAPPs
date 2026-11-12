@@ -132,6 +132,37 @@ export async function uploadFile(
     );
   }
 }
+
+export type HairstyleUpload = {
+  id: string;
+  photoAssetId: string;
+  status: string;
+};
+
+export async function uploadHairstylePhoto(
+  file: File,
+): Promise<HairstyleUpload> {
+  const token = localStorage.getItem("halo-token");
+  const body = new FormData();
+  body.append("file", file);
+  body.append("consentGiven", "true");
+  let response = await fetch(`${API}/ai/hairstyle/upload`, {
+    method: "POST",
+    headers: token ? { authorization: `Bearer ${token}` } : {},
+    body,
+  });
+  if (response.status === 401 && (await rotateAccessToken())) {
+    const refreshed = localStorage.getItem("halo-token");
+    response = await fetch(`${API}/ai/hairstyle/upload`, {
+      method: "POST",
+      headers: refreshed ? { authorization: `Bearer ${refreshed}` } : {},
+      body,
+    });
+  }
+  if (!response.ok)
+    throw new Error(getApiErrorMessage(new Error(await response.text())));
+  return response.json();
+}
 export async function deleteMedia(source: string) {
   const match = source.match(/\/media\/([^/?]+)/);
   if (!match) return;

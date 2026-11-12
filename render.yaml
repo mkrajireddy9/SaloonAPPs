@@ -3,7 +3,7 @@ services:
     name: halo-api
     runtime: node
     plan: free
-    buildCommand: npm install --include=dev && npm run build --workspace backend
+    buildCommand: npm install --include=dev --legacy-peer-deps && npm run build --workspace backend
     startCommand: npm run start --workspace backend
     healthCheckPath: /health
     envVars:
@@ -27,7 +27,7 @@ services:
     name: halo-web
     runtime: node
     plan: free
-    buildCommand: npm install --include=dev && npm run build --workspace frontend
+    buildCommand: npm install --include=dev --legacy-peer-deps && npm run build --workspace frontend
     startCommand: npm run start --workspace frontend
     envVars:
       - key: NODE_ENV

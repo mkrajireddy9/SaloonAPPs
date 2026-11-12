@@ -27,7 +27,10 @@ type Salon = {
   branches?: Branch[];
 };
 export default function SalonDetails() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, hairstyle } = useLocalSearchParams<{
+    id: string;
+    hairstyle?: string;
+  }>();
   const [salon, setSalon] = useState<Salon | null>(null);
   const [service, setService] = useState("");
   const [stylist, setStylist] = useState("");
@@ -55,6 +58,7 @@ export default function SalonDetails() {
         setService(result.services?.[0] || "");
         setStylist(result.stylists?.[0] || "");
         setBranchId(result.branches?.[0]?.id || "");
+        if (hairstyle) setNotes(`AI hairstyle request: ${hairstyle}`);
       })
       .catch((e) =>
         setMessage(
@@ -62,7 +66,7 @@ export default function SalonDetails() {
         ),
       )
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, hairstyle]);
   useEffect(() => {
     if (!salon || !date || !service || !branch?.id) return;
     api<string[]>(

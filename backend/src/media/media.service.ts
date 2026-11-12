@@ -8,6 +8,8 @@ import {
 import { InjectRepository } from "@nestjs/typeorm";
 import { LessThan, Repository } from "typeorm";
 import { existsSync, promises as fs } from "fs";
+import { randomUUID } from "crypto";
+import { join } from "path";
 import sharp = require("sharp");
 import type { Metadata } from "sharp";
 
@@ -45,7 +47,16 @@ export class MediaService implements OnModuleInit {
     salonId: string | null,
     consentGiven = false,
   ) {
-    if (!file || !allowed.has(file.mimetype))
+    if (!file)
+      throw new BadRequestException(
+        "Only JPEG, PNG, and WebP images are supported",
+      );
+    const declaredMime = String(file.mimetype || "").toLowerCase();
+    if (
+      declaredMime &&
+      !allowed.has(declaredMime) &&
+      declaredMime !== "application/octet-stream"
+    )
       throw new BadRequestException(
         "Only JPEG, PNG, and WebP images are supported",
       );
@@ -54,19 +65,6 @@ export class MediaService implements OnModuleInit {
       throw new BadRequestException(
         `Images must be ${Math.round(maxBytes / 1024 / 1024)} MB or smaller`,
       );
-    const bytes = await fs.readFile(file.path);
-    const validSignature =
-      (file.mimetype === "image/jpeg" &&
-        bytes.subarray(0, 3).toString("hex") === "ffd8ff") ||
-      (file.mimetype === "image/png" &&
-        bytes.subarray(0, 8).toString("hex") === "89504e470d0a1a0a") ||
-      (file.mimetype === "image/webp" &&
-        bytes.subarray(0, 4).toString() === "RIFF" &&
-        bytes.subarray(8, 12).toString() === "WEBP");
-    if (!validSignature) {
-      await fs.unlink(file.path).catch(() => undefined);
-      throw new BadRequestException("The uploaded file is not a valid image");
-    }
     let metadata: Metadata;
     try {
       metadata = await sharpFactory(file.path, { failOn: "none" }).metadata();
@@ -78,6 +76,19 @@ export class MediaService implements OnModuleInit {
           : "decoder failure";
       throw new BadRequestException(
         `The uploaded JPEG could not be decoded: ${reason}`,
+      );
+    }
+    const formatMime: Record<string, string> = {
+      jpeg: "image/jpeg",
+      jpg: "image/jpeg",
+      png: "image/png",
+      webp: "image/webp",
+    };
+    const mimeType = formatMime[String(metadata.format || "").toLowerCase()];
+    if (!mimeType) {
+      await fs.unlink(file.path).catch(() => undefined);
+      throw new BadRequestException(
+        "Only JPEG, PNG, and WebP images are supported",
       );
     }
     const width = metadata.width || 0;
@@ -111,7 +122,7 @@ export class MediaService implements OnModuleInit {
       try {
         const uploaded = await this.cloudinary.upload(
           file.path,
-          file.mimetype,
+          mimeType,
           file.originalname,
         );
         storageProvider = "cloudinary";
@@ -129,7 +140,7 @@ export class MediaService implements OnModuleInit {
         ownerEmail,
         filename: file.filename,
         originalName: file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_"),
-        mimeType: file.mimetype,
+        mimeType,
         size: file.size,
         width,
         height,
@@ -151,19 +162,59 @@ export class MediaService implements OnModuleInit {
     };
   }
 
+  async saveGenerated(bytes: Buffer, mimeType: string, ownerEmail: string) {
+    const extension = mimeType === "image/png" ? "png" : "jpg";
+    const path = join(
+      process.cwd(),
+      "uploads",
+      `halo-ai-${randomUUID()}.${extension}`,
+    );
+    await fs.writeFile(path, bytes);
+    return this.validateAndSave(
+      {
+        path,
+        filename: `ai-generated-${randomUUID()}.${extension}`,
+        originalname: `ai-generated.${extension}`,
+        mimetype: mimeType,
+        size: bytes.length,
+      },
+      ownerEmail,
+      null,
+      true,
+    );
+  }
+
   async get(
     id: string,
-    _ownerEmail: string,
-    _isAdmin: boolean,
+    ownerEmail: string,
+    isAdmin: boolean,
     salonId: string | null,
   ) {
     const asset = await this.repo.findOne({
       where: { id, ...(salonId ? { salonId } : {}) },
     });
     if (!asset) throw new NotFoundException("Media asset not found");
+    if (!isAdmin && asset.ownerEmail !== ownerEmail)
+      throw new ForbiddenException("You cannot access this image");
     if (asset.storageProvider === "local" && !existsSync(asset.storagePath))
       throw new NotFoundException("Media file is missing");
     return asset;
+  }
+
+  async readPrivate(id: string, ownerEmail: string) {
+    const asset = await this.get(id, ownerEmail, false, null);
+    if (asset.storageProvider === "local")
+      return {
+        bytes: await fs.readFile(asset.storagePath),
+        mimeType: asset.mimeType,
+      };
+    const response = await fetch(this.signedUrl(asset.publicId!, asset.format));
+    if (!response.ok)
+      throw new NotFoundException("Private image is unavailable");
+    return {
+      bytes: Buffer.from(await response.arrayBuffer()),
+      mimeType: asset.mimeType,
+    };
   }
 
   signedUrl(publicId: string, format?: string | null) {

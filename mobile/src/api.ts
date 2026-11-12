@@ -51,10 +51,12 @@ export async function api<T>(
   retry = true,
 ): Promise<T> {
   const token = await SecureStore.getItemAsync("halo-access-token");
+  const isMultipart =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
-      "content-type": "application/json",
+      ...(isMultipart ? {} : { "content-type": "application/json" }),
       ...(token ? { authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },

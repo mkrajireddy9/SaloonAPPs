@@ -32,6 +32,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
         route: request.originalUrl,
         statusCode: status,
         errorType: exception instanceof Error ? exception.name : "UnknownError",
+        errorMessage:
+          exception instanceof Error
+            ? exception.message.slice(0, 300)
+            : "Unknown server error",
         message: "request failed",
       };
       process.stderr.write(`${JSON.stringify(event)}\n`);
