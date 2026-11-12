@@ -35,6 +35,7 @@ import {
 import { ToastProvider, useToast } from "./components/Toast";
 import { SalonLoaderPreview } from "./components/SalonLoaderPreview";
 import { PasswordRecoveryScreen } from "./screens/PasswordRecoveryScreen";
+import { HairstyleAiScreen } from "./screens/HairstyleAiScreen";
 
 function AppContent() {
   const { showToast } = useToast();
@@ -160,6 +161,7 @@ function AppContent() {
       "tools",
       "customers",
       "account",
+      "ai-hairstyle",
     ].includes(candidate)
       ? candidate
       : "today";
@@ -779,6 +781,12 @@ function AppContent() {
             onSelect={selectSalon}
           />
         )}{" "}
+        {role === "user" && view === "ai-hairstyle" && (
+          <HairstyleAiScreen
+            onBack={() => navigate("salons")}
+            onFindSalon={() => navigate("salons")}
+          />
+        )}{" "}
         {role === "user" && view === "appointments" && selectedSalonId && (
           <>
             <AppointmentsScreen
@@ -791,13 +799,16 @@ function AppContent() {
             <ToolsScreen role="user" appointments={appointments} />
           </>
         )}{" "}
-        {role === "user" && view !== "salons" && !selectedSalonId && (
-          <SalonDirectoryScreen
-            salons={salons}
-            selectedSalonId={selectedSalonId}
-            onSelect={selectSalon}
-          />
-        )}{" "}
+        {role === "user" &&
+          view !== "salons" &&
+          view !== "ai-hairstyle" &&
+          !selectedSalonId && (
+            <SalonDirectoryScreen
+              salons={salons}
+              selectedSalonId={selectedSalonId}
+              onSelect={selectSalon}
+            />
+          )}{" "}
         {role === "user" && view === "account" && (
           <CustomersScreen
             role="user"
