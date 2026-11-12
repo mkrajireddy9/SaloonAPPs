@@ -7008,12 +7008,13 @@ button[aria-busy="true"]::after {
 }
 .platform-salon-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
   gap: 16px;
   margin-top: 16px;
 }
 .platform-salon-card {
   padding: 22px;
+  min-width: 0;
 }
 .platform-salon-card-head,
 .tenant-code-row,
@@ -7058,6 +7059,13 @@ button[aria-busy="true"]::after {
 .tenant-code-row strong { letter-spacing: .12em; }
 .platform-salon-actions { justify-content: flex-start; flex-wrap: wrap; }
 .platform-salon-actions button { display: inline-flex; align-items: center; gap: 7px; }
+.platform-salon-metrics {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #ebe8e1;
+  color: #65726b;
+  font-size: 12px;
+}
 .empty-platform-salons { grid-column: 1 / -1; padding: 36px; text-align: center; color: #718078; }
 .empty-platform-salons b { display: block; margin: 8px 0 4px; color: #20352d; }
 .empty-platform-salons p { margin: 0; }
