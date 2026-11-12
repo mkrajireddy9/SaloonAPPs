@@ -8,6 +8,7 @@ import {
 export enum UserRole {
   USER = "user",
   ADMIN = "admin",
+  PLATFORM_ADMIN = "platform_admin",
 }
 export enum AdminApprovalStatus {
   NOT_REQUIRED = "not_required",

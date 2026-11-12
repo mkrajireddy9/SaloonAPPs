@@ -52,7 +52,7 @@ export class LoginDto {
   password!: string;
   @ApiPropertyOptional({ enum: UserRole, default: UserRole.USER })
   @IsOptional()
-  @IsIn([UserRole.USER, UserRole.ADMIN])
+  @IsIn([UserRole.USER, UserRole.ADMIN, UserRole.PLATFORM_ADMIN])
   role?: UserRole;
 }
 

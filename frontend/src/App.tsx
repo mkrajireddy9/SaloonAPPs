@@ -37,6 +37,9 @@ import { SalonLoaderPreview } from "./components/SalonLoaderPreview";
 import { PasswordRecoveryScreen } from "./screens/PasswordRecoveryScreen";
 import { HairstyleAiScreen } from "./screens/HairstyleAiScreen";
 
+const workspaceRole = (role: Role): Role =>
+  role === "platform_admin" ? "admin" : role;
+
 function AppContent() {
   const { showToast } = useToast();
   const [view, setView] = useState<View>("today");
@@ -120,7 +123,9 @@ function AppContent() {
             exp?: number;
           };
           return payload.exp && payload.exp * 1000 > Date.now()
-            ? payload.role || null
+            ? payload.role
+              ? workspaceRole(payload.role)
+              : null
             : null;
         };
         let restored = parseRole(localStorage.getItem("halo-token"));
@@ -329,8 +334,8 @@ function AppContent() {
           method: "PUT",
           body: JSON.stringify(loginTheme),
         });
-      setRole(result.user.role);
-      navigate(result.user.role === "admin" ? "today" : "salons", true);
+      setRole(workspaceRole(result.user.role));
+      navigate(workspaceRole(result.user.role) === "admin" ? "today" : "salons", true);
     } catch {
       clearAuthSession();
       setLoginError(
@@ -350,8 +355,8 @@ function AppContent() {
         body: JSON.stringify({ credential, role: selectedRole }),
       });
       setAuthSession(result.accessToken, result.refreshToken);
-      setRole(result.user.role);
-      navigate(result.user.role === "admin" ? "today" : "salons", true);
+      setRole(workspaceRole(result.user.role));
+      navigate(workspaceRole(result.user.role) === "admin" ? "today" : "salons", true);
     } catch (error) {
       clearAuthSession();
       setLoginError(
@@ -393,8 +398,8 @@ function AppContent() {
           method: "PUT",
           body: JSON.stringify(loginTheme),
         });
-      setRole(result.user.role);
-      navigate(result.user.role === "admin" ? "today" : "salons", true);
+      setRole(workspaceRole(result.user.role));
+      navigate(workspaceRole(result.user.role) === "admin" ? "today" : "salons", true);
     } catch (error) {
       clearAuthSession();
       setLoginError(
@@ -619,8 +624,8 @@ function AppContent() {
       }
       if (result.accessToken && result.refreshToken && result.user) {
         setAuthSession(result.accessToken, result.refreshToken);
-        setRole(result.user.role);
-        navigate(result.user.role === "admin" ? "today" : "salons", true);
+        setRole(workspaceRole(result.user.role));
+        navigate(workspaceRole(result.user.role) === "admin" ? "today" : "salons", true);
       }
     } catch (error) {
       setLoginError(

@@ -64,7 +64,7 @@ declare global {
   }
 }
 
-export type Role = "admin" | "user";
+export type Role = "admin" | "platform_admin" | "user";
 export type Appointment = {
   id: string;
   salonId?: string;

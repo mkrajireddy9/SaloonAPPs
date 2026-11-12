@@ -122,7 +122,7 @@ export class AuthService implements OnModuleInit {
   async login(dto: LoginDto) {
     const email = dto.email.toLowerCase().trim();
     if (
-      dto.role === UserRole.ADMIN &&
+      (dto.role === UserRole.ADMIN || dto.role === UserRole.PLATFORM_ADMIN) &&
       process.env.PLATFORM_ADMIN_TEST_LOGIN === "true" &&
       email === process.env.PLATFORM_ADMIN_EMAIL?.toLowerCase().trim() &&
       dto.password === process.env.PLATFORM_ADMIN_PASSWORD
@@ -589,8 +589,8 @@ export class AuthService implements OnModuleInit {
       id: "platform-admin",
       name: "Platform Administrator",
       email: process.env.PLATFORM_ADMIN_EMAIL || "platform-admin@halo.local",
-      role: UserRole.ADMIN,
-      salonId: salon.id,
+      role: UserRole.PLATFORM_ADMIN,
+      salonId: null,
       active: true,
       adminApprovalStatus: AdminApprovalStatus.APPROVED,
     } as User;
