@@ -15,6 +15,8 @@ const days = [
   "Saturday",
   "Sunday",
 ];
+const timePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+const isValidTime = (value: string) => timePattern.test(value);
 const emptyDetail = (name: string) => ({
   name,
   durationMinutes: 60,
@@ -47,13 +49,17 @@ export function SalonSetupScreen({
   onSave: (config: SalonConfig) => void | Promise<void>;
 }) {
   const [draft, setDraft] = useState(config);
+  const [numericDraft, setNumericDraft] = useState<Record<string, string>>({});
   const [service, setService] = useState("");
   const [stylist, setStylist] = useState("");
   const [leaveDates, setLeaveDates] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<"setup" | "media">("setup");
   const qrCanvas = useRef<HTMLCanvasElement>(null);
   const { showToast } = useToast();
-  useEffect(() => setDraft(config), [config]);
+  useEffect(() => {
+    setDraft(config);
+    setNumericDraft({});
+  }, [config]);
   const publicSalonUrl = draft.id
     ? `${window.location.origin}/?salon=${encodeURIComponent(draft.id)}`
     : "";
@@ -66,6 +72,35 @@ export function SalonSetupScreen({
     });
   }, [publicSalonUrl]);
   const details = draft.serviceDetails || draft.services.map(emptyDetail);
+  const numericValue = (
+    name: string,
+    field: "durationMinutes" | "price",
+    value: number,
+  ) => numericDraft[`${field}-${name}`] ?? String(value);
+  const updateNumeric = (
+    name: string,
+    field: "durationMinutes" | "price",
+    raw: string,
+  ) => {
+    setNumericDraft((current) => ({
+      ...current,
+      [`${field}-${name}`]: raw,
+    }));
+    setDraft((current) => ({
+      ...current,
+      serviceDetails: (current.serviceDetails || details).map((detail) =>
+        detail.name === name
+          ? { ...detail, [field]: raw === "" ? 0 : Number(raw) }
+          : detail,
+      ),
+    }));
+  };
+  const finishNumeric = (name: string, field: "durationMinutes" | "price") =>
+    setNumericDraft((current) => {
+      const next = { ...current };
+      delete next[`${field}-${name}`];
+      return next;
+    });
   const schedules = draft.stylistSchedules || {};
   const profiles = draft.stylistProfiles || {};
   const branches = draft.branches?.length
@@ -102,12 +137,39 @@ export function SalonSetupScreen({
     const names = activeBranches.map((branch) =>
       branch.name.trim().toLowerCase(),
     );
+    const invalidServices = draft.services.filter(
+      (name) => name.trim().length < 2,
+    );
+    const invalidStylists = draft.stylists.filter(
+      (name) => name.trim().length < 2,
+    );
     if (!draft.name.trim() || !draft.location.trim()) {
       showToast("Salon name and location are required.", "error");
       return;
     }
-    if (draft.openingHours.open >= draft.openingHours.close) {
-      showToast("Salon opening time must be before closing time.", "error");
+    if (
+      !isValidTime(draft.openingHours.open) ||
+      !isValidTime(draft.openingHours.close) ||
+      draft.openingHours.open >= draft.openingHours.close
+    ) {
+      showToast(
+        "Enter valid opening and closing times, with opening before closing.",
+        "error",
+      );
+      return;
+    }
+    if (invalidServices.length) {
+      showToast(
+        "Each service name must be at least 2 characters. Remove or rename the highlighted service.",
+        "error",
+      );
+      return;
+    }
+    if (invalidStylists.length) {
+      showToast(
+        "Each stylist name must be at least 2 characters. Remove or rename the highlighted stylist.",
+        "error",
+      );
       return;
     }
     if (!activeBranches.length || new Set(names).size !== names.length) {
@@ -119,6 +181,8 @@ export function SalonSetupScreen({
         (branch) =>
           !branch.name.trim() ||
           !branch.location.trim() ||
+          !isValidTime(branch.openingHours.open) ||
+          !isValidTime(branch.openingHours.close) ||
           branch.openingHours.open >= branch.openingHours.close,
       )
     ) {
@@ -162,6 +226,10 @@ export function SalonSetupScreen({
   const addService = () => {
     const name = service.trim();
     if (!name || draft.services.includes(name)) return;
+    if (name.length < 2) {
+      showToast("Service names must be at least 2 characters.", "error");
+      return;
+    }
     setDraft((current) => ({
       ...current,
       services: [...current.services, name],
@@ -175,6 +243,10 @@ export function SalonSetupScreen({
   const addStylist = () => {
     const name = stylist.trim();
     if (!name || draft.stylists.includes(name)) return;
+    if (name.length < 2) {
+      showToast("Stylist names must be at least 2 characters.", "error");
+      return;
+    }
     setDraft((current) => ({
       ...current,
       stylists: [...current.stylists, name],
@@ -316,7 +388,11 @@ export function SalonSetupScreen({
               <label className="field">
                 <span>Default opening</span>
                 <input
-                  type="time"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={5}
+                  placeholder="HH:MM"
+                  className="time-input"
                   value={draft.openingHours.open}
                   onChange={(event) =>
                     setDraft((current) => ({
@@ -332,7 +408,11 @@ export function SalonSetupScreen({
               <label className="field">
                 <span>Default closing</span>
                 <input
-                  type="time"
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={5}
+                        placeholder="HH:MM"
+                        className="time-input"
                   value={draft.openingHours.close}
                   onChange={(event) =>
                     setDraft((current) => ({
@@ -414,7 +494,11 @@ export function SalonSetupScreen({
                       <label className="field">
                         <span>Opening</span>
                         <input
-                          type="time"
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={5}
+                          placeholder="HH:MM"
+                          className="time-input"
                           value={branch.openingHours.open}
                           onChange={(event) =>
                             updateBranch(branch.id, {
@@ -472,7 +556,11 @@ export function SalonSetupScreen({
                       <label className="field">
                         <span>Closing</span>
                         <input
-                          type="time"
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={5}
+                          placeholder="HH:MM"
+                          className="time-input"
                           value={branch.openingHours.close}
                           onChange={(event) =>
                             updateBranch(branch.id, {
@@ -611,55 +699,47 @@ export function SalonSetupScreen({
                   details.find((detail) => detail.name === name) ||
                   emptyDetail(name);
                 return (
-                  <div className="setup-item" key={name}>
+                  <div
+                    className={`setup-item${name.trim().length < 2 ? " has-validation-error" : ""}`}
+                    key={name}
+                  >
                     <div>
                       <b>{name}</b>
+                      {name.trim().length < 2 && (
+                        <small className="validation-help">
+                          At least 2 characters required. Rename or remove this service.
+                        </small>
+                      )}
                       <div className="form-two">
                         <input
                           type="number"
                           min="15"
                           step="15"
-                          value={item.durationMinutes}
+                          value={numericValue(
+                            name,
+                            "durationMinutes",
+                            item.durationMinutes,
+                          )}
                           aria-label={`${name} duration`}
                           onChange={(event) =>
-                            setDraft((current) => ({
-                              ...current,
-                              serviceDetails: (
-                                current.serviceDetails || details
-                              ).map((detail) =>
-                                detail.name === name
-                                  ? {
-                                      ...detail,
-                                      durationMinutes: Number(
-                                        event.target.value,
-                                      ),
-                                    }
-                                  : detail,
-                              ),
-                            }))
+                            updateNumeric(
+                              name,
+                              "durationMinutes",
+                              event.target.value,
+                            )
                           }
+                          onBlur={() => finishNumeric(name, "durationMinutes")}
                         />
                         <input
                           type="number"
                           min="0"
                           step="100"
-                          value={item.price}
+                          value={numericValue(name, "price", item.price)}
                           aria-label={`${name} price`}
                           onChange={(event) =>
-                            setDraft((current) => ({
-                              ...current,
-                              serviceDetails: (
-                                current.serviceDetails || details
-                              ).map((detail) =>
-                                detail.name === name
-                                  ? {
-                                      ...detail,
-                                      price: Number(event.target.value),
-                                    }
-                                  : detail,
-                              ),
-                            }))
+                            updateNumeric(name, "price", event.target.value)
                           }
+                          onBlur={() => finishNumeric(name, "price")}
                         />
                       </div>
                       <input
@@ -733,9 +813,17 @@ export function SalonSetupScreen({
                 };
                 const profile = profiles[name] || { bio: "", imageUrl: "" };
                 return (
-                  <div className="setup-item" key={name}>
+                  <div
+                    className={`setup-item${name.trim().length < 2 ? " has-validation-error" : ""}`}
+                    key={name}
+                  >
                     <div>
                       <b>{name}</b>
+                      {name.trim().length < 2 && (
+                        <small className="validation-help">
+                          At least 2 characters required. Rename or remove this stylist.
+                        </small>
+                      )}
                       <div className="tags">
                         {days.map((day) => (
                           <button

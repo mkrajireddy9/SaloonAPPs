@@ -917,6 +917,10 @@ header {
 .override select:focus {
   border-color: #bb765f;
 }
+.salon-setup .time-input {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
 .form-two {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -3771,6 +3775,14 @@ header {
 .salon-setup .setup-item:hover {
   border-color: #d7b8ad;
   box-shadow: 0 8px 22px #26392c10;
+}
+.salon-setup .setup-item.has-validation-error {
+  border-color: #d7836f;
+  background: #fffaf8;
+}
+.salon-setup .setup-item .validation-help {
+  color: #b34d38;
+  margin: -5px 0 8px;
 }
 .salon-setup .setup-item > div {
   flex: 1;
