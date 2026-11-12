@@ -28,6 +28,7 @@ export class AuditInterceptor implements NestInterceptor {
               .record({
                 actorEmail: request.user?.email || null,
                 actorRole: request.user?.role || null,
+                salonId: request.user?.salonId || null,
                 action: `${method} ${request.path}`,
                 method,
                 path: request.path,

@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -117,6 +118,16 @@ export class AppointmentService {
       salonId?: string;
     },
   ) {
+    if (user.role === UserRole.PLATFORM_ADMIN)
+      throw new ForbiddenException(
+        "Platform admins must use platform-scoped appointment operations",
+      );
+    if (user.role === UserRole.ADMIN && !user.salonId)
+      throw new ForbiddenException("Salon admin has no assigned salon");
+    if (user.role === UserRole.ADMIN && dto.salonId !== user.salonId)
+      throw new ForbiddenException(
+        "A salon admin can only create appointments for their own salon",
+      );
     const account = user.id
       ? await this.users.findOne({ where: { id: user.id } })
       : undefined;
@@ -131,8 +142,10 @@ export class AppointmentService {
       throw new ConflictException(
         "Appointments must be scheduled for today or a future date",
       );
-    const salon = dto.salonId
-      ? await this.salons.findOne({ where: { id: dto.salonId } })
+    const requestedSalonId =
+      user.role === UserRole.ADMIN ? user.salonId : dto.salonId;
+    const salon = requestedSalonId
+      ? await this.salons.findOne({ where: { id: requestedSalonId } })
       : await this.salons.findOne({ where: {} });
     if (!salon)
       throw new ConflictException("Salon booking settings are not configured");

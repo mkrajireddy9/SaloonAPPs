@@ -33,6 +33,36 @@ export class AuthService implements OnModuleInit {
 
   async onModuleInit() {
     await this.ensureActivityColumns();
+    await this.ensurePlatformAdmin();
+  }
+
+  private async ensurePlatformAdmin() {
+    const email = process.env.PLATFORM_ADMIN_EMAIL?.toLowerCase().trim();
+    const password = process.env.PLATFORM_ADMIN_PASSWORD;
+    if (!email || !password) return;
+    const existing = await this.users
+      .createQueryBuilder("user")
+      .addSelect("user.passwordHash")
+      .where("user.email = :email", { email })
+      .getOne();
+    if (existing) {
+      if (existing.role !== UserRole.PLATFORM_ADMIN)
+        throw new Error("PLATFORM_ADMIN_EMAIL belongs to a non-platform account");
+      return;
+    }
+    await this.users.save(
+      this.users.create({
+        name: "Platform Administrator",
+        email,
+        passwordHash: await bcrypt.hash(password, 12),
+        role: UserRole.PLATFORM_ADMIN,
+        adminApprovalStatus: AdminApprovalStatus.APPROVED,
+        salonId: null,
+        refreshTokenHash: null,
+        emailVerified: true,
+        active: true,
+      }),
+    );
   }
 
   private async ensureActivityColumns() {
@@ -149,6 +179,7 @@ export class AuthService implements OnModuleInit {
       throw new UnauthorizedException("Too many login attempts. Try again later.");
     if (
       (dto.role === UserRole.ADMIN || dto.role === UserRole.PLATFORM_ADMIN) &&
+      process.env.NODE_ENV !== "production" &&
       process.env.PLATFORM_ADMIN_TEST_LOGIN === "true" &&
       email === process.env.PLATFORM_ADMIN_EMAIL?.toLowerCase().trim() &&
       dto.password === process.env.PLATFORM_ADMIN_PASSWORD

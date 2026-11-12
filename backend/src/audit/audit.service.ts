@@ -14,6 +14,7 @@ export class AuditService implements OnModuleInit {
       this.repo.create({
         actorEmail: null,
         actorRole: null,
+      salonId: null,
         metadata: {},
         ...input,
       }),
@@ -40,6 +41,7 @@ export class AuditService implements OnModuleInit {
     to?: string;
     page?: number;
     pageSize?: number;
+    salonId?: string;
   }) {
     const page = Math.max(1, Number(query.page) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(query.pageSize) || 50));
@@ -55,6 +57,8 @@ export class AuditService implements OnModuleInit {
     if (query.from)
       builder.andWhere('log."createdAt" >= :from', { from: query.from });
     if (query.to) builder.andWhere('log."createdAt" <= :to', { to: query.to });
+    if (query.salonId)
+      builder.andWhere('log."salonId" = :salonId', { salonId: query.salonId });
     return builder
       .getManyAndCount()
       .then(([items, total]) => ({

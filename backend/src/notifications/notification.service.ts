@@ -102,8 +102,10 @@ export class NotificationService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  async deliver(id: string) {
-    const item = await this.repo.findOne({ where: { id } });
+  async deliver(id: string, salonId?: string) {
+    const item = await this.repo.findOne({
+      where: { id, ...(salonId ? { salonId } : {}) },
+    });
     if (!item) throw new NotFoundException("Notification not found");
     item.attempts += 1;
     try {

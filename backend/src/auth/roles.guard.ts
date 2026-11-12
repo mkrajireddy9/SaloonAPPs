@@ -20,10 +20,10 @@ export class RolesGuard implements CanActivate {
       .switchToHttp()
       .getRequest<{ user?: { role?: UserRole } }>();
     const role = request.user?.role;
-    const allowed =
-      role === UserRole.PLATFORM_ADMIN && roles.includes(UserRole.ADMIN)
-        ? true
-        : Boolean(role && roles.includes(role));
+    // Platform administration is deliberately not an implicit salon-admin
+    // permission. Endpoints that span tenants must opt in explicitly with
+    // Roles(UserRole.PLATFORM_ADMIN).
+    const allowed = Boolean(role && roles.includes(role));
     if (!allowed)
       throw new ForbiddenException("Insufficient permissions");
     return true;

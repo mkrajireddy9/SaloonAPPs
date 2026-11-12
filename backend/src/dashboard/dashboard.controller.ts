@@ -10,7 +10,7 @@ import { DashboardService } from "./dashboard.service";
 @ApiTags("dashboard")
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
+@Roles(UserRole.ADMIN, UserRole.PLATFORM_ADMIN)
 export class DashboardController {
   constructor(private readonly service: DashboardService) {}
   @Get("summary")

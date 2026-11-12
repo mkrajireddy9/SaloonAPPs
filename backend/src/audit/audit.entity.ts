@@ -13,6 +13,7 @@ export class AuditLog {
     | string
     | null;
   @Column({ type: "varchar", nullable: true }) actorRole!: string | null;
+  @Index() @Column({ type: "uuid", nullable: true }) salonId!: string | null;
   @Column() action!: string;
   @Column() method!: string;
   @Column() path!: string;

@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from "@nestjs/common";
+import { Controller, Get, Query, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/auth.guard";
 import { Roles } from "../auth/roles.decorator";
@@ -22,7 +22,8 @@ export class AuditController {
       page?: number;
       pageSize?: number;
     },
+    @Req() request: { user: { salonId?: string } },
   ) {
-    return this.service.list(query);
+    return this.service.list({ ...query, salonId: request.user.salonId });
   }
 }

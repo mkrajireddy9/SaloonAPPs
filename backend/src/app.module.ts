@@ -72,6 +72,7 @@ import { HairstyleModule } from "./ai/hairstyle.module";
 import { AiHairstyle2050000000000 } from "./database/migrations/2050000000000-AiHairstyle";
 import { PlatformAdminRole2060000000000 } from "./database/migrations/2060000000000-PlatformAdminRole";
 import { SalonActiveAndRelations2070000000000 } from "./database/migrations/2070000000000-SalonActiveAndRelations";
+import { AuditSalon2080000000000 } from "./database/migrations/2080000000000-AuditSalon";
 
 @Module({
   imports: [
@@ -183,6 +184,7 @@ import { SalonActiveAndRelations2070000000000 } from "./database/migrations/2070
         AiHairstyle2050000000000,
         PlatformAdminRole2060000000000,
         SalonActiveAndRelations2070000000000,
+        AuditSalon2080000000000,
       ],
       migrationsRun: true,
       synchronize: false,

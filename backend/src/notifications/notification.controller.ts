@@ -64,7 +64,10 @@ export class NotificationController {
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: "Retry a notification delivery (admin only)" })
-  retry(@Param("id") id: string) {
-    return this.service.deliver(id);
+  retry(
+    @Param("id") id: string,
+    @Req() request: { user: { salonId?: string } },
+  ) {
+    return this.service.deliver(id, request.user.salonId);
   }
 }
