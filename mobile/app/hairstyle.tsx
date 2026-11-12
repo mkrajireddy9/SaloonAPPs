@@ -478,7 +478,7 @@ export default function HairstyleScreen({ showBack = true }: { showBack?: boolea
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#f7f5f0" },
   content: { padding: 22, paddingBottom: 48 },
-  back: { color: "#20352d", fontSize: 16, marginBottom: 22 },
+  back: { color: "#c55239", fontSize: 16, marginBottom: 22 },
   eyebrow: {
     color: "#91b3a3",
     fontSize: 11,

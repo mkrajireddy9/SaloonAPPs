@@ -66,7 +66,7 @@ export default function TabsLayout() {
           title: "Passport",
           tabBarIcon: ({ color, size }) => (
             <Ionicons
-              name="sparkles-outline"
+              name="book-outline"
               size={size}
               color={String(color)}
             />

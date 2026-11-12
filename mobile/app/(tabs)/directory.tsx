@@ -1,13 +1,14 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
+  Animated,
+  Easing,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   View,
-  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { api } from "../../src/api";
@@ -21,29 +22,6 @@ type Salon = {
   stylists: string[];
   branches?: unknown[];
 };
-type Banner = {
-  id: string;
-  title: string;
-  message: string;
-};
-const bannerWidth = Dimensions.get("window").width - 44;
-const fallbackBanners: Banner[] = [
-  {
-    id: "default-banner-1",
-    title: "Find a look that feels like you.",
-    message: "Explore salon-ready hairstyle ideas with our private AI studio.",
-  },
-  {
-    id: "default-banner-2",
-    title: "Your next good hair day starts here.",
-    message: "Discover thoughtful salons, talented stylists, and services made for you.",
-  },
-  {
-    id: "default-banner-3",
-    title: "Make room for a fresh feeling.",
-    message: "Save your favorite looks and carry your hair story into every visit.",
-  },
-];
 export default function Directory() {
   const { hairstyle } = useLocalSearchParams<{ hairstyle?: string }>();
   const [salons, setSalons] = useState<Salon[]>([]);
@@ -53,10 +31,6 @@ export default function Directory() {
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [banners, setBanners] = useState<Banner[]>([]);
-  const [bannerIndex, setBannerIndex] = useState(0);
-  const bannerCarouselRef = useRef<any>(null);
-  const carouselBanners = banners.length ? banners : fallbackBanners;
   const load = async () => {
     setLoading(true);
     try {
@@ -73,27 +47,7 @@ export default function Directory() {
     api<{ name?: string; email?: string }>("/customers/me")
       .then(setProfile)
       .catch(() => setProfile(null));
-    api<Banner[]>("/banners")
-      .then(setBanners)
-      .catch(() => setBanners([]));
   }, []);
-  useEffect(() => {
-    if (carouselBanners.length < 2) return;
-    const timer = setInterval(
-      () => {
-        setBannerIndex((current) => {
-          const next = (current + 1) % carouselBanners.length;
-          bannerCarouselRef.current?.scrollTo({
-            x: next * bannerWidth,
-            animated: true,
-          });
-          return next;
-        });
-      },
-      3000,
-    );
-    return () => clearInterval(timer);
-  }, [carouselBanners.length]);
   return (
     <SafeAreaView style={s.safeArea}>
       <ScrollView
@@ -114,42 +68,7 @@ export default function Directory() {
           Browse salons, services, and stylists before requesting your
           appointment.
         </Text>
-        <ScrollView
-          ref={bannerCarouselRef}
-          horizontal
-          pagingEnabled
-          snapToInterval={bannerWidth}
-          decelerationRate="fast"
-          disableIntervalMomentum
-          showsHorizontalScrollIndicator={false}
-          style={s.bannerViewport}
-        >
-          {carouselBanners.map((banner) => (
-            <View style={s.bannerSlide} key={banner.id}>
-              <View style={s.promoBanner}>
-                <View style={s.promoBadge}>
-                  <Text style={s.promoBadgeText}>HALO FEATURE</Text>
-                </View>
-                <Text style={s.promoTitle} numberOfLines={2}>
-                  {banner.title}
-                </Text>
-                <Text style={s.promoCopy} numberOfLines={2}>
-                  {banner.message}
-                </Text>
-              </View>
-            </View>
-          ))}
-        </ScrollView>
-        {carouselBanners.length > 1 ? (
-          <View style={s.bannerDots}>
-            {carouselBanners.map((banner, index) => (
-              <View
-                key={banner.id}
-                style={[s.bannerDot, index === bannerIndex && s.bannerDotActive]}
-              />
-            ))}
-          </View>
-        ) : null}
+        <AiDemoCard />
         {error ? <Text style={s.error}>{error}</Text> : null}
         {salons.map((salon) => (
           <View style={s.card} key={salon.id}>
@@ -163,8 +82,8 @@ export default function Directory() {
               style={s.primary}
               onPress={() =>
                 router.push({
-                  pathname: "/(tabs)/salon/[id]",
-                  params: { id: salon.id, hairstyle },
+                  pathname: "/(tabs)/appointments",
+                  params: { salonId: salon.id, booking: "1", hairstyle },
                 })
               }
             >
@@ -184,6 +103,62 @@ export default function Directory() {
     </SafeAreaView>
   );
 }
+
+function AiDemoCard() {
+  const [step, setStep] = useState(0);
+  const fade = useRef(new Animated.Value(1)).current;
+  const steps = [
+    ["01", "Upload a photo", "Your private starting point"],
+    ["02", "AI reads your look", "Visible hair and face characteristics"],
+    ["03", "Explore five ideas", "Salon-ready recommendations"],
+    ["04", "See it on you", "A more confident hair decision"],
+  ];
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setStep((current) => (current + 1) % steps.length);
+    }, 2200);
+    return () => clearInterval(timer);
+  }, [steps.length]);
+  useEffect(() => {
+    fade.setValue(0.25);
+    Animated.timing(fade, {
+      toValue: 1,
+      duration: 420,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [fade, step]);
+  const current = steps[step];
+  return (
+    <View style={s.demoCard}>
+      <View style={s.demoHeader}>
+        <View>
+          <Text style={s.demoEyebrow}>HOW HALO WORKS</Text>
+          <Text style={s.demoTitle}>From photo to good hair day.</Text>
+        </View>
+        <Text style={s.demoSpark}>✦</Text>
+      </View>
+      <Animated.View style={[s.demoStage, { opacity: fade }]}>
+        <View style={s.demoNumber}>
+          <Text style={s.demoNumberText}>{current[0]}</Text>
+        </View>
+        <View style={s.demoStageCopy}>
+          <Text style={s.demoStageTitle}>{current[1]}</Text>
+          <Text style={s.demoStageText}>{current[2]}</Text>
+        </View>
+        <View style={s.demoProgress}>
+          {steps.map((item, index) => (
+            <View
+              key={item[0]}
+              style={[s.demoDot, index === step && s.demoDotActive]}
+            />
+          ))}
+        </View>
+      </Animated.View>
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#f7f5f0" },
   screen: { flex: 1, backgroundColor: "#f7f5f0" },
@@ -225,66 +200,66 @@ const s = StyleSheet.create({
     alignItems: "center",
     marginTop: 14,
   },
-  primaryText: { color: "#fff", fontWeight: "700" },
+  primaryText: { color: "#fff", fontWeight: "800" },
   empty: {
     backgroundColor: "#fffdfa",
     borderRadius: 14,
     padding: 20,
     marginTop: 22,
   },
-  error: { color: "#c55239", marginVertical: 12 },
-  bannerViewport: { height: 164 },
-  bannerSlide: { width: bannerWidth, paddingRight: 12 },
-  promoBanner: {
-    width: "100%",
-    backgroundColor: "#20352d",
+  error: { color: "#a74e3d", marginVertical: 12 },
+  demoCard: {
+    backgroundColor: "#fffdfa",
+    borderWidth: 1,
+    borderColor: "#d9d6ce",
     borderRadius: 18,
-    padding: 18,
-    height: 156,
-    justifyContent: "center",
-    position: "relative",
-    shadowColor: "#20352d",
-    shadowOpacity: 0.16,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    padding: 16,
+    marginBottom: 14,
   },
-  promoBadge: {
-    alignSelf: "flex-start",
-    borderRadius: 999,
-    backgroundColor: "#c55239",
-    paddingHorizontal: 9,
-    paddingVertical: 5,
+  demoHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
   },
-  promoBadgeText: {
-    color: "#fffdfa",
+  demoEyebrow: {
+    color: "#91b3a3",
     fontSize: 10,
     fontWeight: "800",
-    letterSpacing: 1,
+    letterSpacing: 1.2,
   },
-  promoTitle: {
-    color: "#fffdfa",
-    fontSize: 21,
-    lineHeight: 26,
+  demoTitle: {
+    color: "#20352d",
+    fontSize: 18,
     fontWeight: "800",
-    marginTop: 13,
-    maxWidth: 235,
+    marginTop: 6,
   },
-  promoCopy: { color: "#c8d2cb", lineHeight: 19, marginTop: 6, maxWidth: 245 },
-  bannerDots: {
+  demoSpark: { color: "#c55239", fontSize: 28, marginTop: -5 },
+  demoStage: {
     flexDirection: "row",
-    justifyContent: "center",
     alignItems: "center",
-    height: 14,
-    marginTop: 2,
-    marginBottom: 6,
-    gap: 5,
+    backgroundColor: "#f7f5f0",
+    borderRadius: 13,
+    padding: 12,
+    marginTop: 14,
   },
-  bannerDot: {
+  demoNumber: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: "#c55239",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  demoNumberText: { color: "#fff", fontWeight: "800" },
+  demoStageCopy: { flex: 1, marginLeft: 11 },
+  demoStageTitle: { color: "#20352d", fontWeight: "800", fontSize: 14 },
+  demoStageText: { color: "#77817c", fontSize: 12, marginTop: 3 },
+  demoProgress: { flexDirection: "row", gap: 4, marginLeft: 8 },
+  demoDot: {
     width: 5,
     height: 5,
     borderRadius: 3,
-    backgroundColor: "#c9c6bd",
+    backgroundColor: "#91b3a3",
   },
-  bannerDotActive: { width: 16, backgroundColor: "#c55239" },
+  demoDotActive: { width: 14, backgroundColor: "#c55239" },
 });

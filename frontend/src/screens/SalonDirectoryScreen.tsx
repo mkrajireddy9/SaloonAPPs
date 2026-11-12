@@ -1,4 +1,4 @@
-import { ArrowRight, MapPin, Scissors } from "lucide-react";
+import { ArrowRight, MapPin, Scissors, Sparkles } from "lucide-react";
 import type { PublicSalon } from "../types";
 
 export function SalonDirectoryScreen({
@@ -23,6 +23,14 @@ export function SalonDirectoryScreen({
         </div>
         <span className="eyebrow-pill">SALON DIRECTORY</span>
       </div>
+      <section className="directory-ai-card">
+        <div>
+          <span className="directory-ai-kicker">HALO AI STUDIO</span>
+          <h2>From your photo to a look that feels like you.</h2>
+          <p>Upload once, explore thoughtful ideas, and arrive ready for the conversation.</p>
+        </div>
+        <div className="directory-ai-mark" aria-hidden="true"><Sparkles size={28} /></div>
+      </section>
       <div className="salon-directory-grid">
         {salons.length === 0 ? (
           <div className="empty-state">

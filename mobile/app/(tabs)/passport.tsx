@@ -17,6 +17,8 @@ type Passport = {
   length?: string;
   preferredStylist?: string;
   notes?: string;
+  styles?: Record<string, string>[];
+  history?: Record<string, string>[];
 };
 
 export default function Passport() {
@@ -99,6 +101,73 @@ export default function Passport() {
             Your stylist can use these details to prepare for your next visit.
           </Text>
         </View>
+        <View style={s.sectionCard}>
+          <Text style={s.sectionTitle}>Your hair profile</Text>
+          <View style={s.profileGrid}>
+            <ProfileItem label="Texture" value={texture || "Not added"} />
+            <ProfileItem label="Length" value={length || "Not added"} />
+            <ProfileItem
+              label="Preferred stylist"
+              value={preferredStylist || "Not added"}
+            />
+            <ProfileItem
+              label="Saved looks"
+              value={String(passport?.styles?.length || 0)}
+            />
+          </View>
+        </View>
+        <View style={s.rebookCard}>
+          <Text style={s.rebookEyebrow}>NEXT GOOD HAIR DAY</Text>
+          <Text style={s.rebookTitle}>Ready to plan your next visit?</Text>
+          <Text style={s.rebookCopy}>
+            Your passport keeps your preferences ready for a smoother salon
+            conversation.
+          </Text>
+        </View>
+        <View style={s.sectionCard}>
+          <View style={s.sectionHeader}>
+            <Text style={s.sectionTitle}>Saved looks</Text>
+            <Text style={s.count}>{passport?.styles?.length || 0}</Text>
+          </View>
+          {passport?.styles?.length ? (
+            passport.styles.map((style, index) => (
+              <View style={s.lookRow} key={`${style.name || "look"}-${index}`}>
+                <View style={s.lookIcon}>
+                  <Text style={s.lookIconText}>✦</Text>
+                </View>
+                <View style={s.lookCopy}>
+                  <Text style={s.lookName}>{style.name || "Saved hairstyle"}</Text>
+                  <Text style={s.muted}>{style.meta || "AI hairstyle look"}</Text>
+                </View>
+              </View>
+            ))
+          ) : (
+            <Text style={s.muted}>
+              Your saved AI looks will appear here after you choose a favorite.
+            </Text>
+          )}
+        </View>
+        <View style={s.sectionCard}>
+          <View style={s.sectionHeader}>
+            <Text style={s.sectionTitle}>Visit history</Text>
+            <Text style={s.count}>{passport?.history?.length || 0}</Text>
+          </View>
+          {passport?.history?.length ? (
+            passport.history.slice(0, 4).map((visit, index) => (
+              <View style={s.visitRow} key={`${visit.id || "visit"}-${index}`}>
+                <Text style={s.visitDate}>{visit.date || "Recent visit"}</Text>
+                <Text style={s.visitService}>
+                  {visit.service || "Salon appointment"}
+                  {visit.stylist ? ` · ${visit.stylist}` : ""}
+                </Text>
+              </View>
+            ))
+          ) : (
+            <Text style={s.muted}>
+              Completed appointments will become part of your hair story here.
+            </Text>
+          )}
+        </View>
         <Text style={s.label}>Guest name</Text>
         <TextInput
           value={guestName}
@@ -156,6 +225,15 @@ export default function Passport() {
   );
 }
 
+function ProfileItem({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={s.profileItem}>
+      <Text style={s.profileLabel}>{label}</Text>
+      <Text style={s.profileValue}>{value}</Text>
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#f7f5f0" },
   screen: { flex: 1, backgroundColor: "#f7f5f0" },
@@ -187,6 +265,68 @@ const s = StyleSheet.create({
   },
   cardTitle: { color: "#fff", fontSize: 20, fontWeight: "800" },
   cardCopy: { color: "#c8d2cb", lineHeight: 20, marginTop: 8 },
+  sectionCard: {
+    backgroundColor: "#fffdfa",
+    borderWidth: 1,
+    borderColor: "#dedbd2",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  sectionTitle: { color: "#20352d", fontSize: 17, fontWeight: "800" },
+  count: {
+    color: "#c55239",
+    backgroundColor: "#f7f5f0",
+    borderRadius: 99,
+    minWidth: 26,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    textAlign: "center",
+    fontWeight: "800",
+  },
+  profileGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  profileItem: { width: "46%" },
+  profileLabel: { color: "#91b3a3", fontSize: 11, fontWeight: "700" },
+  profileValue: { color: "#20352d", fontWeight: "700", marginTop: 4 },
+  rebookCard: {
+    backgroundColor: "#f7f5f0",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+  },
+  rebookEyebrow: {
+    color: "#4c947d",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+  },
+  rebookTitle: { color: "#20352d", fontSize: 18, fontWeight: "800", marginTop: 7 },
+  rebookCopy: { color: "#77817c", lineHeight: 19, marginTop: 5 },
+  lookRow: { flexDirection: "row", alignItems: "center", marginTop: 12 },
+  lookIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: "#f7f5f0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  lookIconText: { color: "#c55239", fontSize: 20 },
+  lookCopy: { flex: 1, marginLeft: 11 },
+  lookName: { color: "#20352d", fontWeight: "800" },
+  visitRow: {
+    borderTopWidth: 1,
+    borderTopColor: "#eeeae2",
+    paddingVertical: 11,
+  },
+  visitDate: { color: "#20352d", fontWeight: "800" },
+  visitService: { color: "#77817c", marginTop: 4 },
   label: {
     color: "#20352d",
     fontWeight: "700",
