@@ -415,6 +415,12 @@ function AppContent() {
           tenantCode: tenant,
         }),
       });
+      if (selectedRole === "user" && result.user.role !== "user") {
+        clearAuthSession();
+        throw new Error(
+          "This account is registered for the Admin workspace. Select Admin to continue.",
+        );
+      }
       setAuthSession(result.accessToken, result.refreshToken);
       if (result.user.role === "admin" && !result.user.platformAdmin)
         await request("/salon/theme", {
