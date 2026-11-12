@@ -18,3 +18,30 @@ test("guest cannot cancel another customer appointment", async () => {
     /Appointment not found/,
   );
 });
+
+test("salon admin cannot create an appointment for another salon", async () => {
+  const service = new AppointmentService(
+    {},
+    {},
+    {},
+    {},
+  );
+  await assert.rejects(
+    () =>
+      service.create(
+        {
+          salonId: "salon-b",
+          service: "Signature cut",
+          date: "2099-01-01",
+          time: "10:00 AM",
+        },
+        {
+          email: "admin@example.com",
+          name: "Admin",
+          role: UserRole.ADMIN,
+          salonId: "salon-a",
+        },
+      ),
+    /only create appointments for their own salon/,
+  );
+});

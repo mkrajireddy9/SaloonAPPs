@@ -10,7 +10,7 @@ import {
 @Entity("reviews")
 export class Review {
   @PrimaryGeneratedColumn("uuid") id!: string;
-  @Index() @Column({ type: "uuid", nullable: true }) salonId!: string | null;
+  @Index() @Column({ type: "uuid" }) salonId!: string;
   @Column() guestEmail!: string;
   @Column() guestName!: string;
   @Column({ type: "varchar", nullable: true }) appointmentId!: string | null;

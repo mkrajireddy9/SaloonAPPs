@@ -12,7 +12,7 @@ export type PaymentStatus = "Pending" | "Paid" | "Failed" | "Refunded";
 @Entity("payments")
 export class Payment {
   @PrimaryGeneratedColumn("uuid") id!: string;
-  @Index() @Column({ type: "uuid", nullable: true }) salonId!: string | null;
+  @Index() @Column({ type: "uuid" }) salonId!: string;
   @Index() @Column() appointmentId!: string;
   @Index() @Column() guestEmail!: string;
   @Column({ default: "local" }) provider!: string;

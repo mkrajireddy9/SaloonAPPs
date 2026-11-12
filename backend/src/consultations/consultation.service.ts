@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import {
@@ -89,9 +89,10 @@ export class ConsultationService {
     });
   }
   async create(dto: CreateConsultationDto, salonId?: string) {
+    if (!salonId) throw new BadRequestException("A salon is required");
     const c = this.repo.create({
       ...dto,
-      salonId: salonId || null,
+      salonId,
       report: null,
       status: "draft",
     });

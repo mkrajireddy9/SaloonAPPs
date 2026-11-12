@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  BadRequestException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -47,6 +48,7 @@ export class ReviewService {
     if (dto.appointmentId && !appointment)
       throw new NotFoundException("Appointment not found");
     const salonId = appointment?.salonId || user.salonId || null;
+    if (!salonId) throw new BadRequestException("A salon is required");
     if (
       dto.appointmentId &&
       (await this.repo.findOne({

@@ -96,11 +96,7 @@ export class AuthService implements OnModuleInit {
     if (await this.users.findOne({ where: { email } }))
       throw new ConflictException("An account with this email already exists");
     const role = dto.role || UserRole.USER;
-    if (
-      role === UserRole.ADMIN &&
-      process.env.NODE_ENV === "production" &&
-      !dto.tenantCode?.trim()
-    )
+    if (role === UserRole.ADMIN && !dto.tenantCode?.trim())
       throw new UnauthorizedException(
         "A salon tenant code is required for admin registration",
       );
@@ -117,9 +113,10 @@ export class AuthService implements OnModuleInit {
         ? AdminApprovalStatus.PENDING
         : AdminApprovalStatus.NOT_REQUIRED;
     let tenantSalon: Salon | null = null;
-    if (role === UserRole.ADMIN && dto.tenantCode) {
+    if (role === UserRole.ADMIN) {
+      const tenantCode = dto.tenantCode!.trim().toLowerCase();
       tenantSalon = await this.salons.findOne({
-        where: { tenantCode: dto.tenantCode.trim().toLowerCase() },
+        where: { tenantCode },
       });
       if (!tenantSalon || tenantSalon.active === false)
         throw new UnauthorizedException("Invalid or inactive salon tenant code");
@@ -139,28 +136,10 @@ export class AuthService implements OnModuleInit {
       }),
     );
     if (role === UserRole.ADMIN) {
-      const salon = tenantSalon || await this.salons.save(
-            this.salons.create({
-              tenantCode: this.tenantCode(dto.name),
-              name: `${dto.name.trim()}'s Salon`,
-              location: "Add your salon location",
-              ownerId: user.id,
-              services: [],
-              stylists: [],
-              products: [],
-              serviceDetails: [],
-              stylistSchedules: {},
-              stylistProfiles: {},
-              branches: [],
-              openingHours: { open: "09:00", close: "19:00" },
-              closedDays: [],
-            }),
-          );
+      const salon = tenantSalon!;
       user.salonId = salon.id;
-      if (dto.tenantCode) {
-        salon.ownerId = user.id;
-        await this.salons.save(salon);
-      }
+      salon.ownerId = user.id;
+      await this.salons.save(salon);
       await this.users.save(user);
     }
     await this.issueEmailVerification(user);
@@ -257,11 +236,33 @@ export class AuthService implements OnModuleInit {
       .split(",")
       .map((value) => value.trim().toLowerCase())
       .filter(Boolean);
+    const requestedAdmin = dto.role === UserRole.ADMIN;
+    if (requestedAdmin && !adminEmails.includes(email))
+      throw new UnauthorizedException(
+        "This Google email is not approved for admin access.",
+      );
+    if (requestedAdmin && !dto.tenantCode?.trim())
+      throw new UnauthorizedException(
+        "A salon tenant code is required for admin registration",
+      );
+    const tenantSalon = requestedAdmin
+      ? await this.salons.findOne({
+          where: { tenantCode: dto.tenantCode!.trim().toLowerCase() },
+        })
+      : null;
+    if (requestedAdmin && (!tenantSalon || tenantSalon.active === false))
+      throw new UnauthorizedException("Invalid or inactive salon tenant code");
     let user = await this.users
       .createQueryBuilder("user")
       .addSelect("user.passwordHash")
       .where("user.email = :email", { email })
       .getOne();
+    if (
+      requestedAdmin &&
+      tenantSalon!.ownerId &&
+      tenantSalon!.ownerId !== user?.id
+    )
+      throw new ConflictException("This salon already has an assigned admin");
     if (
       user &&
       dto.role &&
@@ -276,77 +277,48 @@ export class AuthService implements OnModuleInit {
         `This Google account is registered as ${user.role === UserRole.ADMIN ? "admin" : "guest"}. Select the matching workspace.`,
       );
     if (!user) {
-      const role =
-        dto.role === UserRole.ADMIN && adminEmails.includes(email)
-          ? UserRole.ADMIN
-          : UserRole.USER;
-      if (dto.role === UserRole.ADMIN && role !== UserRole.ADMIN)
-        throw new UnauthorizedException(
-          "This Google email is not approved for admin access.",
-        );
+      const role = requestedAdmin ? UserRole.ADMIN : UserRole.USER;
       user = await this.users.save(
         this.users.create({
           name: payload.name?.trim() || email.split("@")[0],
           email,
           passwordHash: await bcrypt.hash(randomBytes(32).toString("hex"), 12),
           role,
-          salonId: null,
+          adminApprovalStatus: requestedAdmin
+            ? AdminApprovalStatus.PENDING
+            : AdminApprovalStatus.NOT_REQUIRED,
+          salonId: requestedAdmin ? tenantSalon!.id : null,
           refreshTokenHash: null,
           emailVerified: true,
         }),
       );
-      if (role === UserRole.ADMIN) {
-        const salon = await this.salons.save(
-          this.salons.create({
-            tenantCode: this.tenantCode(user.name),
-            name: `${user.name}'s Salon`,
-            location: "Add your salon location",
-            ownerId: user.id,
-            services: [],
-            stylists: [],
-            products: [],
-            serviceDetails: [],
-            stylistSchedules: {},
-            stylistProfiles: {},
-            branches: [],
-            openingHours: { open: "09:00", close: "19:00" },
-            closedDays: [],
-          }),
-        );
-        user.salonId = salon.id;
+      if (requestedAdmin) {
+        tenantSalon!.ownerId = user.id;
+        await this.salons.save(tenantSalon!);
         user = await this.users.save(user);
       }
     }
     if (
       user &&
-      dto.role === UserRole.ADMIN &&
-      adminEmails.includes(email) &&
+      requestedAdmin &&
       user.role === UserRole.USER
     ) {
-      const salon = await this.salons.save(
-        this.salons.create({
-          tenantCode: this.tenantCode(user.name),
-          name: `${user.name}'s Salon`,
-          location: "Add your salon location",
-          ownerId: user.id,
-          services: [],
-          stylists: [],
-          products: [],
-          serviceDetails: [],
-          stylistSchedules: {},
-          stylistProfiles: {},
-          branches: [],
-          openingHours: { open: "09:00", close: "19:00" },
-          closedDays: [],
-        }),
-      );
       user.role = UserRole.ADMIN;
-      user.salonId = salon.id;
+      user.adminApprovalStatus = AdminApprovalStatus.PENDING;
+      user.salonId = tenantSalon!.id;
+      tenantSalon!.ownerId = user.id;
+      await this.salons.save(tenantSalon!);
       user = await this.users.save(user);
     }
     if (!user.active)
       throw new UnauthorizedException("This account has been deactivated");
     if (user.role === UserRole.ADMIN) {
+      if (user.adminApprovalStatus !== AdminApprovalStatus.APPROVED)
+        return {
+          pendingApproval: true,
+          message:
+            "Your admin registration is awaiting approval from an existing administrator.",
+        };
       const salon = await this.assertTenant(user.salonId, dto.tenantCode);
       if (!salon.active)
         throw new UnauthorizedException("This salon tenant is inactive");
@@ -579,7 +551,7 @@ export class AuthService implements OnModuleInit {
   }
 
   async listAdminRequests() {
-    return this.users.find({
+    const users = await this.users.find({
       where: [
         {
           role: UserRole.ADMIN,
@@ -590,9 +562,29 @@ export class AuthService implements OnModuleInit {
           adminApprovalStatus: AdminApprovalStatus.REJECTED,
         },
       ],
-      select: ["id", "name", "email", "adminApprovalStatus", "createdAt"],
+      select: [
+        "id",
+        "name",
+        "email",
+        "adminApprovalStatus",
+        "salonId",
+        "createdAt",
+      ],
       order: { createdAt: "DESC" },
     });
+    return Promise.all(
+      users.map(async (user) => {
+        const salon = user.salonId
+          ? await this.salons.findOne({ where: { id: user.salonId } })
+          : null;
+        return {
+          ...user,
+          salon: salon
+            ? { id: salon.id, name: salon.name, tenantCode: salon.tenantCode }
+            : null,
+        };
+      }),
+    );
   }
 
   async approveAdmin(id: string, approved: boolean) {

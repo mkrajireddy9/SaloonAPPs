@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { UpdatePassportDto } from "./passport.dto";
@@ -14,13 +14,14 @@ export class PassportService {
   ) {}
 
   async get(ownerEmail: string, ownerName?: string, salonId?: string) {
+    if (!salonId) throw new BadRequestException("A salon is required");
     let passport = await this.repo.findOne({
       where: { ownerEmail, salonId: salonId || undefined },
     });
     if (!passport)
       passport = await this.repo.save(
         this.repo.create({
-          salonId: salonId || null,
+          salonId,
           ownerEmail,
           guestName: ownerName || ownerEmail.split("@")[0],
           styles: [],

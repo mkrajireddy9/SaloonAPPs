@@ -65,7 +65,7 @@ export class NotificationService implements OnModuleInit, OnModuleDestroy {
         }
         return this.repo.save(
           this.repo.create({
-            salonId: appointment.salonId || null,
+            salonId: appointment.salonId,
             appointmentId: appointment.id,
             recipientEmail: appointment.guestEmail,
             recipientPhone,

@@ -88,7 +88,7 @@ export class PaymentService {
     if (!paymentsEnabled)
       return this.payments.save(
         this.payments.create({
-          salonId: appointment.salonId || user.salonId || null,
+          salonId: appointment.salonId,
           appointmentId: appointment.id,
           guestEmail: appointment.guestEmail,
           provider,
@@ -136,7 +136,7 @@ export class PaymentService {
       const order = (await response.json()) as { id: string };
       const payment = await this.payments.save(
         this.payments.create({
-          salonId: appointment.salonId || user.salonId || null,
+          salonId: appointment.salonId,
           appointmentId: appointment.id,
           guestEmail: appointment.guestEmail,
           provider,
@@ -195,7 +195,7 @@ export class PaymentService {
     }
     return this.payments.save(
       this.payments.create({
-        salonId: appointment.salonId || user.salonId || null,
+        salonId: appointment.salonId,
         appointmentId: appointment.id,
         guestEmail: appointment.guestEmail,
         provider,

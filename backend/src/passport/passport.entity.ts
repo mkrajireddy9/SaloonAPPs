@@ -10,7 +10,7 @@ import {
 @Entity("passports")
 export class Passport {
   @PrimaryGeneratedColumn("uuid") id!: string;
-  @Index() @Column({ type: "uuid", nullable: true }) salonId!: string | null;
+  @Index() @Column({ type: "uuid" }) salonId!: string;
   @Column({ unique: true }) ownerEmail!: string;
   @Column({ default: "Ananya Rao" }) guestName!: string;
   @Column({ default: "Hyderabad" }) location!: string;

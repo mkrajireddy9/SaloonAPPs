@@ -4,14 +4,14 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
+  Index,
 } from "typeorm";
 
 @Entity("salons")
 export class Salon {
   @PrimaryGeneratedColumn("uuid") id!: string;
-  @Column({ type: "varchar", unique: true, nullable: true }) tenantCode!:
-    | string
-    | null;
+  @Column({ type: "varchar", unique: true }) tenantCode!: string;
+  @Index("IDX_salons_ownerId", { unique: true, where: '"ownerId" IS NOT NULL' })
   @Column({ type: "uuid", nullable: true }) ownerId!: string | null;
   @Column({ default: true }) active!: boolean;
   @Column({ default: "Halo Studio" }) name!: string;

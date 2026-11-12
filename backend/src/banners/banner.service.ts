@@ -1,16 +1,20 @@
-import { Injectable, NotFoundException, OnModuleInit } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException, OnModuleInit } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Banner } from "./banner.entity";
 import { CreateBannerDto, UpdateBannerDto } from "./banner.dto";
+import { Salon } from "../salon/salon.entity";
 @Injectable()
 export class BannerService implements OnModuleInit {
   constructor(
     @InjectRepository(Banner) private readonly repo: Repository<Banner>,
+    @InjectRepository(Salon) private readonly salons: Repository<Salon>,
   ) {}
   async onModuleInit() {
     if (process.env.NODE_ENV === "production" || (await this.repo.count()))
       return;
+    const salon = await this.salons.findOne({ where: { active: true } });
+    if (!salon) return;
     await this.repo.save(
       this.repo.create([
         {
@@ -20,6 +24,7 @@ export class BannerService implements OnModuleInit {
           actionUrl: "/price-list",
           audience: "guest",
           active: true,
+          salonId: salon.id,
         },
         {
           title: "Seasonal styling offer",
@@ -28,6 +33,7 @@ export class BannerService implements OnModuleInit {
           actionUrl: "/appointments",
           audience: "guest",
           active: true,
+          salonId: salon.id,
         },
       ]),
     );
@@ -54,10 +60,11 @@ export class BannerService implements OnModuleInit {
     });
   }
   async create(dto: CreateBannerDto, salonId?: string) {
+    if (!salonId) throw new BadRequestException("A salon is required");
     return this.repo.save(
       this.repo.create({
         ...dto,
-        salonId: salonId || null,
+        salonId,
         startsAt: dto.startsAt ? new Date(dto.startsAt) : null,
         endsAt: dto.endsAt ? new Date(dto.endsAt) : null,
       }),

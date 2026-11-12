@@ -9,7 +9,7 @@ import {
 @Entity("appointments")
 export class Appointment {
   @PrimaryGeneratedColumn("uuid") id!: string;
-  @Column({ type: "uuid", nullable: true }) salonId!: string | null;
+  @Column({ type: "uuid" }) salonId!: string;
   @Column({ default: "Ananya Rao" }) guestName!: string;
   @Column({ default: "" }) guestEmail!: string;
   @Column({ default: "" }) guestPhone!: string;

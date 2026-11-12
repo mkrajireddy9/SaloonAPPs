@@ -14,7 +14,7 @@ export type NotificationStatus = "Queued" | "Sent" | "Failed";
 @Index(["appointmentId", "event", "channel"], { unique: true })
 export class Notification {
   @PrimaryGeneratedColumn("uuid") id!: string;
-  @Index() @Column({ type: "uuid", nullable: true }) salonId!: string | null;
+  @Index() @Column({ type: "uuid" }) salonId!: string;
   @Index() @Column({ type: "uuid", nullable: true }) appointmentId!:
     | string
     | null;

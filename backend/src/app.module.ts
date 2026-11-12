@@ -73,6 +73,8 @@ import { AiHairstyle2050000000000 } from "./database/migrations/2050000000000-Ai
 import { PlatformAdminRole2060000000000 } from "./database/migrations/2060000000000-PlatformAdminRole";
 import { SalonActiveAndRelations2070000000000 } from "./database/migrations/2070000000000-SalonActiveAndRelations";
 import { AuditSalon2080000000000 } from "./database/migrations/2080000000000-AuditSalon";
+import { UniqueSalonOwner2090000000000 } from "./database/migrations/2090000000000-UniqueSalonOwner";
+import { TenantIntegrity2100000000000 } from "./database/migrations/2100000000000-TenantIntegrity";
 
 @Module({
   imports: [
@@ -185,6 +187,8 @@ import { AuditSalon2080000000000 } from "./database/migrations/2080000000000-Aud
         PlatformAdminRole2060000000000,
         SalonActiveAndRelations2070000000000,
         AuditSalon2080000000000,
+        UniqueSalonOwner2090000000000,
+        TenantIntegrity2100000000000,
       ],
       migrationsRun: true,
       synchronize: false,

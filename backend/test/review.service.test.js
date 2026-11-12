@@ -15,7 +15,7 @@ test("review creation persists the numeric rating and trimmed comment", async ()
   const service = new ReviewService(repo);
   const result = await service.create(
     { rating: 4, comment: "  Great service  " },
-    { email: "guest@example.com", name: "Guest" },
+    { email: "guest@example.com", name: "Guest", salonId: "salon-1" },
   );
   assert.equal(result.rating, 4);
   assert.equal(result.comment, "Great service");

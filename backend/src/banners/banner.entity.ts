@@ -8,7 +8,7 @@ import {
 @Entity("banners")
 export class Banner {
   @PrimaryGeneratedColumn("uuid") id!: string;
-  @Column({ type: "uuid", nullable: true }) salonId!: string | null;
+  @Column({ type: "uuid" }) salonId!: string;
   @Column() title!: string;
   @Column({ type: "text" }) message!: string;
   @Column({ type: "varchar", nullable: true }) imageUrl!: string | null;

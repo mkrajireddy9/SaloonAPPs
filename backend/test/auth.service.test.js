@@ -23,6 +23,12 @@ function serviceWith(user) {
     }),
   };
   const salons = {
+    findOne: async () => ({
+      id: "salon-1",
+      active: true,
+      ownerId: null,
+      tenantCode: "salon-owner",
+    }),
     create: (value) => value,
     save: async (value) => ({ id: "salon-1", ...value }),
   };
@@ -39,6 +45,7 @@ test("admin registration creates a pending approval request", async () => {
     password: "strong-password",
     role: UserRole.ADMIN,
     inviteCode: process.env.ADMIN_INVITE_CODE,
+    tenantCode: "salon-owner",
   });
   assert.equal(result.pendingApproval, true);
   assert.equal(saved[0].email, "owner@example.com");
