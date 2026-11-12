@@ -6404,12 +6404,17 @@ button:hover:not(:disabled) svg {
   box-shadow: 0 18px 48px #29392c12;
 }
 .recovery-page .login-form > .text-button:first-child {
-  display: inline-flex;
+  display: flex;
+  width: max-content;
   align-items: center;
   gap: 6px;
-  margin-bottom: 40px;
+  margin: 0 0 28px;
   padding: 0;
   font-size: 12px;
+}
+.recovery-page .eyebrow {
+  display: block;
+  margin-bottom: 14px;
 }
 .recovery-page .login-form h2 { margin-top: 12px; }
 .recovery-page .login-copy { max-width: 420px; margin-bottom: 28px; }
