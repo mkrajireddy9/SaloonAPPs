@@ -1,4 +1,4 @@
-import { Link, router } from "expo-router";
+import { Link, router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -9,22 +9,36 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  View,
 } from "react-native";
 import { API_URL, setSession } from "../../src/api";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Register() {
+  const params = useLocalSearchParams<{ role?: "user" | "admin" }>();
+  const [role, setRole] = useState<"user" | "admin">(
+    params.role === "admin" ? "admin" : "user",
+  );
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [salonName, setSalonName] = useState("");
+  const [salonLocation, setSalonLocation] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const submit = async () => {
     setError("");
+    setMessage("");
     if (!name.trim() || !email.trim() || password.length < 8)
       return setError(
         "Enter your name, email, and a password with at least 8 characters.",
       );
+    if (
+      role === "admin" &&
+      (salonName.trim().length < 2 || salonLocation.trim().length < 2)
+    )
+      return setError("Enter the salon name and location for the admin request.");
     setBusy(true);
     try {
       const response = await fetch(`${API_URL}/auth/register`, {
@@ -34,7 +48,9 @@ export default function Register() {
           name: name.trim(),
           email: email.trim(),
           password,
-          role: "user",
+          role,
+          salonName: role === "admin" ? salonName.trim() : undefined,
+          salonLocation: role === "admin" ? salonLocation.trim() : undefined,
         }),
       });
       const body = await response.json();
@@ -44,6 +60,13 @@ export default function Register() {
             ? body.message.join(" ")
             : body.message || "Unable to create account.",
         );
+      if (body.pendingApproval) {
+        setMessage(
+          body.message ||
+            "Your admin request was submitted for platform approval.",
+        );
+        return;
+      }
       await setSession(body.accessToken, body.refreshToken);
       router.replace("/(tabs)/directory");
     } catch (e) {
@@ -56,14 +79,37 @@ export default function Register() {
     <SafeAreaView style={s.safeArea}>
       <KeyboardAvoidingView
         style={s.screen}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 12 : 0}
       >
-        <ScrollView contentContainerStyle={s.content}>
+        <ScrollView
+          contentContainerStyle={s.content}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+        >
           <Text style={s.eyebrow}>GET STARTED</Text>
-          <Text style={s.title}>Create your guest account</Text>
-          <Text style={s.copy}>
-            Your appointments, preferences, and salon history in one calm place.
+          <Text style={s.title}>
+            {role === "admin" ? "Request admin access" : "Create your guest account"}
           </Text>
+          <Text style={s.copy}>
+            {role === "admin"
+              ? "Submit your salon details. The platform administrator must approve access before you can sign in."
+              : "Your appointments, preferences, and salon history in one calm place."}
+          </Text>
+          <View style={s.roles}>
+            <Pressable
+              style={[s.role, role === "user" && s.selected]}
+              onPress={() => setRole("user")}
+            >
+              <Text style={s.roleTitle}>Guest</Text>
+            </Pressable>
+            <Pressable
+              style={[s.role, role === "admin" && s.selected]}
+              onPress={() => setRole("admin")}
+            >
+              <Text style={s.roleTitle}>Admin</Text>
+            </Pressable>
+          </View>
           <Text style={s.label}>Full name</Text>
           <TextInput
             value={name}
@@ -71,6 +117,24 @@ export default function Register() {
             placeholder="Your name"
             style={s.input}
           />
+          {role === "admin" ? (
+            <>
+              <Text style={s.label}>Salon name</Text>
+              <TextInput
+                value={salonName}
+                onChangeText={setSalonName}
+                placeholder="Your salon name"
+                style={s.input}
+              />
+              <Text style={s.label}>Salon location</Text>
+              <TextInput
+                value={salonLocation}
+                onChangeText={setSalonLocation}
+                placeholder="City or address"
+                style={s.input}
+              />
+            </>
+          ) : null}
           <Text style={s.label}>Email address</Text>
           <TextInput
             value={email}
@@ -96,10 +160,13 @@ export default function Register() {
             {busy ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={s.primaryText}>Create account</Text>
+              <Text style={s.primaryText}>
+                {role === "admin" ? "Request admin access" : "Create account"}
+              </Text>
             )}
           </Pressable>
           {error ? <Text style={s.error}>{error}</Text> : null}
+          {message ? <Text style={s.success}>{message}</Text> : null}
           <Link href="/(auth)/login" style={s.link}>
             Back to sign in
           </Link>
@@ -120,6 +187,17 @@ const s = StyleSheet.create({
   },
   title: { color: "#20352d", fontSize: 30, fontWeight: "700", marginTop: 12 },
   copy: { color: "#77817c", lineHeight: 20, marginTop: 8, marginBottom: 18 },
+  roles: { flexDirection: "row", gap: 10, marginBottom: 8 },
+  role: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#d9d6ce",
+    borderRadius: 9,
+    padding: 12,
+    backgroundColor: "#fffdfa",
+  },
+  selected: { borderColor: "#c55239", backgroundColor: "#fff4ef" },
+  roleTitle: { color: "#20352d", fontWeight: "700" },
   label: {
     color: "#20352d",
     fontWeight: "700",
@@ -145,6 +223,7 @@ const s = StyleSheet.create({
   },
   primaryText: { color: "#fff", fontWeight: "700" },
   error: { color: "#c55239", textAlign: "center", marginTop: 12 },
+  success: { color: "#4c947d", textAlign: "center", marginTop: 12 },
   link: {
     color: "#c55239",
     textAlign: "center",

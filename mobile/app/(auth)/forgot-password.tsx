@@ -1,6 +1,6 @@
 import { Link } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { API_URL } from "../../src/api";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -32,7 +32,8 @@ export default function ForgotPassword() {
   };
   return (
     <SafeAreaView style={s.safeArea}>
-      <View style={s.screen}>
+      <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+        <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <Text style={s.eyebrow}>ACCOUNT SECURITY</Text>
         <Text style={s.title}>Reset your password</Text>
         <Text style={s.copy}>
@@ -54,13 +55,15 @@ export default function ForgotPassword() {
         <Link href="/(auth)/login" style={s.link}>
           Back to sign in
         </Link>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 const s = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#f7f5f0" },
-  screen: { flex: 1, backgroundColor: "#f7f5f0", padding: 24, paddingTop: 40 },
+  screen: { flex: 1, backgroundColor: "#f7f5f0" },
+  content: { padding: 24, paddingTop: 40, paddingBottom: 40 },
   eyebrow: {
     color: "#91b3a3",
     fontSize: 11,

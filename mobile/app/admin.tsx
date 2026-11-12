@@ -2,6 +2,8 @@ import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -111,15 +113,19 @@ export default function Admin() {
           <Action label="Try again" onPress={() => void load()} />
         </View>
       ) : me.role === "platform_admin" ? (
-        <PlatformWorkspace
-          salons={salons}
-          metrics={metrics}
-          requests={requests}
-          onRefresh={load}
-          onError={setError}
-        />
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+          <PlatformWorkspace
+            salons={salons}
+            metrics={metrics}
+            requests={requests}
+            onRefresh={load}
+            onError={setError}
+          />
+        </KeyboardAvoidingView>
       ) : (
-        <StudioWorkspace summary={summary} onSelect={setSection} />
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+          <StudioWorkspace summary={summary} onSelect={setSection} />
+        </KeyboardAvoidingView>
       )}
     </SafeAreaView>
   );
@@ -133,7 +139,7 @@ function StudioWorkspace({
   onSelect: (section: string) => void;
 }) {
   return (
-    <ScrollView contentContainerStyle={s.content}>
+    <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
       <Text style={s.copy}>Keep the salon experience thoughtful and in sync.</Text>
       <View style={s.metrics}>
         <Metric label="Bookings" value={summary?.analytics?.totalBookings || 0} />
@@ -143,9 +149,19 @@ function StudioWorkspace({
       </View>
       <Text style={s.sectionTitle}>Studio tools</Text>
       <Action label="Salon setup" onPress={() => onSelect("salon")} />
+      <Action label="Appointments" onPress={() => onSelect("appointments")} />
+      <Action label="Reports and analytics" onPress={() => onSelect("reports")} />
       <Action label="Customers" onPress={() => onSelect("customers")} />
       <Action label="Prices and services" onPress={() => onSelect("prices")} />
       <Action label="Products" onPress={() => onSelect("products")} />
+      <Action label="Consultations" onPress={() => onSelect("consultations")} />
+      <Action label="Offers and banners" onPress={() => onSelect("banners")} />
+      <Action label="Branding" onPress={() => onSelect("theme")} />
+      <Action label="Private media" onPress={() => onSelect("media")} />
+      <Action label="Review moderation" onPress={() => onSelect("reviews")} />
+      <Action label="Payments and invoices" onPress={() => onSelect("payments")} />
+      <Action label="Hair passport" onPress={() => onSelect("passport")} />
+      <Action label="Notification preferences" onPress={() => onSelect("notifications")} />
     </ScrollView>
   );
 }
@@ -209,7 +225,7 @@ function PlatformWorkspace({
   };
 
   return (
-    <ScrollView contentContainerStyle={s.content}>
+    <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
       <Text style={s.copy}>Monitor tenants, approve salon owners, and manage platform access.</Text>
       <View style={s.metrics}>
         <Metric label="Total salons" value={salons.length} />
@@ -217,6 +233,31 @@ function PlatformWorkspace({
         <Metric label="Bookings" value={totals.bookings} />
         <Metric label="Confirmed" value={totals.confirmed} />
         <Metric label="Revenue" value={`₹${totals.revenue}`} />
+      </View>
+      <View style={s.card}>
+        <Text style={s.sectionTitle}>Bookings by salon</Text>
+        {!metrics.length ? (
+          <Text style={s.muted}>No salon activity yet.</Text>
+        ) : (
+          metrics.map((item) => {
+            const value = item.metrics?.totalBookings || 0;
+            const maximum = Math.max(
+              ...metrics.map((entry) => entry.metrics?.totalBookings || 0),
+              1,
+            );
+            return (
+              <View key={item.salon.id} style={s.chartRow}>
+                <View style={s.rowBetween}>
+                  <Text style={s.muted}>{item.salon.name}</Text>
+                  <Text style={s.cardTitle}>{value}</Text>
+                </View>
+                <View style={s.chartTrack}>
+                  <View style={[s.chartBar, { width: `${Math.max((value / maximum) * 100, value ? 8 : 0)}%` }]} />
+                </View>
+              </View>
+            );
+          })
+        )}
       </View>
 
       <View style={s.card}>
@@ -353,6 +394,9 @@ const s = StyleSheet.create({
   actionText: { color: "#20352d", fontWeight: "700" },
   arrow: { color: "#c55239", fontSize: 21, lineHeight: 16 },
   request: { borderTopWidth: 1, borderTopColor: "#e5e1d9", paddingTop: 12, marginTop: 12 },
+  chartRow: { marginTop: 12 },
+  chartTrack: { height: 9, borderRadius: 5, backgroundColor: "#e7eee9", overflow: "hidden", marginTop: 6 },
+  chartBar: { height: 9, borderRadius: 5, backgroundColor: "#c55239" },
   inline: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
   rowBetween: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
   code: { color: "#20352d", fontWeight: "700", letterSpacing: 1, marginTop: 14 },

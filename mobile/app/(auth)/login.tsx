@@ -15,7 +15,7 @@ import { API_URL, setSession } from "../../src/api";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Login() {
-  const [role, setRole] = useState<"user" | "admin">("user");
+  const [role, setRole] = useState<"user" | "admin" | "platform_admin">("user");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [tenantCode, setTenantCode] = useState("");
@@ -56,9 +56,14 @@ export default function Login() {
     <SafeAreaView style={s.safeArea}>
       <KeyboardAvoidingView
         style={s.screen}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 12 : 0}
       >
-        <ScrollView contentContainerStyle={s.content}>
+        <ScrollView
+          contentContainerStyle={s.content}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+        >
           <View style={s.hero}>
             <Text style={s.mark}>h</Text>
             <Text style={s.brand}>halo</Text>
@@ -85,6 +90,13 @@ export default function Login() {
             >
               <Text style={s.roleTitle}>Admin</Text>
               <Text style={s.roleCopy}>Manage the studio</Text>
+            </Pressable>
+            <Pressable
+              style={[s.role, role === "platform_admin" && s.selected]}
+              onPress={() => setRole("platform_admin")}
+            >
+              <Text style={s.roleTitle}>Platform</Text>
+              <Text style={s.roleCopy}>Manage all salons</Text>
             </Pressable>
           </View>
           {role === "admin" && (
@@ -125,7 +137,7 @@ export default function Login() {
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={s.primaryText}>
-                Continue as {role === "admin" ? "admin" : "guest"}
+                Continue as {role === "platform_admin" ? "platform admin" : role === "admin" ? "admin" : "guest"}
               </Text>
             )}
           </Pressable>
@@ -133,9 +145,17 @@ export default function Login() {
           <Link href="/(auth)/forgot-password" style={s.link}>
             Forgot password?
           </Link>
-          <Link href="/(auth)/register" style={s.link}>
-            Create an account
-          </Link>
+          {role === "platform_admin" ? (
+            <Text style={s.link}>Platform admin accounts are provisioned by Halo.</Text>
+          ) : (
+            <Pressable
+              onPress={() =>
+                router.push({ pathname: "/(auth)/register", params: { role } })
+              }
+            >
+              <Text style={s.link}>Create an account</Text>
+            </Pressable>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
