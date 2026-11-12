@@ -86,6 +86,24 @@ export class SalonService {
     let salon = salonId
       ? await this.repo.findOne({ where: { id: salonId } })
       : await this.repo.findOne({ where: {} });
+    if (!salon && !salonId) {
+      salon = await this.repo.save(
+        this.repo.create({
+          name: "Halo Studio",
+          location: "Add your salon location",
+          ownerId: null,
+          services: [],
+          stylists: [],
+          serviceDetails: [],
+          products: [],
+          stylistSchedules: {},
+          stylistProfiles: {},
+          branches: [],
+          openingHours: { open: "09:00", close: "19:00" },
+          closedDays: [],
+        }),
+      );
+    }
     if (!salon)
       throw new ServiceUnavailableException(
         "Salon configuration has not been created",
