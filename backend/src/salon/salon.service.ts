@@ -61,6 +61,12 @@ function validateBranches(
       throw new BadRequestException(
         "Each branch needs an ID, name, and location",
       );
+    const hasLatitude = Number.isFinite(branch.latitude);
+    const hasLongitude = Number.isFinite(branch.longitude);
+    if (hasLatitude !== hasLongitude)
+      throw new BadRequestException(
+        `Branch ${name} must include both latitude and longitude`,
+      );
     validateHours(branch.openingHours, `Branch ${name}`);
     if (branch.closedDays.some((day) => !days.includes(day)))
       throw new BadRequestException(`Branch ${name} has an invalid closed day`);
@@ -143,8 +149,7 @@ export class SalonService {
           .filter(
             (branch) =>
               !hasLocation ||
-              branch.distanceKm === null ||
-              branch.distanceKm <= radiusKm,
+              (branch.distanceKm !== null && branch.distanceKm <= radiusKm),
           );
         return {
           id: salon.id,
@@ -233,6 +238,14 @@ export class SalonService {
       name: branch.name.trim(),
       location: branch.location.trim(),
       contact: branch.contact?.trim() || "",
+      latitude:
+        branch.latitude === undefined || branch.latitude === null
+          ? undefined
+          : Number(branch.latitude),
+      longitude:
+        branch.longitude === undefined || branch.longitude === null
+          ? undefined
+          : Number(branch.longitude),
       active: branch.active !== false,
       services: branch.services?.length ? branch.services : services,
       stylists: branch.stylists?.length ? branch.stylists : stylists,

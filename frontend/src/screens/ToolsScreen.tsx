@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   Bell,
-  Building2,
   Check,
   CreditCard,
   Download,
@@ -48,15 +47,6 @@ type AdminRequest = {
   adminApprovalStatus: "pending" | "rejected";
   createdAt: string;
 };
-type PlatformSalon = {
-  id: string;
-  name: string;
-  location: string;
-  tenantCode: string | null;
-  active: boolean;
-  ownerId: string | null;
-};
-
 function isPlatformAdmin() {
   try {
     const token = localStorage.getItem("halo-token");
@@ -89,14 +79,6 @@ export function ToolsScreen({
     "idle" | "enabled" | "dismissed"
   >("idle");
   const [adminRequests, setAdminRequests] = useState<AdminRequest[]>([]);
-  const [platformSalons, setPlatformSalons] = useState<PlatformSalon[]>([]);
-  const [newSalonName, setNewSalonName] = useState("");
-  const [newSalonLocation, setNewSalonLocation] = useState("");
-  const platformAdmin = isPlatformAdmin();
-  const refreshPlatformSalons = () =>
-    void request<PlatformSalon[]>("/salon/platform/salons")
-      .then(setPlatformSalons)
-      .catch(() => setPlatformSalons([]));
   const refreshPayments = () =>
     void request<Payment[]>("/payments")
       .then(setPayments)
@@ -108,11 +90,10 @@ export function ToolsScreen({
     void request<typeof preferences>("/auth/preferences")
       .then(setPreferences)
       .catch(() => undefined);
-    if (platformAdmin) {
+    if (isPlatformAdmin()) {
       void request<AdminRequest[]>("/auth/admin-requests")
         .then(setAdminRequests)
         .catch(() => setAdminRequests([]));
-      refreshPlatformSalons();
     }
     refreshPayments();
     if (localStorage.getItem("halo-push-dismissed") === "true")
@@ -128,48 +109,7 @@ export function ToolsScreen({
       )
         setPushStatus("enabled");
     })();
-  }, [role, platformAdmin]);
-  const createPlatformSalon = async () => {
-    if (!newSalonName.trim() || !newSalonLocation.trim()) return;
-    try {
-      await request<PlatformSalon>("/salon/platform/salons", {
-        method: "POST",
-        body: JSON.stringify({
-          name: newSalonName.trim(),
-          location: newSalonLocation.trim(),
-        }),
-      });
-      setNewSalonName("");
-      setNewSalonLocation("");
-      refreshPlatformSalons();
-      showToast("Salon created. Share its tenant code with the salon admin.");
-    } catch {
-      showToast("Could not create the salon.", "error");
-    }
-  };
-  const updatePlatformSalon = async (salon: PlatformSalon, active: boolean) => {
-    try {
-      await request(`/salon/platform/salons/${salon.id}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ active }),
-      });
-      refreshPlatformSalons();
-      showToast(active ? "Salon activated." : "Salon deactivated.");
-    } catch {
-      showToast("Could not update the salon.", "error");
-    }
-  };
-  const rotatePlatformTenantCode = async (salon: PlatformSalon) => {
-    try {
-      await request(`/salon/platform/salons/${salon.id}/rotate-tenant-code`, {
-        method: "POST",
-      });
-      refreshPlatformSalons();
-      showToast("Tenant code rotated.");
-    } catch {
-      showToast("Could not rotate the tenant code.", "error");
-    }
-  };
+  }, [role]);
   const updateAdminRequest = async (id: string, approved: boolean) => {
     try {
       await request(`/auth/admin-requests/${id}`, {
@@ -640,60 +580,7 @@ export function ToolsScreen({
           </section>
         </div>
       </div>
-      {platformAdmin && (
-        <section className="panel form-panel">
-          <div className="section-label">
-            <span className="round-icon sage">
-              <Building2 size={16} />
-            </span>
-            <div>
-              <b>Platform salons</b>
-              <small>Create tenants, manage availability, and share login codes.</small>
-            </div>
-          </div>
-          <div className="inline-form">
-            <input
-              value={newSalonName}
-              onChange={(event) => setNewSalonName(event.target.value)}
-              placeholder="Salon name"
-            />
-            <input
-              value={newSalonLocation}
-              onChange={(event) => setNewSalonLocation(event.target.value)}
-              placeholder="Location"
-            />
-            <button className="primary" onClick={() => void createPlatformSalon()}>
-              Create salon
-            </button>
-          </div>
-          {platformSalons.map((salon) => (
-            <div className="review-row" key={salon.id}>
-              <div>
-                <b>{salon.name}</b>
-                <p>{salon.location}</p>
-                <small>
-                  {salon.active ? "Active" : "Inactive"} · Tenant code: {salon.tenantCode || "Not assigned"}
-                </small>
-              </div>
-              <span>
-                <button
-                  className="soft"
-                  onClick={() => void updatePlatformSalon(salon, !salon.active)}
-                >
-                  {salon.active ? "Deactivate" : "Activate"}
-                </button>
-                <button
-                  className="soft"
-                  onClick={() => void rotatePlatformTenantCode(salon)}
-                >
-                  Rotate code
-                </button>
-              </span>
-            </div>
-          ))}
-        </section>
-      )}
-      {platformAdmin && adminRequests.length > 0 && (
+      {isPlatformAdmin() && adminRequests.length > 0 && (
         <section className="panel form-panel">
           <div className="section-label">
             <span className="round-icon butter">

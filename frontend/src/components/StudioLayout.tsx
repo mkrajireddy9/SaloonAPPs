@@ -3,6 +3,7 @@ import {
   BarChart3,
   Bell,
   BookOpen,
+  Building2,
   CalendarDays,
   CircleHelp,
   Home,
@@ -36,6 +37,7 @@ export type View =
   | "price-list"
   | "products"
   | "tools"
+  | "platform-salons"
   | "customers"
   | "account"
   | "ai-hairstyle";
@@ -70,6 +72,17 @@ export function StudioLayout({
   const [displayName, setDisplayName] = useState(
     role === "admin" ? "Studio admin" : "Guest",
   );
+  const platformAdmin = (() => {
+    try {
+      const token = localStorage.getItem("halo-token");
+      const payload = token
+        ? (JSON.parse(atob(token.split(".")[1])) as { role?: Role })
+        : {};
+      return payload.role === "platform_admin";
+    } catch {
+      return false;
+    }
+  })();
   useEffect(() => {
     void request<ThemeConfig>("/salon/theme")
       .then((savedTheme) => setTheme({ ...defaultTheme, ...savedTheme }))
@@ -247,6 +260,14 @@ export function StudioLayout({
                 label="Products used"
                 onClick={() => go("products")}
               />
+              {platformAdmin && (
+                <Nav
+                  active={view === "platform-salons"}
+                  icon={<Building2 size={16} />}
+                  label="Platform salons"
+                  onClick={() => go("platform-salons")}
+                />
+              )}
               <Nav
                 active={view === "new" || view === "scan" || view === "report"}
                 icon={<Plus size={17} />}

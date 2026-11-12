@@ -425,6 +425,49 @@ export function SalonSetupScreen({
                             })
                           }
                         />
+                    <div className="form-two branch-coordinates">
+                      <label className="field">
+                        <span>Latitude</span>
+                        <input
+                          type="number"
+                          step="any"
+                          min="-90"
+                          max="90"
+                          value={branch.latitude ?? ""}
+                          placeholder="e.g. 17.3850"
+                          onChange={(event) =>
+                            updateBranch(branch.id, {
+                              latitude:
+                                event.target.value === ""
+                                  ? undefined
+                                  : Number(event.target.value),
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Longitude</span>
+                        <input
+                          type="number"
+                          step="any"
+                          min="-180"
+                          max="180"
+                          value={branch.longitude ?? ""}
+                          placeholder="e.g. 78.4867"
+                          onChange={(event) =>
+                            updateBranch(branch.id, {
+                              longitude:
+                                event.target.value === ""
+                                  ? undefined
+                                  : Number(event.target.value),
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
+                    <small className="branch-location-help">
+                      Required for this branch to appear in nearby-location results.
+                    </small>
                       </label>
                       <label className="field">
                         <span>Closing</span>
