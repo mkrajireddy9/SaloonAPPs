@@ -491,6 +491,7 @@ export class AuthService implements OnModuleInit {
   }
 
   async logout(userId: string) {
+    if (userId === "platform-admin") return { success: true };
     await this.users.update(userId, {
       refreshTokenHash: null,
       lastLogoutAt: new Date(),
@@ -499,6 +500,7 @@ export class AuthService implements OnModuleInit {
   }
 
   async heartbeat(userId: string) {
+    if (userId === "platform-admin") return { success: true };
     await this.users.update(userId, { lastSeenAt: new Date() });
     return { success: true };
   }
@@ -556,6 +558,12 @@ export class AuthService implements OnModuleInit {
     dto: NotificationPreferencesDto,
   ) {
     const user = await this.users.findOne({ where: { email } });
+    if (
+      !user &&
+      email.toLowerCase().trim() ===
+        process.env.PLATFORM_ADMIN_EMAIL?.toLowerCase().trim()
+    )
+      return { email: true, appointmentReminders: true, ...dto };
     if (!user) throw new UnauthorizedException("User not found");
     user.notificationPreferences = {
       ...{ email: true, appointmentReminders: true },
