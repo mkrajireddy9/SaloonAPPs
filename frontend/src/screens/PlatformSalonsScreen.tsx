@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Building2, CheckCircle2, Copy, RefreshCw, ShieldOff } from "lucide-react";
+import { Building2, Check, CheckCircle2, Copy, RefreshCw, ShieldOff, X } from "lucide-react";
 import { ShellTitle } from "../components/ShellTitle";
 import { useToast } from "../components/Toast";
 import { request } from "../api";
@@ -24,13 +24,21 @@ type PlatformMetrics = {
   metrics: { totalBookings: number; confirmedBookings: number; revenue: number };
   consultations: number;
 };
+type AdminRequest = {
+  id: string;
+  name: string;
+  email: string;
+  adminApprovalStatus: "pending" | "approved" | "rejected";
+  emailVerified: boolean;
+  createdAt: string;
+  salon: { id: string; name: string; location: string; tenantCode: string } | null;
+};
 
 export function PlatformSalonsScreen({ onBack }: { onBack: () => void }) {
   const { showToast } = useToast();
   const [salons, setSalons] = useState<PlatformSalon[]>([]);
   const [metrics, setMetrics] = useState<PlatformMetrics[]>([]);
-  const [name, setName] = useState("");
-  const [location, setLocation] = useState("");
+  const [requests, setRequests] = useState<AdminRequest[]>([]);
   const refresh = () => {
     void request<PlatformSalon[]>("/salon/platform/salons")
       .then(setSalons)
@@ -38,23 +46,28 @@ export function PlatformSalonsScreen({ onBack }: { onBack: () => void }) {
     void request<{ items: PlatformMetrics[] }>("/dashboard/platform")
       .then((result) => setMetrics(result.items))
       .catch(() => setMetrics([]));
+    void request<AdminRequest[]>("/auth/admin-requests")
+      .then(setRequests)
+      .catch(() => setRequests([]));
   };
 
   useEffect(() => refresh(), []);
 
-  const create = async () => {
-    if (!name.trim() || !location.trim()) return;
+  const formatDate = (value: string | null) =>
+    value
+      ? new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(new Date(value))
+      : "Never";
+
+  const updateRequest = async (id: string, approved: boolean) => {
     try {
-      await request("/salon/platform/salons", {
-        method: "POST",
-        body: JSON.stringify({ name: name.trim(), location: location.trim() }),
+      await request(`/auth/admin-requests/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ approved }),
       });
-      setName("");
-      setLocation("");
       refresh();
-      showToast("Salon created. Share its tenant code with the salon admin.");
+      showToast(approved ? "Admin request approved." : "Admin request rejected.");
     } catch {
-      showToast("Could not create the salon.", "error");
+      showToast("Could not update the admin request.", "error");
     }
   };
   const updateStatus = async (salon: PlatformSalon) => {
@@ -91,19 +104,29 @@ export function PlatformSalonsScreen({ onBack }: { onBack: () => void }) {
       <ShellTitle
         eyebrow="PLATFORM ADMINISTRATION"
         title="Manage platform salons."
-        copy="Create tenant workspaces, control availability, and share secure login codes with salon admins."
+        copy="Review salon access requests, approve admins, and control tenant availability."
         back="Back to today"
         onBack={onBack}
       />
-      <section className="platform-salon-create panel">
+      <section className="platform-admin-requests panel">
         <div className="section-label">
           <span className="round-icon sage"><Building2 size={17} /></span>
-          <div><b>Create a salon workspace</b><small>Each salon gets its own tenant and login code.</small></div>
+          <div><b>Admin access requests</b><small>Approve a salon owner before they can sign in.</small></div>
         </div>
-        <div className="platform-salon-form">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Salon name" aria-label="Salon name" />
-          <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location" aria-label="Location" />
-          <button className="primary" onClick={() => void create()}>Create salon</button>
+        <div className="admin-request-list">
+          {requests.map((item) => <div className="admin-request-row" key={item.id}>
+            <div>
+              <b>{item.salon?.name || "Salon request"}</b>
+              <p>{item.name} · {item.email} · {item.salon?.location || "Location not provided"}</p>
+              <small>Requested {formatDate(item.createdAt)} · Email {item.emailVerified ? "verified" : "not verified"}</small>
+            </div>
+            <div className="admin-request-actions">
+              <span className={`request-status ${item.adminApprovalStatus}`}>{item.adminApprovalStatus}</span>
+              <button className="soft" onClick={() => void updateRequest(item.id, true)}><Check size={14} /> Approve</button>
+              {item.adminApprovalStatus === "pending" && <button className="soft danger" onClick={() => void updateRequest(item.id, false)}><X size={14} /> Reject</button>}
+            </div>
+          </div>)}
+          {!requests.length && <p className="admin-request-empty">No pending admin access requests.</p>}
         </div>
       </section>
       <div className="platform-salon-list">
@@ -118,7 +141,9 @@ export function PlatformSalonsScreen({ onBack }: { onBack: () => void }) {
                 <h2>{salon.name}</h2>
                 <p>{salon.location || "Location not set"}</p>
               </div>
-              <span className="platform-salon-id">{salon.ownerId ? "Admin connected" : "Awaiting admin"}</span>
+              <span className="platform-salon-id">
+                {salon.admin?.approvalStatus === "pending" ? "Pending approval" : salon.ownerId ? "Admin connected" : "Awaiting admin"}
+              </span>
             </div>
             <div className="tenant-code-row">
               <div><small>TENANT LOGIN CODE</small><strong>{salon.tenantCode || "Not assigned"}</strong></div>
@@ -127,9 +152,10 @@ export function PlatformSalonsScreen({ onBack }: { onBack: () => void }) {
             <div className="platform-salon-admin">
               <small>SALON ADMIN</small>
               {salon.admin ? (
-                <span>
-                  {salon.admin.name} · {salon.admin.email} · {salon.admin.active ? "Active" : "Inactive"}
-                </span>
+                <div>
+                  <span>{salon.admin.name} · {salon.admin.email}</span>
+                  <small>{salon.admin.active ? "Active" : "Inactive"} · Last login {formatDate(salon.admin.lastLoginAt)}</small>
+                </div>
               ) : (
                 <span>Awaiting admin registration</span>
               )}
@@ -148,7 +174,7 @@ export function PlatformSalonsScreen({ onBack }: { onBack: () => void }) {
             )}
           </article>
         ))}
-        {!salons.length && <div className="panel empty-platform-salons"><Building2 size={20} /><b>No platform salons yet</b><p>Create the first salon workspace above.</p></div>}
+        {!salons.length && <div className="panel empty-platform-salons"><Building2 size={20} /><b>No platform salons yet</b><p>Approved access requests will appear here.</p></div>}
       </div>
     </section>
   );

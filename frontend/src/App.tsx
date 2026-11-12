@@ -619,8 +619,8 @@ function AppContent() {
     email: string,
     password: string,
     selectedRole: Role,
-    inviteCode: string,
-    tenantCode: string,
+    salonName: string,
+    salonLocation: string,
   ) => {
     setLoginError("");
     try {
@@ -637,8 +637,8 @@ function AppContent() {
           email,
           password,
           role: selectedRole,
-          inviteCode,
-          tenantCode: tenantCode.trim() || undefined,
+          salonName: selectedRole === "admin" ? salonName : undefined,
+          salonLocation: selectedRole === "admin" ? salonLocation : undefined,
         }),
       });
       if (result.pendingApproval) {

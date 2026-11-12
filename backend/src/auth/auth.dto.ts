@@ -27,17 +27,27 @@ export class RegisterDto {
   @IsIn([UserRole.USER, UserRole.ADMIN])
   role?: UserRole;
   @ApiPropertyOptional({
-    description: "Required when registering an admin account.",
+    description: "Legacy admin invite code; no longer required for requests.",
   })
   @IsOptional()
   @IsString()
   inviteCode?: string;
   @ApiPropertyOptional({
-    description: "Tenant code assigned by the platform for an existing salon.",
+    description: "Legacy tenant code for an existing salon.",
   })
   @IsOptional()
   @IsString()
   tenantCode?: string;
+  @ApiPropertyOptional({ example: "Halo Studio" })
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  salonName?: string;
+  @ApiPropertyOptional({ example: "Indiranagar, Bengaluru" })
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  salonLocation?: string;
 }
 
 export class LoginDto {

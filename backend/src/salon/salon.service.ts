@@ -193,7 +193,10 @@ export class SalonService {
           ? await this.users.findOne({
               where: { id: salon.ownerId, role: UserRole.ADMIN },
             })
-          : null;
+          : await this.users.findOne({
+              where: { salonId: salon.id, role: UserRole.ADMIN },
+              order: { createdAt: "DESC" },
+            });
         return {
           ...salon,
           admin: admin

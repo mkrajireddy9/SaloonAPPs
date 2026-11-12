@@ -7061,6 +7061,30 @@ button[aria-busy="true"]::after {
 .empty-platform-salons { grid-column: 1 / -1; padding: 36px; text-align: center; color: #718078; }
 .empty-platform-salons b { display: block; margin: 8px 0 4px; color: #20352d; }
 .empty-platform-salons p { margin: 0; }
+.platform-admin-requests { padding: 22px; margin-bottom: 16px; }
+.admin-request-list { margin-top: 18px; }
+.admin-request-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 0;
+  border-top: 1px solid #e5e2da;
+}
+.admin-request-row p { margin: 5px 0 0; color: #77817c; }
+.admin-request-row small { display: block; margin-top: 5px; color: #8a958e; font-size: 10px; }
+.admin-request-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.admin-request-actions button { display: inline-flex; align-items: center; gap: 6px; }
+.request-status { border-radius: 999px; padding: 5px 9px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.request-status.pending { color: #8a671b; background: #f8edc9; }
+.request-status.approved { color: #356b51; background: #e1f0e8; }
+.request-status.rejected { color: #9a5749; background: #f6e4df; }
+.admin-request-actions .danger { color: #9a5749; }
+.admin-request-empty { margin: 18px 0 0; color: #77817c; }
+.platform-salon-admin { display: grid; gap: 6px; }
+.platform-salon-admin > div { display: grid; gap: 4px; }
+.platform-salon-admin span { color: #31463c; }
+.platform-salon-admin small { color: #8a958e; font-size: 10px; letter-spacing: .06em; }
 .platform-overview-page .metrics-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -7180,6 +7204,8 @@ button[aria-busy="true"]::after {
   .platform-salon-form,
   .platform-salon-list { grid-template-columns: 1fr; }
   .platform-salon-form button { width: 100%; }
+  .admin-request-row { align-items: flex-start; flex-direction: column; }
+  .admin-request-actions { justify-content: flex-start; }
 }
 @media (max-width: 900px) {
   .platform-overview-page .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

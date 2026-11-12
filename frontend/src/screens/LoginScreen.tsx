@@ -32,8 +32,8 @@ export function LoginScreen({
     email: string,
     password: string,
     role: Role,
-    inviteCode: string,
-    tenantCode: string,
+    salonName: string,
+    salonLocation: string,
   ) => void | Promise<void>;
   error?: string;
 }) {
@@ -42,8 +42,8 @@ export function LoginScreen({
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
-  const [tenantCode, setTenantCode] = useState("");
+  const [salonName, setSalonName] = useState("");
+  const [salonLocation, setSalonLocation] = useState("");
   const [registering, setRegistering] = useState(false);
   const [theme, setTheme] = useState<ThemeConfig>(defaultTheme);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -208,29 +208,18 @@ export function LoginScreen({
           )}
           {registering && role === "admin" && (
             <>
-              <label className="login-label">Admin invite code</label>
+              <label className="login-label">Salon name</label>
               <input
-                value={inviteCode}
-                onChange={(event) => setInviteCode(event.target.value)}
-                placeholder="Enter invite code"
-                type="password"
-              />
-              <label className="login-label">Salon tenant code</label>
-              <input
-                value={tenantCode}
-                onChange={(event) => setTenantCode(event.target.value)}
-                placeholder="Enter the code from platform admin"
+                value={salonName}
+                onChange={(event) => setSalonName(event.target.value)}
+                placeholder="Enter your salon name"
                 type="text"
               />
-            </>
-          )}
-          {!registering && role === "admin" && (
-            <>
-              <label className="login-label">Salon tenant code</label>
+              <label className="login-label">Salon location</label>
               <input
-                value={tenantCode}
-                onChange={(event) => setTenantCode(event.target.value)}
-                placeholder="Leave empty for platform admin"
+                value={salonLocation}
+                onChange={(event) => setSalonLocation(event.target.value)}
+                placeholder="City or full salon address"
                 type="text"
               />
             </>
@@ -274,10 +263,10 @@ export function LoginScreen({
                     email,
                     password,
                     role,
-                    inviteCode,
-                    tenantCode,
+                    salonName,
+                    salonLocation,
                   )
-                : void onLogin(email, password, role, theme, tenantCode)
+                : void onLogin(email, password, role, theme)
             }
           >
             {registering
@@ -287,7 +276,7 @@ export function LoginScreen({
               : `Continue as ${role === "admin" ? "admin" : "guest"}`}{" "}
             <ArrowRight size={17} />
           </button>
-          {!registering &&
+          {!registering && role === "user" &&
             (googleConfigured ? (
               <div className="google-login" aria-label="Continue with Google" />
             ) : (

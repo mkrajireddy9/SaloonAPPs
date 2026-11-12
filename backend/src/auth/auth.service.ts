@@ -96,32 +96,34 @@ export class AuthService implements OnModuleInit {
     if (await this.users.findOne({ where: { email } }))
       throw new ConflictException("An account with this email already exists");
     const role = dto.role || UserRole.USER;
-    if (role === UserRole.ADMIN && !dto.tenantCode?.trim())
-      throw new UnauthorizedException(
-        "A salon tenant code is required for admin registration",
-      );
-    if (
-      role === UserRole.ADMIN &&
-      (!process.env.ADMIN_INVITE_CODE ||
-        process.env.ADMIN_INVITE_CODE.includes("replace-with") ||
-        process.env.ADMIN_INVITE_CODE.length < 16 ||
-        dto.inviteCode !== process.env.ADMIN_INVITE_CODE)
-    )
-      throw new UnauthorizedException("A valid admin invite code is required");
     const approval =
       role === UserRole.ADMIN
         ? AdminApprovalStatus.PENDING
         : AdminApprovalStatus.NOT_REQUIRED;
     let tenantSalon: Salon | null = null;
     if (role === UserRole.ADMIN) {
-      const tenantCode = dto.tenantCode!.trim().toLowerCase();
-      tenantSalon = await this.salons.findOne({
-        where: { tenantCode },
-      });
-      if (!tenantSalon || tenantSalon.active === false)
-        throw new UnauthorizedException("Invalid or inactive salon tenant code");
-      if (tenantSalon.ownerId)
-        throw new ConflictException("This salon already has an assigned admin");
+      if (!dto.salonName?.trim() || !dto.salonLocation?.trim())
+        throw new UnauthorizedException(
+          "Salon name and location are required for admin access requests",
+        );
+      tenantSalon = await this.salons.save(
+        this.salons.create({
+          name: dto.salonName.trim(),
+          location: dto.salonLocation.trim(),
+          tenantCode: this.tenantCode(dto.salonName),
+          active: false,
+          ownerId: null,
+          services: [],
+          stylists: [],
+          serviceDetails: [],
+          products: [],
+          stylistSchedules: {},
+          stylistProfiles: {},
+          branches: [],
+          openingHours: { open: "09:00", close: "19:00" },
+          closedDays: [],
+        }),
+      );
     }
     const user = await this.users.save(
       this.users.create({
@@ -130,25 +132,32 @@ export class AuthService implements OnModuleInit {
         passwordHash: await bcrypt.hash(dto.password, 12),
         role,
         adminApprovalStatus: approval,
-        salonId: null,
+        salonId: tenantSalon?.id || null,
         refreshTokenHash: null,
         emailVerified: false,
+        active: role !== UserRole.ADMIN,
       }),
     );
-    if (role === UserRole.ADMIN) {
-      const salon = tenantSalon!;
-      user.salonId = salon.id;
-      salon.ownerId = user.id;
-      await this.salons.save(salon);
-      await this.users.save(user);
-    }
     await this.issueEmailVerification(user);
-    if (role === UserRole.ADMIN)
+    if (role === UserRole.ADMIN) {
+      const platformEmail = process.env.PLATFORM_ADMIN_EMAIL?.toLowerCase().trim();
+      if (platformEmail) {
+        try {
+          await this.sendEmail(
+            platformEmail,
+            "New Halo salon admin access request",
+            `<p><strong>${dto.name.trim()}</strong> requested admin access for <strong>${tenantSalon!.name}</strong>.</p><p>Review the request in Platform administration before access is enabled.</p>`,
+          );
+        } catch {
+          this.logger.warn(`Admin request notification could not be sent for ${email}`);
+        }
+      }
       return {
         pendingApproval: true,
         message:
-          "Your admin registration is awaiting approval from an existing administrator.",
+          "Your request was submitted. The platform administrator will review it before you can sign in.",
       };
+    }
     return this.issueToken(user);
   }
 
@@ -194,7 +203,7 @@ export class AuthService implements OnModuleInit {
           : "Your admin registration is awaiting approval.",
       );
     if (user.role === UserRole.ADMIN) {
-      const salon = await this.assertTenant(user.salonId, dto.tenantCode);
+      const salon = await this.assertTenant(user.salonId, dto.tenantCode, false);
       if (!salon.active)
         throw new UnauthorizedException("This salon tenant is inactive");
     }
@@ -371,13 +380,17 @@ export class AuthService implements OnModuleInit {
         .slice(0, 24) || "salon"
     }-${randomBytes(3).toString("hex")}`;
   }
-  private async assertTenant(salonId: string | null, tenantCode?: string) {
-    if (!tenantCode?.trim())
+  private async assertTenant(
+    salonId: string | null,
+    tenantCode?: string,
+    requireCode = true,
+  ) {
+    if (!salonId) throw new UnauthorizedException("This admin has no salon assigned");
+    const salon = await this.salons.findOne({ where: { id: salonId } });
+    if (!salon) throw new UnauthorizedException("Salon tenant not found");
+    if (requireCode && !tenantCode?.trim())
       throw new UnauthorizedException("Enter your salon tenant code");
-    const salon = await this.salons.findOne({
-      where: { tenantCode: tenantCode.trim().toLowerCase() },
-    });
-    if (!salon || salon.id !== salonId)
+    if (tenantCode?.trim() && salon.tenantCode !== tenantCode.trim().toLowerCase())
       throw new UnauthorizedException("Invalid salon tenant code");
     return salon;
   }
@@ -604,6 +617,7 @@ export class AuthService implements OnModuleInit {
         "email",
         "adminApprovalStatus",
         "salonId",
+        "emailVerified",
         "createdAt",
       ],
       order: { createdAt: "DESC" },
@@ -616,7 +630,12 @@ export class AuthService implements OnModuleInit {
         return {
           ...user,
           salon: salon
-            ? { id: salon.id, name: salon.name, tenantCode: salon.tenantCode }
+            ? {
+                id: salon.id,
+                name: salon.name,
+                location: salon.location,
+                tenantCode: salon.tenantCode,
+              }
             : null,
         };
       }),
@@ -632,7 +651,26 @@ export class AuthService implements OnModuleInit {
       ? AdminApprovalStatus.APPROVED
       : AdminApprovalStatus.REJECTED;
     user.active = approved;
-    return this.users.save(user);
+    const salon = user.salonId
+      ? await this.salons.findOne({ where: { id: user.salonId } })
+      : null;
+    if (!salon) throw new UnauthorizedException("Admin request has no salon");
+    salon.active = approved;
+    if (approved) salon.ownerId = user.id;
+    await this.salons.save(salon);
+    const saved = await this.users.save(user);
+    if (approved) {
+      try {
+        await this.sendEmail(
+          user.email,
+          "Your Halo salon admin access was approved",
+          `<p>Your request for <strong>${salon.name}</strong> was approved.</p><p>You can now sign in with your email and password.</p>`,
+        );
+      } catch {
+        this.logger.warn(`Approval email could not be sent to ${user.email}`);
+      }
+    }
+    return saved;
   }
 
   async getNotificationPreferences(email: string) {
