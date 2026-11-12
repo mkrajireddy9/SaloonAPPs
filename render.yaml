@@ -19,6 +19,12 @@ services:
         sync: false
       - key: CORS_ORIGINS
         sync: false
+      - key: PLATFORM_ADMIN_TEST_LOGIN
+        value: "true"
+      - key: PLATFORM_ADMIN_EMAIL
+        sync: false
+      - key: PLATFORM_ADMIN_PASSWORD
+        sync: false
       - key: ALLOW_EMPTY_LOGIN
         value: "false"
       - key: EMAIL_REMINDERS_ENABLED

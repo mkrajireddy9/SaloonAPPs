@@ -371,9 +371,7 @@ function AppContent() {
     setLoginError("");
     const tenant =
       selectedRole === "admin"
-        ? tenantCode.trim() ||
-          window.prompt("Enter your salon tenant code") ||
-          ""
+        ? tenantCode.trim()
         : undefined;
     try {
       const result = await request<{

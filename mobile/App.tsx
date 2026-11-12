@@ -470,12 +470,8 @@ function AppContent() {
   }, []);
   async function login() {
     setError("");
-    if (!email || !password || (role === "admin" && !tenantCode)) {
-      setError(
-        role === "admin"
-          ? "Enter email, password, and tenant code."
-          : "Enter email and password.",
-      );
+    if (!email || !password) {
+      setError("Enter email and password.");
       return;
     }
     setBusy(true);

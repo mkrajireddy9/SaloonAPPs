@@ -121,6 +121,13 @@ export class AuthService implements OnModuleInit {
 
   async login(dto: LoginDto) {
     const email = dto.email.toLowerCase().trim();
+    if (
+      dto.role === UserRole.ADMIN &&
+      process.env.PLATFORM_ADMIN_TEST_LOGIN === "true" &&
+      email === process.env.PLATFORM_ADMIN_EMAIL?.toLowerCase().trim() &&
+      dto.password === process.env.PLATFORM_ADMIN_PASSWORD
+    )
+      return this.issueToken(this.platformAdminUser(), false, true);
     const user = await this.users
       .createQueryBuilder("user")
       .addSelect("user.passwordHash")
@@ -452,7 +459,12 @@ export class AuthService implements OnModuleInit {
   }
 
   async refresh(dto: RefreshTokenDto) {
-    let payload: { sub?: string; role?: UserRole; type?: string };
+    let payload: {
+      sub?: string;
+      role?: UserRole;
+      type?: string;
+      platformAdmin?: boolean;
+    };
     try {
       payload = this.jwt.verify(dto.refreshToken);
     } catch {
@@ -460,6 +472,11 @@ export class AuthService implements OnModuleInit {
     }
     if (payload.type !== "refresh" || !payload.sub)
       throw new UnauthorizedException("Invalid refresh token");
+    if (
+      payload.platformAdmin === true &&
+      process.env.PLATFORM_ADMIN_TEST_LOGIN === "true"
+    )
+      return this.issueToken(this.platformAdminUser(), false, true);
     const user = await this.users
       .createQueryBuilder("user")
       .addSelect("user.refreshTokenHash")
@@ -548,18 +565,31 @@ export class AuthService implements OnModuleInit {
     return user.notificationPreferences;
   }
 
-  issueToken(user: User, persist = true) {
+  private platformAdminUser() {
+    return {
+      id: "platform-admin",
+      name: "Platform Administrator",
+      email: process.env.PLATFORM_ADMIN_EMAIL || "platform-admin@halo.local",
+      role: UserRole.ADMIN,
+      salonId: null,
+      active: true,
+      adminApprovalStatus: AdminApprovalStatus.APPROVED,
+    } as User;
+  }
+
+  issueToken(user: User, persist = true, platformAdmin = false) {
     const payload = {
       sub: user.id,
       email: user.email,
       role: user.role,
       name: user.name,
       salonId: user.salonId,
+      platformAdmin,
       type: "access",
     };
     const accessToken = this.jwt.sign(payload, { expiresIn: "15m" });
     const refreshToken = this.jwt.sign(
-      { sub: user.id, role: user.role, type: "refresh" },
+      { sub: user.id, role: user.role, platformAdmin, type: "refresh" },
       { expiresIn: "30d" },
     );
     if (persist)
