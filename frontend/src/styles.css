@@ -3824,13 +3824,30 @@ header {
   min-width: 0;
 }
 .branch-coordinates {
-  margin-top: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+  margin-top: 4px;
+}
+.branch-coordinates .field {
+  min-width: 0;
+  margin-bottom: 0;
+}
+.branch-coordinates input[type="number"] {
+  appearance: textfield;
+}
+.branch-coordinates input[type="number"]::-webkit-inner-spin-button,
+.branch-coordinates input[type="number"]::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
 }
 .branch-location-help {
   display: block;
-  margin-top: 7px;
+  max-width: 360px;
+  margin: 7px 0 14px;
   color: #7b877f;
   font-size: 11px;
+  line-height: 1.45;
 }
 .salon-setup .setup-item .tags {
   gap: 7px;
@@ -3894,6 +3911,17 @@ header {
 }
 .salon-setup .setup-save {
   margin-top: 24px;
+  position: sticky;
+  bottom: 16px;
+  z-index: 5;
+  box-shadow: 0 10px 24px #20352d26;
+}
+.salon-setup > .setup-grid > aside {
+  display: grid;
+  align-self: start;
+  gap: 18px;
+  position: sticky;
+  top: 20px;
 }
 .salon-setup-tabs {
   display: flex;
@@ -5361,10 +5389,8 @@ select:focus {
   }
 }
 .salon-setup > .setup-grid > .form-panel {
-  max-height: calc(100vh - 150px);
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #c6d2ca transparent;
+  max-height: none;
+  overflow: visible;
 }
 .upcoming {
   max-height: 620px;
@@ -5385,6 +5411,9 @@ select:focus {
   scrollbar-color: #c6d2ca transparent;
 }
 @media (max-width: 720px) {
+  .salon-setup > .setup-grid > aside {
+    position: static;
+  }
   .salon-setup > .setup-grid > .form-panel,
   .upcoming,
   .consultation-log,

@@ -509,6 +509,27 @@ export function SalonSetupScreen({
                             })
                           }
                         />
+                      </label>
+                      <label className="field">
+                        <span>Closing</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={5}
+                          placeholder="HH:MM"
+                          className="time-input"
+                          value={branch.openingHours.close}
+                          onChange={(event) =>
+                            updateBranch(branch.id, {
+                              openingHours: {
+                                ...branch.openingHours,
+                                close: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
                     <div className="form-two branch-coordinates">
                       <label className="field">
                         <span>Latitude</span>
@@ -552,27 +573,6 @@ export function SalonSetupScreen({
                     <small className="branch-location-help">
                       Required for this branch to appear in nearby-location results.
                     </small>
-                      </label>
-                      <label className="field">
-                        <span>Closing</span>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={5}
-                          placeholder="HH:MM"
-                          className="time-input"
-                          value={branch.openingHours.close}
-                          onChange={(event) =>
-                            updateBranch(branch.id, {
-                              openingHours: {
-                                ...branch.openingHours,
-                                close: event.target.value,
-                              },
-                            })
-                          }
-                        />
-                      </label>
-                    </div>
                     <label className="branch-label">Closed days</label>
                     <div className="tags">
                       {days.map((day) => (
