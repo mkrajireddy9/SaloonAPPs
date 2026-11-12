@@ -68,3 +68,26 @@ test("pending admin cannot log in", async () => {
     /awaiting approval/,
   );
 });
+
+test("platform admin cannot log in through the guest workspace", async () => {
+  const user = {
+    id: "platform-1",
+    email: "platform@example.com",
+    passwordHash: await bcrypt.hash("strong-password", 4),
+    role: UserRole.PLATFORM_ADMIN,
+    adminApprovalStatus: AdminApprovalStatus.APPROVED,
+    active: true,
+    emailVerified: true,
+    salonId: null,
+  };
+  const { service } = serviceWith(user);
+  await assert.rejects(
+    () =>
+      service.login({
+        email: user.email,
+        password: "strong-password",
+        role: UserRole.USER,
+      }),
+    /different workspace/,
+  );
+});

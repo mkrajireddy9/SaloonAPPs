@@ -15,6 +15,7 @@ import { PriceListScreen } from "./screens/PriceListScreen";
 import { ProductsScreen } from "./screens/ProductsScreen";
 import { CustomersScreen } from "./screens/CustomersScreen";
 import { PlatformSalonsScreen } from "./screens/PlatformSalonsScreen";
+import { PlatformOverviewScreen } from "./screens/PlatformOverviewScreen";
 import type {
   Appointment,
   Consultation,
@@ -41,6 +42,18 @@ import { HairstyleAiScreen } from "./screens/HairstyleAiScreen";
 const workspaceRole = (role: Role): Role =>
   role === "platform_admin" ? "admin" : role;
 
+function tokenIsPlatformAdmin() {
+  try {
+    const token = localStorage.getItem("halo-token");
+    return token
+      ? (JSON.parse(atob(token.split(".")[1])) as { role?: Role }).role ===
+          "platform_admin"
+      : false;
+  } catch {
+    return false;
+  }
+}
+
 function AppContent() {
   const { showToast } = useToast();
   const [view, setView] = useState<View>("today");
@@ -61,6 +74,12 @@ function AppContent() {
       return null;
     }
   });
+  const platformAdmin = role === "admin" && tokenIsPlatformAdmin();
+  useEffect(() => {
+    if (platformAdmin && view === "today") setView("studio");
+    if (platformAdmin && !["studio", "platform-salons"].includes(view))
+      setView("studio");
+  }, [platformAdmin, view]);
   const [loginError, setLoginError] = useState("");
   const [authReady, setAuthReady] = useState(false);
   const [consultation, setConsultation] = useState<Consultation | null>(null);
@@ -688,6 +707,7 @@ function AppContent() {
         view={view}
         setView={navigate}
         role={role}
+        platformAdmin={platformAdmin}
         guestSalonSelected={role === "admin" || Boolean(selectedSalonId)}
         onLogout={() => {
           clearAuthSession();
@@ -705,7 +725,10 @@ function AppContent() {
             onConfirmAppointment={confirmAppointmentWithApi}
           />
         )}{" "}
-        {role === "admin" && view === "studio" && (
+        {role === "admin" && platformAdmin && view === "studio" && (
+          <PlatformOverviewScreen onManage={() => navigate("platform-salons")} />
+        )}
+        {role === "admin" && !platformAdmin && view === "studio" && (
           <>
             <AdminStudioScreen
               data={dashboard}
@@ -717,7 +740,7 @@ function AppContent() {
             <ToolsScreen role="admin" appointments={appointments} />
           </>
         )}{" "}
-        {role === "admin" && view === "customers" && (
+        {role === "admin" && !platformAdmin && view === "customers" && (
           <CustomersScreen
             role="admin"
             salon={salon}
@@ -727,14 +750,14 @@ function AppContent() {
         {role === "admin" && view === "platform-salons" && (
           <PlatformSalonsScreen onBack={() => navigate("today")} />
         )} {" "}
-        {role === "admin" && view === "salon" && (
+        {role === "admin" && !platformAdmin && view === "salon" && (
           <SalonSetupScreen
             config={salon}
             onBack={() => navigate("studio")}
             onSave={saveSalon}
           />
         )}{" "}
-        {role === "admin" && view === "price-list" && (
+        {role === "admin" && !platformAdmin && view === "price-list" && (
           <PriceListScreen
             role="admin"
             items={priceList}
@@ -742,7 +765,7 @@ function AppContent() {
             onSave={savePriceList}
           />
         )}{" "}
-        {role === "admin" && view === "products" && (
+        {role === "admin" && !platformAdmin && view === "products" && (
           <ProductsScreen
             role="admin"
             products={salon.products || []}
@@ -750,13 +773,13 @@ function AppContent() {
             onSave={saveProducts}
           />
         )}{" "}
-        {role === "admin" && view === "new" && (
+        {role === "admin" && !platformAdmin && view === "new" && (
           <IntakeScreen
             onBack={() => navigate("today")}
             onStart={startConsultation}
           />
         )}{" "}
-        {role === "admin" && view === "scan" && consultation && (
+        {role === "admin" && !platformAdmin && view === "scan" && consultation && (
           <ScanScreen
             consultation={consultation}
             onBack={() => navigate("new")}
@@ -766,7 +789,7 @@ function AppContent() {
             onQualityCheck={checkImageQuality}
           />
         )}{" "}
-        {role === "admin" && view === "report" && consultation && (
+        {role === "admin" && !platformAdmin && view === "report" && consultation && (
           <ReportScreen
             consultation={consultation}
             report={report}
@@ -775,7 +798,7 @@ function AppContent() {
             onGeneratePreview={generateTryOn}
           />
         )}{" "}
-        {role === "admin" && view === "passport" && (
+        {role === "admin" && !platformAdmin && view === "passport" && (
           <PassportScreen
             passport={passport}
             onBack={() => navigate("today")}

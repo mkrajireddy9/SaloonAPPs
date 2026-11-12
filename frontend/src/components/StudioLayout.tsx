@@ -45,6 +45,7 @@ export function StudioLayout({
   view,
   setView,
   role,
+  platformAdmin = false,
   onLogout,
   notifications,
   guestSalonSelected = false,
@@ -53,6 +54,7 @@ export function StudioLayout({
   view: View;
   setView: (view: View) => void;
   role: Role;
+  platformAdmin?: boolean;
   onLogout: () => void;
   notifications: Appointment[];
   guestSalonSelected?: boolean;
@@ -72,17 +74,6 @@ export function StudioLayout({
   const [displayName, setDisplayName] = useState(
     role === "admin" ? "Studio admin" : "Guest",
   );
-  const platformAdmin = (() => {
-    try {
-      const token = localStorage.getItem("halo-token");
-      const payload = token
-        ? (JSON.parse(atob(token.split(".")[1])) as { role?: Role })
-        : {};
-      return payload.role === "platform_admin";
-    } catch {
-      return false;
-    }
-  })();
   useEffect(() => {
     void request<ThemeConfig>("/salon/theme")
       .then((savedTheme) => setTheme({ ...defaultTheme, ...savedTheme }))
@@ -227,9 +218,25 @@ export function StudioLayout({
           </div>
         </div>
         <nav>
-          <p>{role === "admin" ? "STUDIO WORKSPACE" : "YOUR SPACE"}</p>
+          <p>{platformAdmin ? "PLATFORM WORKSPACE" : role === "admin" ? "STUDIO WORKSPACE" : "YOUR SPACE"}</p>
           {role === "admin" ? (
-            <>
+            platformAdmin ? (
+              <>
+                <Nav
+                  active={view === "studio"}
+                  icon={<BarChart3 size={16} />}
+                  label="Platform overview"
+                  onClick={() => go("studio")}
+                />
+                <Nav
+                  active={view === "platform-salons"}
+                  icon={<Building2 size={16} />}
+                  label="Tenant management"
+                  onClick={() => go("platform-salons")}
+                />
+              </>
+            ) : (
+              <>
               <Nav
                 active={view === "today"}
                 icon={<Home size={16} />}
@@ -280,7 +287,8 @@ export function StudioLayout({
                 label="Hair Passports"
                 onClick={() => go("passport")}
               />
-            </>
+              </>
+            )
           ) : (
             <>
               <Nav

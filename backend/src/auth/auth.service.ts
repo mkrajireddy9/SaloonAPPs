@@ -171,6 +171,17 @@ export class AuthService implements OnModuleInit {
       .getOne();
     if (!user || !(await bcrypt.compare(dto.password, user.passwordHash)))
       throw new UnauthorizedException("Invalid email or password");
+    if (
+      dto.role &&
+      !(
+        dto.role === UserRole.ADMIN &&
+        user.role === UserRole.PLATFORM_ADMIN
+      ) &&
+      dto.role !== user.role
+    )
+      throw new UnauthorizedException(
+        "This account is registered for a different workspace",
+      );
     if (!user.active)
       throw new UnauthorizedException("This account has been deactivated");
     if (
