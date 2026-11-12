@@ -127,7 +127,7 @@ export class AuthService implements OnModuleInit {
       email === process.env.PLATFORM_ADMIN_EMAIL?.toLowerCase().trim() &&
       dto.password === process.env.PLATFORM_ADMIN_PASSWORD
     )
-      return this.issueToken(await this.platformAdminUser(), false, true);
+      return this.issueToken(this.platformAdminUser(), false, true);
     const user = await this.users
       .createQueryBuilder("user")
       .addSelect("user.passwordHash")
@@ -476,7 +476,7 @@ export class AuthService implements OnModuleInit {
       payload.platformAdmin === true &&
       process.env.PLATFORM_ADMIN_TEST_LOGIN === "true"
     )
-      return this.issueToken(await this.platformAdminUser(), false, true);
+      return this.issueToken(this.platformAdminUser(), false, true);
     const user = await this.users
       .createQueryBuilder("user")
       .addSelect("user.refreshTokenHash")
@@ -565,26 +565,7 @@ export class AuthService implements OnModuleInit {
     return user.notificationPreferences;
   }
 
-  private async platformAdminUser() {
-    let salon = await this.salons.findOne({ order: { createdAt: "ASC" } });
-    if (!salon) {
-      salon = await this.salons.save(
-        this.salons.create({
-          name: "Halo Studio",
-          location: "Add your salon location",
-          ownerId: null,
-          services: [],
-          stylists: [],
-          serviceDetails: [],
-          products: [],
-          stylistSchedules: {},
-          stylistProfiles: {},
-          branches: [],
-          openingHours: { open: "09:00", close: "19:00" },
-          closedDays: [],
-        }),
-      );
-    }
+  private platformAdminUser() {
     return {
       id: "platform-admin",
       name: "Platform Administrator",
