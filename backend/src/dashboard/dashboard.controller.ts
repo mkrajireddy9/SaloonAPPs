@@ -32,4 +32,21 @@ export class DashboardController {
   ) {
     return this.service.summary(query, request.user.salonId);
   }
+
+  @Get("platform")
+  @Roles(UserRole.PLATFORM_ADMIN)
+  @ApiOperation({ summary: "Get platform-wide metrics grouped by salon" })
+  platformSummary(
+    @Query()
+    query: {
+      dateFrom?: string;
+      dateTo?: string;
+      branchId?: string;
+      service?: string;
+      stylist?: string;
+      status?: string;
+    },
+  ) {
+    return this.service.platformSummary(query);
+  }
 }

@@ -46,6 +46,11 @@ type AdminRequest = {
   email: string;
   adminApprovalStatus: "pending" | "rejected";
   createdAt: string;
+  salon?: {
+    id: string;
+    name: string;
+    tenantCode: string | null;
+  } | null;
 };
 function isPlatformAdmin() {
   try {
@@ -598,6 +603,11 @@ export function ToolsScreen({
               <div>
                 <b>{item.name}</b>
                 <p>{item.email}</p>
+                {item.salon && (
+                  <small>
+                    {item.salon.name} · tenant {item.salon.tenantCode || "not assigned"}
+                  </small>
+                )}
                 <small>{item.adminApprovalStatus}</small>
               </div>
               <span>

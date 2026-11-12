@@ -11,17 +11,34 @@ type PlatformSalon = {
   tenantCode: string | null;
   active: boolean;
   ownerId: string | null;
+  admin?: {
+    name: string;
+    email: string;
+    active: boolean;
+    approvalStatus: string;
+    lastLoginAt: string | null;
+  } | null;
+};
+type PlatformMetrics = {
+  salon: { id: string; name: string; active: boolean; tenantCode: string };
+  metrics: { totalBookings: number; confirmedBookings: number; revenue: number };
+  consultations: number;
 };
 
 export function PlatformSalonsScreen({ onBack }: { onBack: () => void }) {
   const { showToast } = useToast();
   const [salons, setSalons] = useState<PlatformSalon[]>([]);
+  const [metrics, setMetrics] = useState<PlatformMetrics[]>([]);
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
-  const refresh = () =>
+  const refresh = () => {
     void request<PlatformSalon[]>("/salon/platform/salons")
       .then(setSalons)
       .catch(() => setSalons([]));
+    void request<{ items: PlatformMetrics[] }>("/dashboard/platform")
+      .then((result) => setMetrics(result.items))
+      .catch(() => setMetrics([]));
+  };
 
   useEffect(() => refresh(), []);
 
@@ -107,10 +124,28 @@ export function PlatformSalonsScreen({ onBack }: { onBack: () => void }) {
               <div><small>TENANT LOGIN CODE</small><strong>{salon.tenantCode || "Not assigned"}</strong></div>
               {salon.tenantCode && <button className="icon-button" title="Copy tenant code" onClick={() => void copyCode(salon.tenantCode)}><Copy size={15} /></button>}
             </div>
+            <div className="platform-salon-admin">
+              <small>SALON ADMIN</small>
+              {salon.admin ? (
+                <span>
+                  {salon.admin.name} · {salon.admin.email} · {salon.admin.active ? "Active" : "Inactive"}
+                </span>
+              ) : (
+                <span>Awaiting admin registration</span>
+              )}
+            </div>
             <div className="platform-salon-actions">
               <button className="soft" onClick={() => void updateStatus(salon)}>{salon.active ? "Deactivate" : "Activate"}</button>
               <button className="soft" onClick={() => void rotateCode(salon)}><RefreshCw size={14} /> Rotate code</button>
             </div>
+            {metrics.find((item) => item.salon.id === salon.id) && (
+              <div className="platform-salon-metrics">
+                {(() => {
+                  const item = metrics.find((entry) => entry.salon.id === salon.id)!;
+                  return <span>{item.metrics.totalBookings} bookings · {item.metrics.confirmedBookings} confirmed · ₹{item.metrics.revenue.toLocaleString("en-IN")}</span>;
+                })()}
+              </div>
+            )}
           </article>
         ))}
         {!salons.length && <div className="panel empty-platform-salons"><Building2 size={20} /><b>No platform salons yet</b><p>Create the first salon workspace above.</p></div>}

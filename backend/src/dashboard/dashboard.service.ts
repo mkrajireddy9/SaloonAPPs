@@ -174,4 +174,24 @@ export class DashboardService {
       },
     };
   }
+
+  async platformSummary(query: Parameters<DashboardService["summary"]>[0] = {}) {
+    const salons = await this.salons.find({ order: { name: "ASC" } });
+    const items = await Promise.all(
+      salons.map(async (salon) => {
+        const summary = await this.summary(query, salon.id);
+        return {
+          salon: {
+            id: salon.id,
+            name: salon.name,
+            active: salon.active,
+            tenantCode: salon.tenantCode,
+          },
+          metrics: summary.analytics,
+          consultations: summary.consultations,
+        };
+      }),
+    );
+    return { items };
+  }
 }

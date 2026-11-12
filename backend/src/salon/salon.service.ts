@@ -13,6 +13,7 @@ import {
   UpdateSalonThemeDto,
 } from "./salon.dto";
 import { Salon } from "./salon.entity";
+import { User, UserRole } from "../auth/user.entity";
 
 const days = [
   "Monday",
@@ -87,6 +88,7 @@ function validateBranches(
 export class SalonService {
   constructor(
     @InjectRepository(Salon) private readonly repo: Repository<Salon>,
+    @InjectRepository(User) private readonly users: Repository<User>,
   ) {}
 
   async get(salonId?: string) {
@@ -184,7 +186,29 @@ export class SalonService {
   }
 
   async listPlatform() {
-    return this.repo.find({ order: { createdAt: "DESC" } });
+    const salons = await this.repo.find({ order: { createdAt: "DESC" } });
+    return Promise.all(
+      salons.map(async (salon) => {
+        const admin = salon.ownerId
+          ? await this.users.findOne({
+              where: { id: salon.ownerId, role: UserRole.ADMIN },
+            })
+          : null;
+        return {
+          ...salon,
+          admin: admin
+            ? {
+                id: admin.id,
+                name: admin.name,
+                email: admin.email,
+                active: admin.active,
+                approvalStatus: admin.adminApprovalStatus,
+                lastLoginAt: admin.lastLoginAt,
+              }
+            : null,
+        };
+      }),
+    );
   }
 
   async createPlatform(name: string, location: string) {
