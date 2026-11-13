@@ -1,4 +1,4 @@
-export type Role = "user" | "admin";
+export type Role = "user" | "admin" | "platform_admin";
 export type Salon = {
   id: string;
   name: string;

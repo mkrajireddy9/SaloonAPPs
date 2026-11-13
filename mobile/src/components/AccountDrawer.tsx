@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signOut } from "../api";
 
@@ -12,24 +12,6 @@ const items = [
     description: "Personal details and history",
     icon: "person-outline",
     section: "account",
-  },
-  {
-    label: "Notifications",
-    description: "Reminders and updates",
-    icon: "notifications-outline",
-    section: "notifications",
-  },
-  {
-    label: "Salon details",
-    description: "Services, prices and products",
-    icon: "storefront-outline",
-    section: "salonInfo",
-  },
-  {
-    label: "Share feedback",
-    description: "Tell us about your experience",
-    icon: "heart-outline",
-    section: "reviews",
   },
 ];
 const rewardItems = [
@@ -67,7 +49,9 @@ export function AccountDrawer({ profile }: Props) {
   const open = (section: string) => {
     setVisible(false);
     setTimeout(() => {
-      if (section === "account")
+      if (section.startsWith("route:"))
+        router.push(section.replace("route:", "") as any);
+      else if (section === "account")
         router.push({
           pathname: "/(tabs)/account",
           params: { fromDrawer: "1" },
@@ -119,7 +103,11 @@ export function AccountDrawer({ profile }: Props) {
               },
             ]}
           >
-            <View style={s.drawerHeader}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={s.drawerContent}
+            >
+              <View style={s.drawerHeader}>
               <View style={s.drawerAvatar}>
                 <Text style={s.drawerAvatarText}>
                   {(profile?.name || profile?.email || "H")
@@ -142,7 +130,7 @@ export function AccountDrawer({ profile }: Props) {
                 <Ionicons name="close" size={24} color="#77817c" />
               </Pressable>
             </View>
-            <View
+              <View
               style={{
                 backgroundColor: "#20352d",
                 borderRadius: 16,
@@ -174,57 +162,58 @@ export function AccountDrawer({ profile }: Props) {
               <Text style={{ color: "#c8d2cb", fontSize: 11, marginTop: 3 }}>
                 Everything you need for your next visit.
               </Text>
-            </View>
-            <Text style={[s.eyebrow, { marginTop: 0 }]}>ACCOUNT</Text>
-            {items.map((item) => (
-              <Pressable
-                key={item.section}
-                style={s.item}
-                onPress={() => open(item.section)}
-              >
-                <View style={s.icon}>
-                  <Ionicons name={item.icon as any} size={20} color="#c55239" />
-                </View>
-                <View style={s.copy}>
-                  <Text style={s.itemTitle}>{item.label}</Text>
-                  <Text style={s.itemDescription}>{item.description}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={17} color="#a7afa9" />
-              </Pressable>
-            ))}
-            <Text style={[s.eyebrow, { marginTop: 22 }]}>REWARDS</Text>
-            {rewardItems.map((item) => (
-              <Pressable
-                key={item.section}
-                style={s.item}
-                onPress={() => open(item.section)}
-              >
-                <View style={s.icon}>
-                  <Ionicons name={item.icon as any} size={20} color="#c55239" />
-                </View>
-                <View style={s.copy}>
-                  <Text style={s.itemTitle}>{item.label}</Text>
-                  <Text style={s.itemDescription}>{item.description}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={17} color="#a7afa9" />
-              </Pressable>
-            ))}
-            <View style={s.footer}>
-              <View style={s.footerLinks}>
-                {legalItems.map((item) => (
-                  <Pressable
-                    key={item.route}
-                    onPress={() => openLegal(item.route)}
-                  >
-                    <Text style={s.footerLink}>{item.label}</Text>
-                  </Pressable>
-                ))}
               </View>
-              <Pressable style={s.signOutButton} onPress={() => void logout()}>
-                <Ionicons name="log-out-outline" size={18} color="#c55239" />
-                <Text style={s.footerSignOut}>Sign out</Text>
-              </Pressable>
-            </View>
+              <Text style={[s.eyebrow, { marginTop: 0 }]}>ACCOUNT</Text>
+              {items.map((item) => (
+                <Pressable
+                  key={item.section}
+                  style={s.item}
+                  onPress={() => open(item.section)}
+                >
+                  <View style={s.icon}>
+                    <Ionicons name={item.icon as any} size={20} color="#c55239" />
+                  </View>
+                  <View style={s.copy}>
+                    <Text style={s.itemTitle}>{item.label}</Text>
+                    <Text style={s.itemDescription}>{item.description}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={17} color="#a7afa9" />
+                </Pressable>
+              ))}
+              <Text style={[s.eyebrow, { marginTop: 22 }]}>REWARDS</Text>
+              {rewardItems.map((item) => (
+                <Pressable
+                  key={item.section}
+                  style={s.item}
+                  onPress={() => open(item.section)}
+                >
+                  <View style={s.icon}>
+                    <Ionicons name={item.icon as any} size={20} color="#c55239" />
+                  </View>
+                  <View style={s.copy}>
+                    <Text style={s.itemTitle}>{item.label}</Text>
+                    <Text style={s.itemDescription}>{item.description}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={17} color="#a7afa9" />
+                </Pressable>
+              ))}
+              <View style={s.footer}>
+                <View style={s.footerLinks}>
+                  {legalItems.map((item) => (
+                    <Pressable
+                      key={item.route}
+                      onPress={() => openLegal(item.route)}
+                    >
+                      <Text style={s.footerLink}>{item.label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <Pressable style={s.signOutButton} onPress={() => void logout()}>
+                  <Ionicons name="log-out-outline" size={18} color="#c55239" />
+                  <Text style={s.footerSignOut}>Sign out</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -255,6 +244,7 @@ const s = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 18,
   },
+  drawerContent: { paddingBottom: 8 },
   drawerHeader: {
     flexDirection: "row",
     alignItems: "center",

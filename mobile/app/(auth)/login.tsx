@@ -29,6 +29,8 @@ export default function Login() {
     setError("");
     if (!email.trim() || !password)
       return setError("Enter your email and password.");
+    if (role === "admin" && !tenantCode.trim())
+      return setError("Enter the salon tenant code to continue as admin.");
     setBusy(true);
     try {
       const response = await fetch(`${API_URL}/auth/login`, {
@@ -125,9 +127,10 @@ export default function Login() {
               <TextInput
                 value={tenantCode}
                 onChangeText={setTenantCode}
-                placeholder="Leave empty for platform admin"
+                placeholder="e.g. salon-82cc5254"
                 autoCapitalize="none"
-                style={s.input}
+                autoCorrect={false}
+                style={[s.input, submitted && !tenantCode.trim() && s.inputError]}
               />
             </>
           )}

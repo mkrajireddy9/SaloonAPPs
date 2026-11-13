@@ -1,6 +1,6 @@
 // @ts-nocheck
 import * as ImagePicker from "expo-image-picker";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { router } from "expo-router";
 import {
   ActivityIndicator,
@@ -64,11 +64,33 @@ export function MoreScreen({
   showBack = false,
 }: Props) {
   const [section, setSection] = useState(
-    initialSection || (role === "admin" ? "customers" : "booking"),
+    initialSection || (role === "admin" ? "customers" : "payments"),
   );
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const scrollRef = useRef<ScrollView>(null);
+  const contentOffsets = useRef<Record<string, number>>({});
+  const pendingSection = useRef<string | null>(null);
+  const selectSection = (value: string) => {
+    pendingSection.current = value;
+    setSection(value);
+    requestAnimationFrame(() => {
+      const offset = contentOffsets.current[value];
+      if (offset != null) {
+        scrollRef.current?.scrollTo({ y: Math.max(0, offset - 12), animated: true });
+      }
+    });
+  };
+  useEffect(() => {
+    if (pendingSection.current !== section) return;
+    const offset = contentOffsets.current[section];
+    if (offset == null) return;
+    pendingSection.current = null;
+    requestAnimationFrame(() =>
+      scrollRef.current?.scrollTo({ y: Math.max(0, offset - 12), animated: true }),
+    );
+  }, [section, loading]);
   const endpoints: Record<string, string> =
     role === "admin"
       ? {
@@ -87,15 +109,17 @@ export function MoreScreen({
           passport: "/passport",
           notifications: "/auth/preferences",
           approvals: "/auth/admin-requests",
+          memberships: "/memberships/admin/members",
         }
       : {
           booking: "/salon/directory",
           payments: "/payments",
           profile: "/customers/me",
+          lastVisit: "/customers/me/history",
           passport: "/passport",
           notifications: "/auth/preferences",
-          salonInfo: "/salon",
           reviews: "/reviews",
+          memberships: "/memberships/me",
         };
   useEffect(() => {
     if (
@@ -126,6 +150,7 @@ export function MoreScreen({
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <ScrollView
+        ref={scrollRef}
         style={styles.wrap}
         contentContainerStyle={styles.screenContent}
         keyboardShouldPersistTaps="handled"
@@ -134,7 +159,7 @@ export function MoreScreen({
       <MoreHeader
         endpoints={endpoints}
         section={section}
-        setSection={setSection}
+        setSection={selectSection}
         email={email}
         role={role}
         showBack={showBack}
@@ -147,16 +172,32 @@ export function MoreScreen({
       ) : error ? (
         <Text style={styles.error}>{error}</Text>
       ) : (
-        <View style={styles.content}>
+        <View
+          style={styles.content}
+          onLayout={(event) => {
+            contentOffsets.current[section] = event.nativeEvent.layout.y;
+            if (pendingSection.current === section) {
+              requestAnimationFrame(() =>
+                scrollRef.current?.scrollTo({
+                  y: Math.max(0, event.nativeEvent.layout.y - 12),
+                  animated: true,
+                }),
+              );
+            }
+          }}
+        >
           {section === "booking" && (
             <BookingView salons={Array.isArray(data) ? data : []} />
           )}
           {section === "profile" && (
             <ProfileView profile={data || {}} email={email} />
           )}
+          {section === "memberships" && (role === "admin" ? <MembershipAdminView initial={Array.isArray(data) ? data : []} /> : <MembershipView initial={Array.isArray(data) ? data : []} />)}
+          {section === "lastVisit" && (
+            <LastVisitView history={Array.isArray(data?.items) ? data.items : []} />
+          )}
           {section === "passport" && <PassportView passport={data || {}} />}
           {section === "salon" && <AdminSalonView salon={data || {}} />}
-          {section === "salonInfo" && <SalonInfoView salon={data || {}} />}
           {section === "prices" && <AdminPriceView initial={prices} />}
           {section === "products" && <AdminProductView initial={products} />}
           {section === "theme" && <AdminThemeView initial={data || {}} />}
@@ -211,15 +252,20 @@ const sectionMeta: Record<
     description: "Keep your salon history handy",
     icon: "sparkles",
   },
-  salonInfo: {
-    label: "Salon details",
-    description: "Services, prices and products",
-    icon: "storefront",
+  lastVisit: {
+    label: "Last visit",
+    description: "See your most recent salon appointment",
+    icon: "time",
   },
   payments: {
     label: "Payments",
     description: "Invoices and payment history",
     icon: "card",
+  },
+  memberships: {
+    label: "Memberships",
+    description: "Plans, sessions and membership usage",
+    icon: "ribbon",
   },
   reviews: {
     label: "Share feedback",
@@ -314,11 +360,15 @@ function MoreHeader({
               "payments",
               "passport",
               "notifications",
+              "memberships",
             ],
           },
         ]
       : [
-          { title: "Quick actions", keys: ["booking", "payments"] },
+          {
+            title: "Your Halo account",
+            keys: ["payments", "memberships", "lastVisit", "profile", "notifications", "reviews"],
+          },
           ...(section !== "booking" &&
           section !== "payments" &&
           sectionMeta[section]
@@ -1838,14 +1888,25 @@ function AdminReviewsView({ initial }: { initial: any[] }) {
   );
 }
 function ReviewView() {
-  const [rating, setRating] = useState("5");
+  const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [appointmentId, setAppointmentId] = useState("");
   const [message, setMessage] = useState("");
+  useEffect(() => {
+    api<any[]>("/appointments")
+      .then((items) => setAppointments(Array.isArray(items) ? items : []))
+      .catch(() => setAppointments([]));
+  }, []);
   async function submit() {
+    if (!appointmentId) {
+      setMessage("Choose the visit you want to rate.");
+      return;
+    }
     try {
       await api("/reviews", {
         method: "POST",
-        body: JSON.stringify({ rating: Number(rating), comment }),
+        body: JSON.stringify({ rating, comment, appointmentId }),
       });
       setMessage("Review submitted for salon approval.");
       setComment("");
@@ -1857,14 +1918,32 @@ function ReviewView() {
     <View>
       <Text style={styles.eyebrow}>YOUR EXPERIENCE</Text>
       <Text style={styles.title}>Share your experience</Text>
-      <TextInput
-        value={rating}
-        onChangeText={setRating}
-        keyboardType="numeric"
-        placeholder="Rating 1-5"
-        style={styles.input}
-        placeholderTextColor="#9aa19c"
-      />
+      <Text style={styles.fieldLabel}>Your rating</Text>
+      <View style={styles.starPicker}>
+        {[1, 2, 3, 4, 5].map((value) => (
+          <Pressable key={value} onPress={() => setRating(value)} accessibilityLabel={`${value} stars`}>
+            <Text style={[styles.star, value <= rating && styles.starSelected]}>★</Text>
+          </Pressable>
+        ))}
+      </View>
+      <Text style={styles.muted}>{rating} out of 5</Text>
+      <Text style={styles.fieldLabel}>Choose a visit</Text>
+      {appointments.length ? (
+        <View style={styles.choiceRow}>
+          {appointments.map((item) => (
+            <Pressable
+              key={item.id}
+              style={[styles.choice, appointmentId === item.id && styles.choiceActive]}
+              onPress={() => setAppointmentId(item.id)}
+            >
+              <Text style={styles.cardTextDark}>{item.service || "Salon visit"}</Text>
+              <Text style={styles.muted}>{item.date} · {item.status}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : (
+        <Text style={styles.muted}>Book a visit before sharing a rating.</Text>
+      )}
       <TextInput
         value={comment}
         onChangeText={setComment}
@@ -1877,6 +1956,94 @@ function ReviewView() {
         <Text style={styles.primaryText}>Submit review</Text>
       </Pressable>
       {message ? <Text style={styles.message}>{message}</Text> : null}
+    </View>
+  );
+}
+function LastVisitView({ history }: { history: any[] }) {
+  const lastVisit = history[0];
+  return (
+    <View>
+      <Text style={styles.eyebrow}>YOUR ACTIVITY</Text>
+      <Text style={styles.title}>Last visit</Text>
+      <Text style={styles.muted}>A quick view of your most recent appointment.</Text>
+      {lastVisit ? (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>{lastVisit.service || "Salon appointment"}</Text>
+          <Text style={styles.cardText}>{lastVisit.date || "Date unavailable"} · {lastVisit.time || "Time unavailable"}</Text>
+          <Text style={styles.cardText}>Stylist: {lastVisit.stylist || "To be confirmed"}</Text>
+          <Text style={styles.cardText}>Status: {lastVisit.status || "Recorded"}</Text>
+        </View>
+      ) : (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>No visits yet</Text>
+          <Text style={styles.muted}>Your latest appointment will appear here after you book a salon.</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+function MembershipView({ initial }: { initial: any[] }) {
+  return (
+    <View>
+      <Text style={styles.eyebrow}>MEMBERSHIP</Text>
+      <Text style={styles.title}>Your memberships</Text>
+      <Text style={styles.muted}>Track your balance and services used at each salon.</Text>
+      {initial.length ? initial.map((item) => (
+        <View style={styles.membershipCard} key={item.id}>
+          <View style={styles.membershipTopline}>
+            <Text style={styles.membershipTitle}>{item.plan?.name || "Salon membership"}</Text>
+            <Text style={styles.membershipStatus}>{item.status}</Text>
+          </View>
+          <Text style={styles.membershipBalance}>{item.remainingSessions} sessions remaining</Text>
+          <Text style={styles.cardTextDark}>Used {Math.max(0, item.totalSessions - item.remainingSessions)} of {item.totalSessions} sessions</Text>
+          <Text style={styles.muted}>Valid until {item.expiresAt}</Text>
+          {item.plan?.eligibleServices?.length ? <Text style={styles.muted}>Services: {item.plan.eligibleServices.join(", ")}</Text> : null}
+          {item.usage?.length ? <Text style={styles.muted}>Last used: {item.usage[0].service} · ₹{item.usage[0].serviceCost || 0}</Text> : null}
+        </View>
+      )) : (
+        <View style={styles.cardLight}>
+          <Text style={styles.cardTextDark}>No active membership</Text>
+          <Text style={styles.muted}>Your salon administrator will add your membership after payment.</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+function MembershipAdminView({ initial }: { initial: any[] }) {
+  const [planName, setPlanName] = useState("");
+  const [price, setPrice] = useState("");
+  const [sessions, setSessions] = useState("5");
+  const [message, setMessage] = useState("");
+  const createPlan = async () => {
+    if (!planName.trim()) return setMessage("Enter a membership plan name.");
+    try {
+      await api("/memberships/plans", { method: "POST", body: JSON.stringify({ name: planName, price: Number(price) || 0, sessionCount: Number(sessions) || 1 }) });
+      setPlanName(""); setPrice(""); setMessage("Membership plan created.");
+    } catch (e) { setMessage(e instanceof Error ? e.message : "Could not create membership plan."); }
+  };
+  return (
+    <View>
+      <Text style={styles.eyebrow}>STUDIO MEMBERSHIPS</Text>
+      <Text style={styles.title}>Memberships</Text>
+      <Text style={styles.muted}>Create plans, add paid members, and record used sessions.</Text>
+      <Text style={styles.subheading}>Create a plan</Text>
+      <TextInput value={planName} onChangeText={setPlanName} placeholder="Plan name" style={styles.input} />
+      <View style={styles.twoInputs}>
+        <TextInput value={price} onChangeText={setPrice} placeholder="Price" keyboardType="numeric" style={[styles.input, styles.halfInput]} />
+        <TextInput value={sessions} onChangeText={setSessions} placeholder="Sessions" keyboardType="numeric" style={[styles.input, styles.halfInput]} />
+      </View>
+      <Pressable style={styles.primary} onPress={() => void createPlan()}><Text style={styles.primaryText}>Create membership plan</Text></Pressable>
+      {message ? <Text style={styles.message}>{message}</Text> : null}
+      <Text style={styles.subheading}>Member balances</Text>
+      {initial.length ? initial.map((item) => (
+        <View style={styles.infoRow} key={item.id}>
+          <View style={styles.infoRowCopy}>
+            <Text style={styles.cardTextDark}>{item.guestEmail}</Text>
+            <Text style={styles.muted}>{item.plan?.name || "Membership"} · {item.remainingSessions}/{item.totalSessions} sessions</Text>
+          </View>
+          <Text style={styles.priceText}>{item.status}</Text>
+        </View>
+      )) : <Text style={styles.muted}>No members added yet.</Text>}
     </View>
   );
 }
@@ -2122,6 +2289,11 @@ const styles = StyleSheet.create({
   },
   infoRowCopy: { flex: 1 },
   priceText: { color: "#c55239", fontSize: 15, fontWeight: "800" },
+  membershipCard: { backgroundColor: "#20352d", borderRadius: 14, padding: 18, marginTop: 12 },
+  membershipTopline: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  membershipTitle: { color: "#fffdfa", fontSize: 18, fontWeight: "800" },
+  membershipStatus: { color: "#dfca73", fontWeight: "800", textTransform: "capitalize" },
+  membershipBalance: { color: "#fffdfa", fontSize: 22, fontWeight: "800", marginTop: 16, marginBottom: 8 },
   actionRow: { flexDirection: "row", gap: 18, marginTop: 10 },
   metricsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 8 },
   metricCard: {
@@ -2157,6 +2329,10 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 6,
   },
+  fieldLabel: { color: "#20352d", fontWeight: "700", fontSize: 12, marginBottom: 6 },
+  starPicker: { flexDirection: "row", gap: 8, marginBottom: 2 },
+  star: { color: "#d9d6ce", fontSize: 32 },
+  starSelected: { color: "#dfb83f" },
   input: {
     height: 48,
     borderWidth: 1,

@@ -74,23 +74,16 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="payments"
+        name="more"
         options={{
-          title: "Payments",
+          title: "More",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="card-outline" size={size} color={String(color)} />
+            <Ionicons name="menu-outline" size={size} color={String(color)} />
           ),
         }}
       />
       <Tabs.Screen
         name="account"
-        options={{
-          tabBarButton: () => null,
-          tabBarItemStyle: { display: "none" },
-        }}
-      />
-      <Tabs.Screen
-        name="more"
         options={{
           tabBarButton: () => null,
           tabBarItemStyle: { display: "none" },

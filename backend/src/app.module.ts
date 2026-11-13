@@ -75,6 +75,9 @@ import { SalonActiveAndRelations2070000000000 } from "./database/migrations/2070
 import { AuditSalon2080000000000 } from "./database/migrations/2080000000000-AuditSalon";
 import { UniqueSalonOwner2090000000000 } from "./database/migrations/2090000000000-UniqueSalonOwner";
 import { TenantIntegrity2100000000000 } from "./database/migrations/2100000000000-TenantIntegrity";
+import { MembershipModule } from "./memberships/membership.module";
+import { Membership, MembershipPlan, MembershipUsage } from "./memberships/membership.entity";
+import { Memberships2110000000000 } from "./database/migrations/2110000000000-Memberships";
 
 @Module({
   imports: [
@@ -148,6 +151,9 @@ import { TenantIntegrity2100000000000 } from "./database/migrations/210000000000
         AiStyleRecommendation,
         AiGenerationJob,
         AiUsageLog,
+        MembershipPlan,
+        Membership,
+        MembershipUsage,
       ],
       migrations: [
         InitialSchema1710000000000,
@@ -189,6 +195,7 @@ import { TenantIntegrity2100000000000 } from "./database/migrations/210000000000
         AuditSalon2080000000000,
         UniqueSalonOwner2090000000000,
         TenantIntegrity2100000000000,
+        Memberships2110000000000,
       ],
       migrationsRun: true,
       synchronize: false,
@@ -209,6 +216,7 @@ import { TenantIntegrity2100000000000 } from "./database/migrations/210000000000
     CustomerModule,
     HealthModule,
     BannerModule,
+    MembershipModule,
   ],
 })
 export class AppModule {}

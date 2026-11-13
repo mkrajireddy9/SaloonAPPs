@@ -25,7 +25,10 @@ type Salon = {
   services: string[];
   stylists: string[];
   branches?: Branch[];
+  serviceDetails?: { name: string; price?: number; durationMinutes?: number }[];
+  products?: { name: string; description?: string }[];
 };
+type Review = { id: string; guestName?: string; rating: number; comment?: string; createdAt?: string };
 export default function SalonDetails() {
   const { id, hairstyle } = useLocalSearchParams<{
     id: string;
@@ -42,6 +45,7 @@ export default function SalonDetails() {
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [reviews, setReviews] = useState<Review[]>([]);
   const branch = useMemo(
     () =>
       salon?.branches?.find((item) => item.id === branchId) ||
@@ -66,6 +70,9 @@ export default function SalonDetails() {
         ),
       )
       .finally(() => setLoading(false));
+    api<Review[]>(`/reviews?salonId=${encodeURIComponent(id)}`)
+      .then(setReviews)
+      .catch(() => setReviews([]));
   }, [id, hairstyle]);
   useEffect(() => {
     if (!salon || !date || !service || !branch?.id) return;
@@ -137,6 +144,61 @@ export default function SalonDetails() {
         <Text style={s.eyebrow}>BOOK A VISIT</Text>
         <Text style={s.title}>{salon.name}</Text>
         <Text style={s.muted}>{salon.location || "Location not set"}</Text>
+        <View style={s.ratingCard}>
+          <View style={s.ratingSummary}>
+            <Text style={s.ratingValue}>
+              {reviews.length
+                ? (reviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / reviews.length).toFixed(1)
+                : "—"}
+            </Text>
+            <View>
+              <Text style={s.stars}>{reviews.length ? "★".repeat(Math.round(reviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / reviews.length)) : "☆☆☆☆☆"}</Text>
+              <Text style={s.muted}>{reviews.length ? `${reviews.length} guest rating${reviews.length === 1 ? "" : "s"}` : "No ratings yet"}</Text>
+            </View>
+          </View>
+          {reviews.length ? reviews.slice(0, 3).map((review) => (
+            <View style={s.reviewRow} key={review.id}>
+              <View style={s.reviewTopline}>
+                <Text style={s.choiceText}>{review.guestName || "Guest"}</Text>
+                <Text style={s.starsSmall}>{"★".repeat(Number(review.rating || 0))}</Text>
+              </View>
+              {review.comment ? <Text style={s.muted}>{review.comment}</Text> : null}
+            </View>
+          )) : null}
+        </View>
+        <View style={s.catalogCard}>
+          <Text style={s.catalogTitle}>Services and products at {salon.name}</Text>
+          {salon.serviceDetails?.length ? (
+            <>
+              <Text style={s.catalogLabel}>SERVICES</Text>
+              {salon.serviceDetails.map((item) => (
+                <View style={s.catalogRow} key={item.name}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.choiceText}>{item.name}</Text>
+                    <Text style={s.muted}>{item.durationMinutes || 60} minutes</Text>
+                  </View>
+                  <Text style={s.price}>{item.price != null ? `₹${item.price}` : "Price on request"}</Text>
+                </View>
+              ))}
+            </>
+          ) : null}
+          {salon.products?.length ? (
+            <>
+              <Text style={s.catalogLabel}>PRODUCTS USED</Text>
+              {salon.products.map((item) => (
+                <View style={s.catalogRow} key={item.name}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.choiceText}>{item.name}</Text>
+                    {item.description ? <Text style={s.muted}>{item.description}</Text> : null}
+                  </View>
+                </View>
+              ))}
+            </>
+          ) : null}
+          {!salon.serviceDetails?.length && !salon.products?.length ? (
+            <Text style={s.muted}>This salon has not published its catalog yet.</Text>
+          ) : null}
+        </View>
         <Text style={s.label}>Branch</Text>
         <View style={s.choices}>
           {(salon.branches || []).map((item) => (
@@ -250,6 +312,18 @@ const s = StyleSheet.create({
   },
   back: { color: "#c55239", fontWeight: "700" },
   muted: { color: "#77817c", marginTop: 6 },
+  catalogCard: { backgroundColor: "#fffdfa", borderRadius: 12, borderWidth: 1, borderColor: "#d9d6ce", padding: 14, marginTop: 18 },
+  catalogTitle: { color: "#20352d", fontSize: 16, fontWeight: "700" },
+  catalogLabel: { color: "#91b3a3", fontSize: 10, fontWeight: "800", letterSpacing: 1.2, marginTop: 16, marginBottom: 6 },
+  catalogRow: { flexDirection: "row", alignItems: "center", borderTopWidth: 1, borderTopColor: "#eeeae2", paddingVertical: 10 },
+  price: { color: "#c55239", fontWeight: "800", marginLeft: 8 },
+  ratingCard: { backgroundColor: "#20352d", borderRadius: 12, padding: 14, marginTop: 18 },
+  ratingSummary: { flexDirection: "row", alignItems: "center", gap: 12 },
+  ratingValue: { color: "#fffdfa", fontSize: 30, fontWeight: "800" },
+  stars: { color: "#dfca73", fontSize: 18, letterSpacing: 2 },
+  starsSmall: { color: "#dfca73", fontSize: 13, letterSpacing: 1 },
+  reviewRow: { borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.14)", marginTop: 12, paddingTop: 10 },
+  reviewTopline: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   label: {
     color: "#20352d",
     fontWeight: "700",

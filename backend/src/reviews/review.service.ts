@@ -18,8 +18,12 @@ export class ReviewService {
     @InjectRepository(Appointment)
     private readonly appointments: Repository<Appointment>,
   ) {}
-  list(user?: { email: string; role: UserRole; salonId?: string }) {
-    const salonFilter = user?.salonId ? 'review."salonId" = :salonId' : "1=1";
+  list(
+    user?: { email: string; role: UserRole; salonId?: string },
+    requestedSalonId?: string,
+  ) {
+    const salonId = isAdminRole(user?.role) ? user?.salonId : requestedSalonId;
+    const salonFilter = salonId ? 'review."salonId" = :salonId' : "1=1";
     if (isAdminRole(user?.role))
       return this.repo
         .createQueryBuilder("review")
@@ -28,7 +32,7 @@ export class ReviewService {
         .getMany();
     return this.repo
       .createQueryBuilder("review")
-      .where(salonFilter, { salonId: user?.salonId })
+      .where(salonFilter, { salonId })
       .andWhere(
         '(review.status = :published OR review."guestEmail" = :email)',
         { published: "Published", email: user?.email || "" },

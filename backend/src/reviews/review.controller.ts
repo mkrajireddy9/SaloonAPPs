@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from "@nestjs/common";
@@ -29,8 +30,9 @@ export class ReviewController {
     request: {
       user: { email: string; role: UserRole; salonId?: string };
     },
+    @Query("salonId") salonId?: string,
   ) {
-    return this.service.list(request.user);
+    return this.service.list(request.user, salonId);
   }
   @Post() @ApiOperation({ summary: "Submit a review for moderation" }) create(
     @Body() dto: CreateReviewDto,

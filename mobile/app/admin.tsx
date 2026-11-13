@@ -56,6 +56,9 @@ export default function Admin() {
     setError("");
     try {
       const identity = await api<Me>("/auth/me");
+      if (identity.role !== "admin" && identity.role !== "platform_admin") {
+        throw new Error("This account does not have admin workspace access.");
+      }
       setMe(identity);
       if (identity.role === "platform_admin") {
         const [salonList, platformSummary, adminRequests] = await Promise.all([
@@ -148,21 +151,49 @@ function StudioWorkspace({
         <Metric label="Customers" value={summary?.customers?.length || 0} />
       </View>
       <Text style={s.sectionTitle}>Studio tools</Text>
-      <Action label="Salon setup" onPress={() => onSelect("salon")} />
-      <Action label="Appointments" onPress={() => onSelect("appointments")} />
-      <Action label="Reports and analytics" onPress={() => onSelect("reports")} />
-      <Action label="Customers" onPress={() => onSelect("customers")} />
-      <Action label="Prices and services" onPress={() => onSelect("prices")} />
-      <Action label="Products" onPress={() => onSelect("products")} />
-      <Action label="Consultations" onPress={() => onSelect("consultations")} />
-      <Action label="Offers and banners" onPress={() => onSelect("banners")} />
-      <Action label="Branding" onPress={() => onSelect("theme")} />
-      <Action label="Private media" onPress={() => onSelect("media")} />
-      <Action label="Review moderation" onPress={() => onSelect("reviews")} />
-      <Action label="Payments and invoices" onPress={() => onSelect("payments")} />
-      <Action label="Hair passport" onPress={() => onSelect("passport")} />
-      <Action label="Notification preferences" onPress={() => onSelect("notifications")} />
+      <Text style={s.muted}>Choose a workspace area to manage your salon.</Text>
+      <ToolGroup title="Daily work" items={[
+        ["Appointments", "appointments"],
+        ["Customers", "customers"],
+        ["Consultations", "consultations"],
+        ["Review moderation", "reviews"],
+      ]} onSelect={onSelect} />
+      <ToolGroup title="Salon setup" items={[
+        ["Salon setup", "salon"],
+        ["Prices and services", "prices"],
+        ["Products", "products"],
+        ["Offers and banners", "banners"],
+        ["Branding", "theme"],
+        ["Private media", "media"],
+      ]} onSelect={onSelect} />
+      <ToolGroup title="Insights and account" items={[
+        ["Reports and analytics", "reports"],
+        ["Payments and invoices", "payments"],
+        ["Hair passport", "passport"],
+        ["Notification preferences", "notifications"],
+      ]} onSelect={onSelect} />
     </ScrollView>
+  );
+}
+
+function ToolGroup({
+  title,
+  items,
+  onSelect,
+}: {
+  title: string;
+  items: string[][];
+  onSelect: (section: string) => void;
+}) {
+  return (
+    <View>
+      <Text style={s.groupTitle}>{title}</Text>
+      <View style={s.toolGrid}>
+        {items.map(([label, section]) => (
+          <Action key={section} label={label} compact onPress={() => onSelect(section)} />
+        ))}
+      </View>
+    </View>
   );
 }
 
@@ -182,10 +213,19 @@ function PlatformWorkspace({
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
   const [busy, setBusy] = useState("");
-  const activeCount = salons.filter((salon) => salon.active).length;
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<"all" | "active" | "inactive" | "bookings">("all");
+  const filteredSalons = salons.filter((salon) => {
+    const matchesSearch = !search.trim() || `${salon.name} ${salon.location}`.toLowerCase().includes(search.trim().toLowerCase());
+    const metric = metrics.find((item) => item.salon.id === salon.id);
+    const matchesFilter = filter === "all" || (filter === "active" ? salon.active : filter === "inactive" ? !salon.active : (metric?.metrics?.totalBookings || 0) > 0);
+    return matchesSearch && matchesFilter;
+  });
+  const filteredMetrics = metrics.filter((item) => filteredSalons.some((salon) => salon.id === item.salon.id));
+  const activeCount = filteredSalons.filter((salon) => salon.active).length;
   const totals = useMemo(
     () =>
-      metrics.reduce(
+      filteredMetrics.reduce(
         (total, item) => ({
           bookings: total.bookings + (item.metrics?.totalBookings || 0),
           confirmed: total.confirmed + (item.metrics?.confirmedBookings || 0),
@@ -193,8 +233,10 @@ function PlatformWorkspace({
         }),
         { bookings: 0, confirmed: 0, revenue: 0 },
       ),
-    [metrics],
+    [filteredMetrics],
   );
+  const maximumBookings = Math.max(...filteredMetrics.map((item) => item.metrics?.totalBookings || 0), 1);
+  const maximumRevenue = Math.max(...filteredMetrics.map((item) => item.metrics?.revenue || 0), 1);
 
   const run = async (key: string, action: () => Promise<void>) => {
     setBusy(key);
@@ -228,23 +270,31 @@ function PlatformWorkspace({
     <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
       <Text style={s.copy}>Monitor tenants, approve salon owners, and manage platform access.</Text>
       <View style={s.metrics}>
-        <Metric label="Total salons" value={salons.length} />
+        <Metric label="Total salons" value={filteredSalons.length} />
         <Metric label="Active salons" value={activeCount} />
         <Metric label="Bookings" value={totals.bookings} />
         <Metric label="Confirmed" value={totals.confirmed} />
         <Metric label="Revenue" value={`₹${totals.revenue}`} />
       </View>
+      <View style={s.filterCard}>
+        <Text style={s.filterTitle}>Filter platform data</Text>
+        <TextInput value={search} onChangeText={setSearch} placeholder="Search salons" style={s.input} />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterChips}>
+          {([['all', 'All'], ['active', 'Active'], ['inactive', 'Inactive'], ['bookings', 'With bookings']] as const).map(([value, label]) => (
+            <Pressable key={value} style={[s.filterChip, filter === value && s.filterChipActive]} onPress={() => setFilter(value)}>
+              <Text style={[s.filterChipText, filter === value && s.filterChipTextActive]}>{label}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+        <Text style={s.filterResult}>Showing {filteredSalons.length} of {salons.length} salons</Text>
+      </View>
       <View style={s.card}>
         <Text style={s.sectionTitle}>Bookings by salon</Text>
-        {!metrics.length ? (
+        {!filteredMetrics.length ? (
           <Text style={s.muted}>No salon activity yet.</Text>
         ) : (
-          metrics.map((item) => {
+          filteredMetrics.map((item) => {
             const value = item.metrics?.totalBookings || 0;
-            const maximum = Math.max(
-              ...metrics.map((entry) => entry.metrics?.totalBookings || 0),
-              1,
-            );
             return (
               <View key={item.salon.id} style={s.chartRow}>
                 <View style={s.rowBetween}>
@@ -252,12 +302,22 @@ function PlatformWorkspace({
                   <Text style={s.cardTitle}>{value}</Text>
                 </View>
                 <View style={s.chartTrack}>
-                  <View style={[s.chartBar, { width: `${Math.max((value / maximum) * 100, value ? 8 : 0)}%` }]} />
+                  <View style={[s.chartBar, { width: `${Math.max((value / maximumBookings) * 100, value ? 8 : 0)}%` }]} />
                 </View>
               </View>
             );
           })
         )}
+      </View>
+      <View style={s.card}>
+        <Text style={s.sectionTitle}>Revenue by salon</Text>
+        {!filteredMetrics.length ? <Text style={s.muted}>No revenue data yet.</Text> : filteredMetrics.map((item) => {
+          const value = item.metrics?.revenue || 0;
+          return <View key={item.salon.id} style={s.chartRow}>
+            <View style={s.rowBetween}><Text style={s.muted}>{item.salon.name}</Text><Text style={s.cardTitle}>₹{value.toLocaleString("en-IN")}</Text></View>
+            <View style={s.chartTrack}><View style={[s.revenueBar, { width: `${Math.max((value / maximumRevenue) * 100, value ? 8 : 0)}%` }]} /></View>
+          </View>;
+        })}
       </View>
 
       <View style={s.card}>
@@ -315,7 +375,7 @@ function PlatformWorkspace({
       {!salons.length ? (
         <View style={s.card}><Text style={s.muted}>No salons created yet.</Text></View>
       ) : (
-        salons.map((salon) => (
+        filteredSalons.map((salon) => (
           <View style={s.card} key={salon.id}>
             <View style={s.rowBetween}>
               <View style={{ flex: 1 }}>
@@ -365,9 +425,9 @@ function Metric({ label, value }: { label: string; value: number | string }) {
   );
 }
 
-function Action({ label, onPress, disabled = false }: { label: string; onPress: () => void; disabled?: boolean }) {
+function Action({ label, onPress, disabled = false, compact = false }: { label: string; onPress: () => void; disabled?: boolean; compact?: boolean }) {
   return (
-    <Pressable disabled={disabled} style={[s.action, disabled && s.disabled]} onPress={onPress}>
+    <Pressable disabled={disabled} style={[s.action, compact && s.actionCompact, disabled && s.disabled]} onPress={onPress}>
       <Text style={s.actionText}>{label}</Text>
       <Text style={s.arrow}>›</Text>
     </Pressable>
@@ -387,16 +447,28 @@ const s = StyleSheet.create({
   metricValue: { color: "#20352d", fontSize: 25, fontWeight: "700" },
   muted: { color: "#77817c", marginTop: 4 },
   sectionTitle: { color: "#20352d", fontSize: 18, fontWeight: "700", marginTop: 24, marginBottom: 10 },
+  groupTitle: { color: "#20352d", fontSize: 14, fontWeight: "800", marginTop: 20, marginBottom: 4 },
+  toolGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   card: { backgroundColor: "#fffdfa", borderRadius: 12, padding: 16, marginTop: 10 },
+  filterCard: { backgroundColor: "#fffdfa", borderRadius: 12, padding: 14, marginTop: 16, borderWidth: 1, borderColor: "#d9d6ce" },
+  filterTitle: { color: "#20352d", fontSize: 15, fontWeight: "800", marginBottom: 2 },
+  filterChips: { gap: 8, paddingTop: 10, paddingBottom: 3 },
+  filterChip: { borderWidth: 1, borderColor: "#d9d6ce", borderRadius: 18, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#f7f5f0" },
+  filterChipActive: { backgroundColor: "#20352d", borderColor: "#20352d" },
+  filterChipText: { color: "#20352d", fontSize: 11, fontWeight: "700" },
+  filterChipTextActive: { color: "#fffdfa" },
+  filterResult: { color: "#8a958e", fontSize: 11, marginTop: 8 },
   cardTitle: { color: "#20352d", fontSize: 16, fontWeight: "700" },
   input: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#d9d8d1", borderRadius: 9, padding: 13, marginTop: 10, color: "#20352d" },
   action: { backgroundColor: "#edf5f1", borderRadius: 10, padding: 14, marginTop: 10, flexDirection: "row", justifyContent: "space-between", minWidth: 145 },
+  actionCompact: { width: "48%", minWidth: 0, marginTop: 8, padding: 12 },
   actionText: { color: "#20352d", fontWeight: "700" },
   arrow: { color: "#c55239", fontSize: 21, lineHeight: 16 },
   request: { borderTopWidth: 1, borderTopColor: "#e5e1d9", paddingTop: 12, marginTop: 12 },
   chartRow: { marginTop: 12 },
   chartTrack: { height: 9, borderRadius: 5, backgroundColor: "#e7eee9", overflow: "hidden", marginTop: 6 },
   chartBar: { height: 9, borderRadius: 5, backgroundColor: "#c55239" },
+  revenueBar: { height: 9, borderRadius: 5, backgroundColor: "#4c947d" },
   inline: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
   rowBetween: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
   code: { color: "#20352d", fontWeight: "700", letterSpacing: 1, marginTop: 14 },
