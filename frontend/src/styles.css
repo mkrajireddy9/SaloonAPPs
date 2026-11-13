@@ -7080,6 +7080,7 @@ button[aria-busy="true"]::after {
 
 .platform-salons-page {
   max-width: 1120px;
+  padding-top: 38px;
 }
 .platform-salon-create {
   padding: 24px;
@@ -7109,10 +7110,14 @@ button[aria-busy="true"]::after {
   grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
   gap: 16px;
   margin-top: 16px;
+  align-items: stretch;
 }
 .platform-salon-card {
   padding: 22px;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 340px;
 }
 .platform-salon-card-head,
 .tenant-code-row,
@@ -7122,8 +7127,9 @@ button[aria-busy="true"]::after {
   justify-content: space-between;
   gap: 16px;
 }
+.platform-salon-card-head { align-items: flex-start; }
 .platform-salon-card h2 {
-  margin: 12px 0 4px;
+  margin: 10px 0 4px;
   font-size: 20px;
 }
 .platform-salon-card p {
@@ -7133,7 +7139,9 @@ button[aria-busy="true"]::after {
 .platform-salon-id {
   color: #718078;
   font-size: 12px;
-  white-space: nowrap;
+  line-height: 1.4;
+  max-width: 145px;
+  text-align: right;
 }
 .status-chip {
   display: inline-flex;
@@ -7155,10 +7163,16 @@ button[aria-busy="true"]::after {
 .tenant-code-row div { display: grid; gap: 5px; }
 .tenant-code-row small { color: #8a958e; font-size: 10px; letter-spacing: .08em; }
 .tenant-code-row strong { letter-spacing: .12em; }
-.platform-salon-actions { justify-content: flex-start; flex-wrap: wrap; }
+.platform-salon-actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid #ebe8e1;
+}
 .platform-salon-actions button { display: inline-flex; align-items: center; gap: 7px; }
 .platform-salon-metrics {
-  margin-top: 16px;
+  margin-top: 13px;
   padding-top: 14px;
   border-top: 1px solid #ebe8e1;
   color: #65726b;
@@ -7196,6 +7210,82 @@ button[aria-busy="true"]::after {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
   margin: 24px 0;
+}
+.platform-overview-filters {
+  padding: 16px 18px;
+  margin: 0 0 20px;
+}
+.platform-filter-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.platform-filter-heading b,
+.platform-filter-heading small {
+  display: block;
+}
+.platform-filter-heading small {
+  color: #77817c;
+  margin-top: 3px;
+  font-size: 11px;
+}
+.platform-filter-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.platform-filter-controls label {
+  display: grid;
+  gap: 6px;
+  color: #68756d;
+  font-size: 10px;
+  font-weight: 700;
+}
+.platform-filter-controls input,
+.platform-filter-controls select {
+  min-width: 175px;
+  height: 38px;
+  border: 1px solid #d8d5cd;
+  border-radius: 9px;
+  background: #fffefa;
+  color: #20352d;
+  padding: 0 11px;
+  font: inherit;
+  font-size: 12px;
+}
+.platform-filter-controls input:focus,
+.platform-filter-controls select:focus {
+  outline: 2px solid #b8d1c7;
+  border-color: #72a18a;
+}
+.platform-filter-search {
+  display: flex !important;
+  align-items: center;
+  gap: 8px !important;
+  min-height: 38px;
+  border: 1px solid #d8d5cd;
+  border-radius: 9px;
+  background: #fffefa;
+  padding: 0 10px;
+}
+.platform-filter-search input {
+  min-width: 180px;
+  border: 0;
+  padding: 0;
+  height: 34px;
+  outline: 0 !important;
+}
+.platform-filter-clear {
+  min-height: 38px;
+  padding: 0 8px;
+}
+.platform-filter-result {
+  display: block;
+  color: #8a958e;
+  font-size: 11px;
+  margin-top: 12px;
 }
 .platform-overview-page .metric-card {
   min-height: 132px;
@@ -7310,6 +7400,13 @@ button[aria-busy="true"]::after {
   .platform-salon-form,
   .platform-salon-list { grid-template-columns: 1fr; }
   .platform-salon-form button { width: 100%; }
+  .platform-filter-controls { align-items: stretch; flex-direction: column; }
+  .platform-filter-controls label,
+  .platform-filter-search,
+  .platform-filter-controls input,
+  .platform-filter-controls select { width: 100%; }
+  .platform-filter-controls input,
+  .platform-filter-controls select { min-width: 0; }
   .admin-request-row { align-items: flex-start; flex-direction: column; }
   .admin-request-actions { justify-content: flex-start; }
 }

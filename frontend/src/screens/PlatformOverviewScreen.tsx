@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BarChart3, Building2, CalendarDays, CheckCircle2 } from "lucide-react";
+import { BarChart3, Building2, CalendarDays, CheckCircle2, Search, SlidersHorizontal } from "lucide-react";
 import { ShellTitle } from "../components/ShellTitle";
 import { request } from "../api";
 
@@ -8,20 +8,32 @@ type PlatformItem = {
   metrics: { totalBookings: number; confirmedBookings: number; revenue: number };
   consultations: number;
 };
+type StatusFilter = "all" | "active" | "inactive";
+type BookingFilter = "all" | "with-bookings" | "without-bookings";
 
 export function PlatformOverviewScreen({ onManage }: { onManage: () => void }) {
   const [items, setItems] = useState<PlatformItem[]>([]);
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<StatusFilter>("all");
+  const [bookingFilter, setBookingFilter] = useState<BookingFilter>("all");
   useEffect(() => {
     void request<{ items: PlatformItem[] }>("/dashboard/platform")
       .then((result) => setItems(result.items))
       .catch(() => setItems([]));
   }, []);
-  const active = items.filter((item) => item.salon.active).length;
-  const inactive = items.length - active;
-  const bookings = items.reduce((sum, item) => sum + item.metrics.totalBookings, 0);
-  const revenue = items.reduce((sum, item) => sum + item.metrics.revenue, 0);
-  const activeShare = items.length ? Math.round((active / items.length) * 100) : 0;
-  const chartItems = [...items]
+  const visibleItems = items.filter((item) => {
+    const matchesSearch = !search.trim() || item.salon.name.toLowerCase().includes(search.trim().toLowerCase());
+    const matchesStatus = status === "all" || (status === "active" ? item.salon.active : !item.salon.active);
+    const hasBookings = item.metrics.totalBookings > 0;
+    const matchesBookings = bookingFilter === "all" || (bookingFilter === "with-bookings" ? hasBookings : !hasBookings);
+    return matchesSearch && matchesStatus && matchesBookings;
+  });
+  const active = visibleItems.filter((item) => item.salon.active).length;
+  const inactive = visibleItems.length - active;
+  const bookings = visibleItems.reduce((sum, item) => sum + item.metrics.totalBookings, 0);
+  const revenue = visibleItems.reduce((sum, item) => sum + item.metrics.revenue, 0);
+  const activeShare = visibleItems.length ? Math.round((active / visibleItems.length) * 100) : 0;
+  const chartItems = [...visibleItems]
     .sort((a, b) => b.metrics.totalBookings - a.metrics.totalBookings)
     .slice(0, 6);
   const maxBookings = Math.max(...chartItems.map((item) => item.metrics.totalBookings), 1);
@@ -35,6 +47,19 @@ export function PlatformOverviewScreen({ onManage }: { onManage: () => void }) {
         back="Manage tenants"
         onBack={onManage}
       />
+      <section className="platform-overview-filters panel">
+        <div className="platform-filter-heading">
+          <span className="round-icon sage"><SlidersHorizontal size={16} /></span>
+          <div><b>Filter platform data</b><small>Update the metrics and charts below.</small></div>
+        </div>
+        <div className="platform-filter-controls">
+          <label className="platform-filter-search"><Search size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search salons" /></label>
+          <label><span>Salon status</span><select value={status} onChange={(event) => setStatus(event.target.value as StatusFilter)}><option value="all">All salons</option><option value="active">Active only</option><option value="inactive">Inactive only</option></select></label>
+          <label><span>Booking activity</span><select value={bookingFilter} onChange={(event) => setBookingFilter(event.target.value as BookingFilter)}><option value="all">All booking activity</option><option value="with-bookings">With bookings</option><option value="without-bookings">No bookings</option></select></label>
+          {(search || status !== "all" || bookingFilter !== "all") && <button className="text-button platform-filter-clear" onClick={() => { setSearch(""); setStatus("all"); setBookingFilter("all"); }}>Clear filters</button>}
+        </div>
+        <small className="platform-filter-result">Showing {visibleItems.length} of {items.length} salons</small>
+      </section>
       <div className="metrics-grid">
         <div className="panel metric-card"><Building2 size={18} /><b>{items.length}</b><span>Total salons</span></div>
         <div className="panel metric-card"><CheckCircle2 size={18} /><b>{active}</b><span>Active salons</span></div>
@@ -77,8 +102,8 @@ export function PlatformOverviewScreen({ onManage }: { onManage: () => void }) {
       </section>
       <section className="panel form-panel">
         <div className="section-label"><span className="round-icon sage"><Building2 size={16} /></span><div><b>Tenant activity</b><small>Aggregated platform metrics by salon.</small></div></div>
-        {items.map((item) => <div className="review-row" key={item.salon.id}><div><b>{item.salon.name}</b><p>{item.salon.active ? "Active" : "Inactive"} · {item.metrics.totalBookings} bookings · {item.consultations} consultations</p></div><strong>₹{item.metrics.revenue.toLocaleString("en-IN")}</strong></div>)}
-        {!items.length && <p>No salon data is available yet.</p>}
+        {visibleItems.map((item) => <div className="review-row" key={item.salon.id}><div><b>{item.salon.name}</b><p>{item.salon.active ? "Active" : "Inactive"} · {item.metrics.totalBookings} bookings · {item.consultations} consultations</p></div><strong>₹{item.metrics.revenue.toLocaleString("en-IN")}</strong></div>)}
+        {!visibleItems.length && <p>No salons match the selected filters.</p>}
       </section>
     </section>
   );
