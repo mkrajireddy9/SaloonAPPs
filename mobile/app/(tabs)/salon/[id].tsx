@@ -182,11 +182,11 @@ export default function SalonDetails() {
           style={s.input}
         />
         <Text style={s.label}>Available time</Text>
-        <View style={s.choices}>
+        <View style={s.timeChoices}>
           {slots.map((item) => (
             <Pressable
               key={item}
-              style={[s.choice, time === item && s.selected]}
+              style={[s.timeChoice, time === item && s.selected]}
               onPress={() => setTime(item)}
             >
               <Text style={s.choiceText}>{item}</Text>
@@ -258,6 +258,17 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   choices: { gap: 8 },
+  timeChoices: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  timeChoice: {
+    minWidth: 92,
+    alignItems: "center",
+    backgroundColor: "#fffdfa",
+    borderColor: "#d9d6ce",
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
   choice: {
     backgroundColor: "#fffdfa",
     borderColor: "#d9d6ce",

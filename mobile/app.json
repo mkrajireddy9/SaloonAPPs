@@ -36,6 +36,12 @@
       "expo-secure-store",
       "expo-web-browser",
       "expo-image-picker",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Halo to show salons near you."
+        }
+      ],
       "expo-notifications",
       "expo-router"
     ],

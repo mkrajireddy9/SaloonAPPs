@@ -11,7 +11,8 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { API_URL, setSession } from "../../src/api";
+import { API_URL, setSession, setUserLocation } from "../../src/api";
+import * as Location from "expo-location";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Login() {
@@ -48,6 +49,22 @@ export default function Login() {
             : body.message || "Unable to sign in.",
         );
       await setSession(body.accessToken, body.refreshToken);
+      if (body.user?.role === "user") {
+        try {
+          const permission = await Location.requestForegroundPermissionsAsync();
+          if (permission.status === Location.PermissionStatus.GRANTED) {
+            const position = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.Balanced,
+            });
+            await setUserLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            });
+          }
+        } catch {
+          // Location is optional; guests can still browse salons without it.
+        }
+      }
       router.replace(body.user?.role === "user" ? "/(tabs)/directory" : "/admin");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to sign in.");

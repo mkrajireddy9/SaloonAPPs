@@ -20,6 +20,8 @@ export const API_URL = (
   process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000"
 ).replace(/\/$/, "");
 
+export type UserLocation = { latitude: number; longitude: number };
+
 export async function getAccessToken() {
   return SecureStore.getItemAsync("halo-access-token");
 }
@@ -27,6 +29,21 @@ export async function setSession(accessToken: string, refreshToken?: string) {
   await SecureStore.setItemAsync("halo-access-token", accessToken);
   if (refreshToken)
     await SecureStore.setItemAsync("halo-refresh-token", refreshToken);
+}
+export async function setUserLocation(location: UserLocation) {
+  await SecureStore.setItemAsync("halo-user-location", JSON.stringify(location));
+}
+export async function getUserLocation(): Promise<UserLocation | null> {
+  const value = await SecureStore.getItemAsync("halo-user-location");
+  if (!value) return null;
+  try {
+    const location = JSON.parse(value) as UserLocation;
+    return Number.isFinite(location.latitude) && Number.isFinite(location.longitude)
+      ? location
+      : null;
+  } catch {
+    return null;
+  }
 }
 export async function refreshSession() {
   const refreshToken = await SecureStore.getItemAsync("halo-refresh-token");
@@ -76,4 +93,5 @@ export async function api<T>(
 export async function signOut() {
   await SecureStore.deleteItemAsync("halo-access-token");
   await SecureStore.deleteItemAsync("halo-refresh-token");
+  await SecureStore.deleteItemAsync("halo-user-location");
 }
