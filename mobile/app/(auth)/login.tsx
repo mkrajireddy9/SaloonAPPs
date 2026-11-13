@@ -14,8 +14,10 @@ import {
 import { API_URL, setSession, setUserLocation } from "../../src/api";
 import * as Location from "expo-location";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useToast } from "../../src/components/ToastProvider";
 
 export default function Login() {
+  const { showToast } = useToast();
   const [role, setRole] = useState<"user" | "admin" | "platform_admin">("user");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,10 +29,16 @@ export default function Login() {
   const submit = async () => {
     setSubmitted(true);
     setError("");
-    if (!email.trim() || !password)
-      return setError("Enter your email and password.");
-    if (role === "admin" && !tenantCode.trim())
-      return setError("Enter the salon tenant code to continue as admin.");
+    if (!email.trim() || !password) {
+      const message = "Enter your email and password.";
+      setError(message); showToast({ type: "warning", message });
+      return;
+    }
+    if (role === "admin" && !tenantCode.trim()) {
+      const message = "Enter the salon tenant code to continue as admin.";
+      setError(message); showToast({ type: "warning", message });
+      return;
+    }
     setBusy(true);
     try {
       const response = await fetch(`${API_URL}/auth/login`, {
@@ -69,7 +77,8 @@ export default function Login() {
       }
       router.replace(body.user?.role === "user" ? "/(tabs)/directory" : "/admin");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to sign in.");
+      const message = e instanceof Error ? e.message : "Unable to sign in.";
+      setError(message); showToast({ type: "error", message });
     } finally {
       setBusy(false);
     }

@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -91,20 +92,31 @@ export default function Admin() {
   if (section && me.role === "admin")
     return (
       <SafeAreaView style={s.safe}>
-        <MoreScreen role="admin" email={me.email || ""} initialSection={section} showBack />
+        <MoreScreen
+          role="admin"
+          email={me.email || ""}
+          initialSection={section}
+          showBack
+          onBack={() => setSection(undefined)}
+        />
       </SafeAreaView>
     );
 
   return (
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
-        <View>
-          <Text style={s.eyebrow}>
+        <View style={s.headerIdentity}>
+          <View style={s.headerAvatar}><Ionicons name="sparkles" size={20} color="#dfca73" /></View>
+          <View style={s.headerCopy}>
+          <Text numberOfLines={1} style={s.eyebrow}>
             {me.role === "platform_admin" ? "PLATFORM WORKSPACE" : "STUDIO WORKSPACE"}
           </Text>
-          <Text style={s.title}>{me.role === "platform_admin" ? "Platform admin" : "Halo admin"}</Text>
+          <Text numberOfLines={1} style={s.title}>{me.role === "platform_admin" ? "Platform admin" : "Halo admin"}</Text>
+          <Text numberOfLines={1} ellipsizeMode="tail" style={s.headerEmail}>{me.email || "Workspace overview"}</Text>
+          </View>
         </View>
-        <Pressable onPress={() => void logout()}>
+        <Pressable style={s.signOutButton} onPress={() => void logout()}>
+          <Ionicons name="log-out-outline" size={18} color="#dfca73" />
           <Text style={s.signOut}>Sign out</Text>
         </Pressable>
       </View>
@@ -144,11 +156,15 @@ function StudioWorkspace({
   return (
     <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
       <Text style={s.copy}>Keep the salon experience thoughtful and in sync.</Text>
+      <View style={s.welcomeCard}>
+        <View style={s.welcomeIcon}><Ionicons name="sparkles-outline" size={22} color="#fffdfa" /></View>
+        <View style={s.welcomeCopy}><Text style={s.welcomeTitle}>Your studio at a glance</Text><Text style={s.welcomeText}>Manage today’s work and keep every guest detail in one place.</Text></View>
+      </View>
       <View style={s.metrics}>
-        <Metric label="Bookings" value={summary?.analytics?.totalBookings || 0} />
-        <Metric label="Confirmed" value={summary?.analytics?.confirmedBookings || 0} />
-        <Metric label="Requests" value={summary?.analytics?.requestedBookings || 0} />
-        <Metric label="Customers" value={summary?.customers?.length || 0} />
+        <Metric label="Bookings" value={summary?.analytics?.totalBookings || 0} icon="calendar-outline" />
+        <Metric label="Confirmed" value={summary?.analytics?.confirmedBookings || 0} icon="checkmark-circle-outline" />
+        <Metric label="Requests" value={summary?.analytics?.requestedBookings || 0} icon="notifications-outline" />
+        <Metric label="Customers" value={summary?.customers?.length || 0} icon="people-outline" />
       </View>
       <Text style={s.sectionTitle}>Studio tools</Text>
       <Text style={s.muted}>Choose a workspace area to manage your salon.</Text>
@@ -269,12 +285,17 @@ function PlatformWorkspace({
   return (
     <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
       <Text style={s.copy}>Monitor tenants, approve salon owners, and manage platform access.</Text>
+      <View style={s.platformHero}>
+        <View style={s.platformHeroIcon}><Ionicons name="bar-chart-outline" size={24} color="#dfca73" /></View>
+        <View style={{ flex: 1 }}><Text style={s.platformHeroTitle}>Platform health</Text><Text style={s.platformHeroText}>A live view of tenant activity, access, and revenue.</Text></View>
+        <Pressable style={s.refreshButton} onPress={() => void onRefresh()}><Ionicons name="refresh-outline" size={19} color="#20352d" /></Pressable>
+      </View>
       <View style={s.metrics}>
-        <Metric label="Total salons" value={filteredSalons.length} />
-        <Metric label="Active salons" value={activeCount} />
-        <Metric label="Bookings" value={totals.bookings} />
-        <Metric label="Confirmed" value={totals.confirmed} />
-        <Metric label="Revenue" value={`₹${totals.revenue}`} />
+        <Metric label="Total salons" value={filteredSalons.length} icon="business-outline" />
+        <Metric label="Active salons" value={activeCount} icon="checkmark-circle-outline" />
+        <Metric label="Bookings" value={totals.bookings} icon="calendar-outline" />
+        <Metric label="Confirmed" value={totals.confirmed} icon="sparkles-outline" />
+        <Metric label="Revenue" value={`₹${totals.revenue}`} icon="trending-up-outline" />
       </View>
       <View style={s.filterCard}>
         <Text style={s.filterTitle}>Filter platform data</Text>
@@ -416,9 +437,10 @@ function PlatformWorkspace({
   );
 }
 
-function Metric({ label, value }: { label: string; value: number | string }) {
+function Metric({ label, value, icon = "ellipse-outline" }: { label: string; value: number | string; icon?: any }) {
   return (
     <View style={s.metric}>
+      <View style={s.metricIcon}><Ionicons name={icon} size={17} color="#c55239" /></View>
       <Text style={s.metricValue}>{value}</Text>
       <Text style={s.muted}>{label}</Text>
     </View>
@@ -428,49 +450,66 @@ function Metric({ label, value }: { label: string; value: number | string }) {
 function Action({ label, onPress, disabled = false, compact = false }: { label: string; onPress: () => void; disabled?: boolean; compact?: boolean }) {
   return (
     <Pressable disabled={disabled} style={[s.action, compact && s.actionCompact, disabled && s.disabled]} onPress={onPress}>
-      <Text style={s.actionText}>{label}</Text>
-      <Text style={s.arrow}>›</Text>
+      <View style={s.actionContent}><View style={s.actionIcon}><Ionicons name="arrow-forward-outline" size={15} color="#c55239" /></View><Text style={s.actionText}>{label}</Text></View>
+      <Ionicons name="chevron-forward" size={16} color="#c55239" />
     </Pressable>
   );
 }
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#f7f5f0" },
-  header: { backgroundColor: "#20352d", padding: 22, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
+  header: { backgroundColor: "#20352d", padding: 20, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  headerIdentity: { flexDirection: "row", alignItems: "center", flex: 1, minWidth: 0, flexShrink: 1 },
+  headerAvatar: { width: 42, height: 42, borderRadius: 14, backgroundColor: "rgba(223,202,115,0.16)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(223,202,115,0.38)" },
+  headerCopy: { flex: 1, minWidth: 0, marginLeft: 11 },
+  headerEmail: { color: "#b8c9c0", fontSize: 11, marginTop: 3 },
   eyebrow: { color: "#91b3a3", fontSize: 10, fontWeight: "700", letterSpacing: 1.5 },
   title: { color: "#f7f5f0", fontSize: 28, fontWeight: "700", marginTop: 6 },
-  signOut: { color: "#dfca73", fontWeight: "700" },
+  signOutButton: { flexDirection: "row", alignItems: "center", padding: 7, flexShrink: 0 },
+  signOut: { color: "#dfca73", fontWeight: "700", fontSize: 12 },
   content: { padding: 22, paddingBottom: 40 },
   copy: { color: "#77817c", lineHeight: 20, marginBottom: 18 },
-  metrics: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  metric: { width: "47%", backgroundColor: "#fffdfa", borderRadius: 12, padding: 16 },
+  metrics: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
+  metric: { width: "48%", marginBottom: 10, backgroundColor: "#fffdfa", borderRadius: 16, padding: 15, borderWidth: 1, borderColor: "#ebe7df", shadowColor: "#20352d", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
+  metricIcon: { width: 30, height: 30, borderRadius: 10, backgroundColor: "#f8e5df", alignItems: "center", justifyContent: "center", marginBottom: 10 },
   metricValue: { color: "#20352d", fontSize: 25, fontWeight: "700" },
   muted: { color: "#77817c", marginTop: 4 },
   sectionTitle: { color: "#20352d", fontSize: 18, fontWeight: "700", marginTop: 24, marginBottom: 10 },
   groupTitle: { color: "#20352d", fontSize: 14, fontWeight: "800", marginTop: 20, marginBottom: 4 },
-  toolGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  card: { backgroundColor: "#fffdfa", borderRadius: 12, padding: 16, marginTop: 10 },
+  toolGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
+  card: { backgroundColor: "#fffdfa", borderRadius: 16, padding: 16, marginTop: 10, borderWidth: 1, borderColor: "#ebe7df", shadowColor: "#20352d", shadowOpacity: 0.04, shadowRadius: 7, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
+  welcomeCard: { backgroundColor: "#20352d", borderRadius: 18, padding: 16, flexDirection: "row", alignItems: "center", marginBottom: 16 },
+  welcomeIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: "#c55239", alignItems: "center", justifyContent: "center", marginRight: 12 },
+  welcomeCopy: { flex: 1 },
+  welcomeTitle: { color: "#fffdfa", fontSize: 15, fontWeight: "800" },
+  welcomeText: { color: "#c8d2cb", fontSize: 12, lineHeight: 17, marginTop: 3 },
+  platformHero: { backgroundColor: "#e7f1ed", borderRadius: 18, padding: 16, flexDirection: "row", alignItems: "center", marginBottom: 16 },
+  platformHeroIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: "#20352d", alignItems: "center", justifyContent: "center", marginRight: 12 },
+  platformHeroTitle: { color: "#20352d", fontWeight: "800", fontSize: 16 },
+  platformHeroText: { color: "#60736a", fontSize: 12, marginTop: 3 },
+  refreshButton: { width: 38, height: 38, borderRadius: 12, backgroundColor: "#fffdfa", alignItems: "center", justifyContent: "center", marginLeft: 8 },
   filterCard: { backgroundColor: "#fffdfa", borderRadius: 12, padding: 14, marginTop: 16, borderWidth: 1, borderColor: "#d9d6ce" },
   filterTitle: { color: "#20352d", fontSize: 15, fontWeight: "800", marginBottom: 2 },
-  filterChips: { gap: 8, paddingTop: 10, paddingBottom: 3 },
-  filterChip: { borderWidth: 1, borderColor: "#d9d6ce", borderRadius: 18, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#f7f5f0" },
+  filterChips: { paddingTop: 10, paddingBottom: 3 },
+  filterChip: { borderWidth: 1, borderColor: "#d9d6ce", borderRadius: 18, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#f7f5f0", marginRight: 8 },
   filterChipActive: { backgroundColor: "#20352d", borderColor: "#20352d" },
   filterChipText: { color: "#20352d", fontSize: 11, fontWeight: "700" },
   filterChipTextActive: { color: "#fffdfa" },
   filterResult: { color: "#8a958e", fontSize: 11, marginTop: 8 },
   cardTitle: { color: "#20352d", fontSize: 16, fontWeight: "700" },
   input: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#d9d8d1", borderRadius: 9, padding: 13, marginTop: 10, color: "#20352d" },
-  action: { backgroundColor: "#edf5f1", borderRadius: 10, padding: 14, marginTop: 10, flexDirection: "row", justifyContent: "space-between", minWidth: 145 },
-  actionCompact: { width: "48%", minWidth: 0, marginTop: 8, padding: 12 },
-  actionText: { color: "#20352d", fontWeight: "700" },
-  arrow: { color: "#c55239", fontSize: 21, lineHeight: 16 },
+  action: { backgroundColor: "#edf5f1", borderRadius: 12, padding: 13, marginTop: 10, flexDirection: "row", justifyContent: "space-between", alignItems: "center", flexGrow: 1, flexShrink: 1, minWidth: 0, borderWidth: 1, borderColor: "#dcebe4" },
+  actionCompact: { width: "48%", flexGrow: 0, marginTop: 8, padding: 12 },
+  actionContent: { flexDirection: "row", alignItems: "center", flex: 1, minWidth: 0 },
+  actionIcon: { width: 24, height: 24, borderRadius: 8, backgroundColor: "#fffdfa", alignItems: "center", justifyContent: "center" },
+  actionText: { color: "#20352d", fontWeight: "700", fontSize: 12, flexShrink: 1, marginLeft: 8 },
   request: { borderTopWidth: 1, borderTopColor: "#e5e1d9", paddingTop: 12, marginTop: 12 },
   chartRow: { marginTop: 12 },
   chartTrack: { height: 9, borderRadius: 5, backgroundColor: "#e7eee9", overflow: "hidden", marginTop: 6 },
   chartBar: { height: 9, borderRadius: 5, backgroundColor: "#c55239" },
   revenueBar: { height: 9, borderRadius: 5, backgroundColor: "#4c947d" },
-  inline: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  rowBetween: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
+  inline: { flexDirection: "row", flexWrap: "wrap" },
+  rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   code: { color: "#20352d", fontWeight: "700", letterSpacing: 1, marginTop: 14 },
   active: { color: "#26735a", fontWeight: "700" },
   inactive: { color: "#b34d38", fontWeight: "700" },

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import * as ImagePicker from "expo-image-picker";
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { router } from "expo-router";
 import {
   ActivityIndicator,
@@ -16,13 +16,16 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { API_URL, api } from "../api";
+import { useToast } from "../components/ToastProvider";
 
 type Props = {
   role: "user" | "admin";
   email: string;
   initialSection?: string;
   showBack?: boolean;
+  onBack?: () => void;
 };
+const SectionBannerVisibility = createContext(true);
 type Price = {
   name: string;
   price: number;
@@ -62,7 +65,9 @@ export function MoreScreen({
   email,
   initialSection,
   showBack = false,
+  onBack,
 }: Props) {
+  const { showToast } = useToast();
   const [section, setSection] = useState(
     initialSection || (role === "admin" ? "customers" : "payments"),
   );
@@ -122,12 +127,9 @@ export function MoreScreen({
           memberships: "/memberships/me",
         };
   useEffect(() => {
-    if (
-      initialSection &&
-      initialSection !== section &&
-      endpoints[initialSection]
-    )
-      setSection(initialSection);
+    if (!initialSection || !endpoints[initialSection]) return;
+    pendingSection.current = initialSection;
+    if (initialSection !== section) setSection(initialSection);
   }, [initialSection]);
   useEffect(() => {
     setLoading(true);
@@ -135,12 +137,14 @@ export function MoreScreen({
     api<any>(endpoints[section])
       .then((result) => setData(result))
       .catch((e) =>
-        setError(
-          e instanceof Error ? e.message : "Unable to load this screen.",
-        ),
+        (() => {
+          const message = e instanceof Error ? e.message : "Unable to load this screen.";
+          setError(message);
+          showToast({ type: "error", message });
+        })(),
       )
       .finally(() => setLoading(false));
-  }, [section]);
+  }, [section, showToast]);
   const prices = (
     Array.isArray(data) ? data : data?.serviceDetails || []
   ) as Price[];
@@ -149,13 +153,14 @@ export function MoreScreen({
   ) as Product[];
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <ScrollView
-        ref={scrollRef}
-        style={styles.wrap}
-        contentContainerStyle={styles.screenContent}
-        keyboardShouldPersistTaps="handled"
-        automaticallyAdjustKeyboardInsets
-      >
+      <SectionBannerVisibility.Provider value={!showBack}>
+        <ScrollView
+          ref={scrollRef}
+          style={styles.wrap}
+          contentContainerStyle={styles.screenContent}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+        >
       <MoreHeader
         endpoints={endpoints}
         section={section}
@@ -163,6 +168,7 @@ export function MoreScreen({
         email={email}
         role={role}
         showBack={showBack}
+        onBack={onBack}
       />
       {loading ? (
         <View style={styles.center}>
@@ -229,7 +235,8 @@ export function MoreScreen({
           )}
         </View>
       )}
-      </ScrollView>
+        </ScrollView>
+      </SectionBannerVisibility.Provider>
     </KeyboardAvoidingView>
   );
 }
@@ -330,6 +337,7 @@ function MoreHeader({
   email,
   role,
   showBack,
+  onBack,
 }: {
   endpoints: Record<string, string>;
   section: string;
@@ -337,6 +345,7 @@ function MoreHeader({
   email: string;
   role: "user" | "admin";
   showBack: boolean;
+  onBack?: () => void;
 }) {
   const displayEmail =
     email || (role === "admin" ? "Salon administrator" : "Welcome to Halo");
@@ -392,7 +401,7 @@ function MoreHeader({
               justifyContent: "center",
               marginRight: 10,
             }}
-            onPress={() => router.back()}
+            onPress={() => (onBack ? onBack() : router.back())}
           >
             <Ionicons name="arrow-back" size={22} color="#20352d" />
           </Pressable>
@@ -423,7 +432,32 @@ function MoreHeader({
         </View>
         <Ionicons name="shield-checkmark-outline" size={20} color="#4c947d" />
       </View>
-      {groups.map((group) => (
+      {showBack ? (
+        <>
+          <View style={styles.focusHeader}>
+            <View style={styles.focusIcon}>
+              <Ionicons name={sectionMeta[section]?.icon || "grid-outline"} size={23} color="#dfca73" />
+            </View>
+            <View style={styles.focusCopy}>
+              <Text style={styles.focusEyebrow}>MANAGEMENT AREA</Text>
+              <Text style={styles.focusTitle}>{sectionMeta[section]?.label || "Salon management"}</Text>
+              <Text style={styles.focusDescription}>{sectionMeta[section]?.description || "Manage your salon workspace."}</Text>
+            </View>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickNav}>
+            {groups[0].keys.filter((key) => endpoints[key]).map((key) => {
+              const item = sectionMeta[key] || { label: key, icon: "ellipse-outline" };
+              const active = section === key;
+              return (
+                <Pressable key={key} style={[styles.quickNavChip, active && styles.quickNavChipActive]} onPress={() => setSection(key)}>
+                  <Ionicons name={item.icon} size={14} color={active ? "#fff" : "#c55239"} />
+                  <Text style={[styles.quickNavText, active && styles.quickNavTextActive]}>{item.label}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </>
+      ) : groups.map((group) => (
         <View key={group.title}>
           <Text style={styles.groupTitle}>{group.title}</Text>
           <View style={styles.settingsGroup}>
@@ -437,50 +471,15 @@ function MoreHeader({
                 };
                 const active = section === key;
                 return (
-                  <Pressable
-                    key={key}
-                    style={[
-                      styles.settingRow,
-                      active && styles.settingRowActive,
-                    ]}
-                    onPress={() => setSection(key)}
-                  >
-                    <View
-                      style={[
-                        styles.settingIcon,
-                        active && styles.settingIconActive,
-                      ]}
-                    >
-                      <Ionicons
-                        name={item.icon}
-                        size={20}
-                        color={active ? "#fff" : "#c55239"}
-                      />
+                  <Pressable key={key} style={[styles.settingRow, active && styles.settingRowActive]} onPress={() => setSection(key)}>
+                    <View style={[styles.settingIcon, active && styles.settingIconActive]}>
+                      <Ionicons name={item.icon} size={20} color={active ? "#fff" : "#c55239"} />
                     </View>
                     <View style={styles.settingCopy}>
-                      <Text
-                        style={[
-                          styles.settingTitle,
-                          active && styles.settingTitleActive,
-                        ]}
-                      >
-                        {item.label}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.settingDescription,
-                          active && styles.settingDescriptionActive,
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {item.description}
-                      </Text>
+                      <Text style={[styles.settingTitle, active && styles.settingTitleActive]}>{item.label}</Text>
+                      <Text style={[styles.settingDescription, active && styles.settingDescriptionActive]} numberOfLines={1}>{item.description}</Text>
                     </View>
-                    <Ionicons
-                      name="chevron-forward"
-                      size={18}
-                      color={active ? "#fff" : "#a7afa9"}
-                    />
+                    <Ionicons name="chevron-forward" size={18} color={active ? "#fff" : "#a7afa9"} />
                   </Pressable>
                 );
               })}
@@ -490,6 +489,20 @@ function MoreHeader({
     </View>
   );
 }
+function SectionBanner({ icon, eyebrow, title, description }: { icon: any; eyebrow: string; title: string; description: string }) {
+  if (!useContext(SectionBannerVisibility)) return null;
+  return (
+    <View style={styles.sectionBanner}>
+      <View style={styles.sectionBannerIcon}><Ionicons name={icon} size={22} color="#dfca73" /></View>
+      <View style={styles.sectionBannerCopy}>
+        <Text style={styles.sectionBannerEyebrow}>{eyebrow}</Text>
+        <Text style={styles.sectionBannerTitle}>{title}</Text>
+        <Text style={styles.sectionBannerDescription}>{description}</Text>
+      </View>
+    </View>
+  );
+}
+
 function AdminSalonView({ salon }: { salon: any }) {
   const [name, setName] = useState(salon.name || "");
   const [location, setLocation] = useState(salon.location || "");
@@ -596,11 +609,16 @@ function AdminSalonView({ salon }: { salon: any }) {
   }
   return (
     <View>
-      <Text style={styles.eyebrow}>STUDIO SETUP</Text>
-      <Text style={styles.title}>Salon setup</Text>
-      <Text style={styles.muted}>Manage the details guests use to find and book your salon.</Text>
+      <SectionBanner icon="storefront-outline" eyebrow="STUDIO SETUP" title="Salon setup" description="Keep branches, hours, services, and stylists ready for guests." />
+      <View style={styles.setupSummary}>
+        <View style={styles.setupSummaryIcon}><Ionicons name="storefront-outline" size={23} color="#c55239" /></View>
+        <View style={styles.setupSummaryCopy}><Text style={styles.setupSummaryTitle}>{name || "Your salon"}</Text><Text style={styles.setupSummaryText}>{location || "Add your main location"}</Text></View>
+        <View style={styles.activePill}><View style={styles.activeDot} /><Text style={styles.activePillText}>Live setup</Text></View>
+      </View>
+      <Text style={styles.formSectionTitle}>Salon details</Text>
       <TextInput value={name} onChangeText={setName} placeholder="Salon name" style={styles.input} placeholderTextColor="#9aa19c" />
       <TextInput value={location} onChangeText={setLocation} placeholder="Main location" style={styles.input} placeholderTextColor="#9aa19c" />
+      <Text style={styles.formSectionLabel}>OPENING HOURS</Text>
       <View style={styles.twoInputs}>
         <TextInput value={opening} onChangeText={setOpening} placeholder="Opening HH:MM" style={[styles.input, styles.halfInput]} placeholderTextColor="#9aa19c" />
         <TextInput value={closing} onChangeText={setClosing} placeholder="Closing HH:MM" style={[styles.input, styles.halfInput]} placeholderTextColor="#9aa19c" />
@@ -651,7 +669,7 @@ function AdminSalonView({ salon }: { salon: any }) {
       {branches.map((branch) => (
         <View style={styles.branchCard} key={branch.id}>
           <View style={styles.branchHeader}>
-            <Text style={styles.cardTextDark}>{branch.name || "Branch"}</Text>
+            <View style={styles.branchTitleWrap}><View style={styles.branchIcon}><Ionicons name="location-outline" size={17} color="#c55239" /></View><View><Text style={styles.branchTitle}>{branch.name || "Branch"}</Text><Text style={styles.branchHint}>{branch.location || "Location not added"}</Text></View></View>
             <Pressable
               onPress={() => updateBranch(branch.id, { active: branch.active === false })}
             >
@@ -695,30 +713,25 @@ function AdminSalonView({ salon }: { salon: any }) {
   );
 }
 function AdminPriceView({ initial }: { initial: Price[] }) {
-  const [text, setText] = useState(
-    initial
-      .map((x) => `${x.name}|${x.price}|${x.durationMinutes || 60}`)
-      .join("\n"),
-  );
+  const [items, setItems] = useState<any[]>(initial.map((item) => ({ ...item })));
+  const [editing, setEditing] = useState<number | null>(null);
   const [message, setMessage] = useState("");
+  const updateItem = (index: number, values: any) =>
+    setItems((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...values } : item));
+  const addItem = () => {
+    setItems((current) => [...current, { name: "", price: "", durationMinutes: "60", active: true }]);
+    setEditing(items.length);
+    setMessage("");
+  };
   async function save() {
-    const items = text
-      .split("\n")
-      .filter(Boolean)
-      .map((line) => {
-        const [name, price, durationMinutes] = line.split("|");
-        return {
-          name,
-          price: Number(price),
-          durationMinutes: Number(durationMinutes) || 60,
-          active: true,
-        };
-      });
+    const invalid = items.some((item) => !String(item.name || "").trim() || Number(item.price) < 0 || !Number(item.durationMinutes));
+    if (invalid) { setMessage("Complete the service name, price, and duration before saving."); return; }
     try {
       await api("/salon/price-list", {
         method: "PUT",
         body: JSON.stringify({ items }),
       });
+      setEditing(null);
       setMessage("Prices saved.");
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Could not save prices.");
@@ -726,16 +739,39 @@ function AdminPriceView({ initial }: { initial: Price[] }) {
   }
   return (
     <View>
-      <Text style={styles.eyebrow}>ADMIN</Text>
-      <Text style={styles.title}>Prices and offers</Text>
-      <TextInput
-        value={text}
-        onChangeText={setText}
-        multiline
-        style={[styles.input, styles.multiline]}
-        placeholder="Service|price|minutes"
-        placeholderTextColor="#9aa19c"
-      />
+      <SectionBanner icon="pricetag-outline" eyebrow="STUDIO CATALOG" title="Prices and offers" description="Keep your services clear, current, and ready for guests." />
+      <View style={styles.editorCard}>
+        <View style={styles.editorHeader}><View style={styles.editorIcon}><Ionicons name="pricetag-outline" size={19} color="#c55239" /></View><View style={styles.editorHeaderCopy}><Text style={styles.editorTitle}>Service catalogue</Text><Text style={styles.editorHint}>Add and update each service individually.</Text></View></View>
+        {items.length ? items.map((item, index) => (
+          <View style={styles.catalogItem} key={`price-${index}`}>
+            <View style={styles.catalogItemHeader}>
+              <View style={styles.catalogItemCopy}>
+                <Text style={styles.catalogItemTitle}>{item.name || "New service"}</Text>
+                <Text style={styles.catalogItemMeta}>₹{Number(item.price) || 0} · {item.durationMinutes || 60} minutes</Text>
+              </View>
+              <Pressable style={styles.editButton} onPress={() => setEditing(editing === index ? null : index)}>
+                <Ionicons name={editing === index ? "checkmark-outline" : "create-outline"} size={16} color="#26735a" />
+                <Text style={styles.editButtonText}>{editing === index ? "Done" : "Edit"}</Text>
+              </Pressable>
+            </View>
+            {editing === index ? (
+              <View style={styles.catalogEditor}>
+                <Text style={styles.fieldLabel}>SERVICE NAME</Text>
+                <TextInput value={item.name} onChangeText={(value) => updateItem(index, { name: value })} placeholder="e.g. Haircut" style={styles.input} placeholderTextColor="#9aa19c" />
+                <View style={styles.twoInputs}>
+                  <View style={styles.flexInput}><Text style={styles.fieldLabel}>PRICE (₹)</Text><TextInput value={String(item.price ?? "")} onChangeText={(value) => updateItem(index, { price: value })} keyboardType="numeric" placeholder="500" style={styles.input} placeholderTextColor="#9aa19c" /></View>
+                  <View style={styles.flexInput}><Text style={styles.fieldLabel}>DURATION (MIN)</Text><TextInput value={String(item.durationMinutes ?? "")} onChangeText={(value) => updateItem(index, { durationMinutes: value })} keyboardType="numeric" placeholder="60" style={styles.input} placeholderTextColor="#9aa19c" /></View>
+                </View>
+                <TextInput value={item.offerText || ""} onChangeText={(value) => updateItem(index, { offerText: value })} placeholder="Optional offer text" style={styles.input} placeholderTextColor="#9aa19c" />
+                <Pressable onPress={() => { setItems((current) => current.filter((_, itemIndex) => itemIndex !== index)); setEditing(null); }}>
+                  <Text style={styles.deleteText}>Remove service</Text>
+                </Pressable>
+              </View>
+            ) : null}
+          </View>
+        )) : <Text style={styles.muted}>No services added yet. Add your first service below.</Text>}
+        <Pressable style={styles.addItemButton} onPress={addItem}><Ionicons name="add-outline" size={18} color="#26735a" /><Text style={styles.actionText}>Add service</Text></Pressable>
+      </View>
       <Pressable style={styles.primary} onPress={() => void save()}>
         <Text style={styles.primaryText}>Save prices</Text>
       </Pressable>
@@ -744,23 +780,25 @@ function AdminPriceView({ initial }: { initial: Price[] }) {
   );
 }
 function AdminProductView({ initial }: { initial: Product[] }) {
-  const [text, setText] = useState(
-    initial.map((x) => `${x.id}|${x.name}|${x.description || ""}`).join("\n"),
-  );
+  const [items, setItems] = useState<any[]>(initial.map((item) => ({ ...item })));
+  const [editing, setEditing] = useState<number | null>(null);
   const [message, setMessage] = useState("");
+  const updateItem = (index: number, values: any) =>
+    setItems((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...values } : item));
+  const addItem = () => {
+    setItems((current) => [...current, { id: `product-${Date.now()}`, name: "", description: "", active: true }]);
+    setEditing(items.length);
+    setMessage("");
+  };
   async function save() {
-    const products = text
-      .split("\n")
-      .filter(Boolean)
-      .map((line) => {
-        const [id, name, description] = line.split("|");
-        return { id, name, description, active: true };
-      });
+    const products = items.map((item) => ({ ...item, id: String(item.id || "").trim(), name: String(item.name || "").trim(), description: String(item.description || "").trim(), active: item.active !== false }));
+    if (products.some((item) => !item.id || item.name.length < 2)) { setMessage("Complete the product ID and name before saving."); return; }
     try {
       await api("/salon/products", {
         method: "PUT",
         body: JSON.stringify({ products }),
       });
+      setEditing(null);
       setMessage("Products saved.");
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Could not save products.");
@@ -768,16 +806,28 @@ function AdminProductView({ initial }: { initial: Product[] }) {
   }
   return (
     <View>
-      <Text style={styles.eyebrow}>ADMIN</Text>
-      <Text style={styles.title}>Products used</Text>
-      <TextInput
-        value={text}
-        onChangeText={setText}
-        multiline
-        style={[styles.input, styles.multiline]}
-        placeholder="id|name|description"
-        placeholderTextColor="#9aa19c"
-      />
+      <SectionBanner icon="cube-outline" eyebrow="PRODUCT CATALOG" title="Products used" description="Show guests the professional products behind every visit." />
+      <View style={styles.editorCard}>
+        <View style={styles.editorHeader}><View style={styles.editorIcon}><Ionicons name="cube-outline" size={19} color="#c55239" /></View><View style={styles.editorHeaderCopy}><Text style={styles.editorTitle}>Products used in the salon</Text><Text style={styles.editorHint}>Tap Edit to update the product guests see.</Text></View></View>
+        {items.length ? items.map((item, index) => (
+          <View style={styles.catalogItem} key={`product-${item.id || index}`}>
+            <View style={styles.catalogItemHeader}>
+              <View style={styles.catalogItemCopy}><Text style={styles.catalogItemTitle}>{item.name || "New product"}</Text><Text style={styles.catalogItemMeta}>{item.description || "No description added"}</Text></View>
+              <Pressable style={styles.editButton} onPress={() => setEditing(editing === index ? null : index)}><Ionicons name={editing === index ? "checkmark-outline" : "create-outline"} size={16} color="#26735a" /><Text style={styles.editButtonText}>{editing === index ? "Done" : "Edit"}</Text></Pressable>
+            </View>
+            {editing === index ? (
+              <View style={styles.catalogEditor}>
+                <Text style={styles.fieldLabel}>PRODUCT NAME</Text>
+                <TextInput value={item.name} onChangeText={(value) => updateItem(index, { name: value })} placeholder="e.g. L'Oreal shampoo" style={styles.input} placeholderTextColor="#9aa19c" />
+                <Text style={styles.fieldLabel}>DESCRIPTION</Text>
+                <TextInput value={item.description || ""} onChangeText={(value) => updateItem(index, { description: value })} placeholder="What is this product used for?" style={[styles.input, styles.multiline]} multiline placeholderTextColor="#9aa19c" />
+                <Pressable onPress={() => { setItems((current) => current.filter((_, itemIndex) => itemIndex !== index)); setEditing(null); }}><Text style={styles.deleteText}>Remove product</Text></Pressable>
+              </View>
+            ) : null}
+          </View>
+        )) : <Text style={styles.muted}>No products added yet. Add your first product below.</Text>}
+        <Pressable style={styles.addItemButton} onPress={addItem}><Ionicons name="add-outline" size={18} color="#26735a" /><Text style={styles.actionText}>Add product</Text></Pressable>
+      </View>
       <Pressable style={styles.primary} onPress={() => void save()}>
         <Text style={styles.primaryText}>Save products</Text>
       </Pressable>
@@ -812,9 +862,7 @@ function AdminThemeView({ initial }: { initial: any }) {
   }
   return (
     <View>
-      <Text style={styles.eyebrow}>ADMIN</Text>
-      <Text style={styles.title}>Salon branding</Text>
-      <Text style={styles.muted}>Keep the guest-facing identity consistent across your salon.</Text>
+      <SectionBanner icon="color-palette-outline" eyebrow="BRAND STUDIO" title="Salon branding" description="Shape the visual identity guests see across your salon." />
       {([
         ["brandName", "Brand name"],
         ["logoMark", "Logo mark"],
@@ -943,9 +991,7 @@ function AdminMediaView({ salon }: { salon: any }) {
   };
   return (
     <View>
-      <Text style={styles.eyebrow}>STUDIO SETUP</Text>
-      <Text style={styles.title}>Private media</Text>
-      <Text style={styles.muted}>Upload protected service and stylist images for the guest experience.</Text>
+      <SectionBanner icon="images-outline" eyebrow="STUDIO ASSETS" title="Private media" description="Keep protected service and stylist images ready for the guest experience." />
       <View style={styles.actionRow}>
         <Pressable style={[styles.choice, kind === "service" && styles.choiceActive]} onPress={() => changeKind("service")}>
           <Text style={styles.cardTextDark}>Service image</Text>
@@ -980,7 +1026,21 @@ function AdminBannerView({ initial }: { initial: any[] }) {
   const [items, setItems] = useState(initial);
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [status, setStatus] = useState("");
+  const chooseBannerImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setStatus("Photo permission is required to choose a banner image.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8, base64: true, allowsEditing: true, aspect: [16, 9] });
+    if (!result.canceled) {
+      const asset = result.assets[0];
+      setImageUrl(asset.base64 ? `data:${asset.mimeType || "image/jpeg"};base64,${asset.base64}` : asset.uri);
+      setStatus("Banner image selected.");
+    }
+  };
   async function create() {
     try {
       const saved = await api<any>("/banners", {
@@ -988,6 +1048,7 @@ function AdminBannerView({ initial }: { initial: any[] }) {
         body: JSON.stringify({
           title,
           message,
+          imageUrl: imageUrl || undefined,
           actionLabel: "Book now",
           actionUrl: "/appointments",
           active: true,
@@ -996,6 +1057,7 @@ function AdminBannerView({ initial }: { initial: any[] }) {
       setItems([...items, saved]);
       setTitle("");
       setMessage("");
+      setImageUrl("");
       setStatus("Banner created.");
     } catch (e) {
       setStatus(e instanceof Error ? e.message : "Could not create banner.");
@@ -1024,8 +1086,7 @@ function AdminBannerView({ initial }: { initial: any[] }) {
   }
   return (
     <View>
-      <Text style={styles.eyebrow}>ADMIN</Text>
-      <Text style={styles.title}>Offers and banners</Text>
+      <SectionBanner icon="megaphone-outline" eyebrow="GUEST COMMUNICATION" title="Offers and banners" description="Create polished promotions that help guests choose their next visit." />
       <TextInput
         value={title}
         onChangeText={setTitle}
@@ -1033,6 +1094,13 @@ function AdminBannerView({ initial }: { initial: any[] }) {
         style={styles.input}
         placeholderTextColor="#9aa19c"
       />
+      <View style={styles.bannerImageCard}>
+        {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.bannerImagePreview} /> : <View style={styles.bannerImageEmpty}><Ionicons name="image-outline" size={25} color="#c55239" /><Text style={styles.muted}>Add a visual to make this offer stand out.</Text></View>}
+        <Pressable style={styles.secondary} onPress={() => void chooseBannerImage()}>
+          <Ionicons name="cloud-upload-outline" size={17} color="#26735a" />
+          <Text style={styles.actionText}>{imageUrl ? "Change image" : "Upload image"}</Text>
+        </Pressable>
+      </View>
       <TextInput
         value={message}
         onChangeText={setMessage}
@@ -1045,6 +1113,7 @@ function AdminBannerView({ initial }: { initial: any[] }) {
       </Pressable>
       {items.map((item) => (
         <View style={styles.row} key={item.id}>
+          {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={styles.bannerListImage} /> : null}
           <Text style={styles.cardTextDark}>{item.title}</Text>
           <Text style={styles.muted}>{item.message}</Text>
           <View style={styles.actionRow}>
@@ -1086,22 +1155,38 @@ function AdminAppointmentsView({ initial }: { initial: any[] }) {
       <Text style={styles.eyebrow}>STUDIO WORKSPACE</Text>
       <Text style={styles.title}>Appointments</Text>
       <Text style={styles.muted}>Review requests and keep today’s queue moving.</Text>
+      <View style={styles.metricsGrid}>
+        <View style={styles.metricCard}><Text style={styles.metricValue}>{items.length}</Text><Text style={styles.metricLabel}>Total</Text></View>
+        <View style={styles.metricCard}><Text style={styles.metricValue}>{items.filter((item) => item.status === "Requested").length}</Text><Text style={styles.metricLabel}>Requests</Text></View>
+        <View style={styles.metricCard}><Text style={styles.metricValue}>{items.filter((item) => item.status === "Confirmed").length}</Text><Text style={styles.metricLabel}>Confirmed</Text></View>
+      </View>
       {items.length ? (
         items.map((item) => (
-          <View style={styles.row} key={item.id}>
-            <Text style={styles.cardTextDark}>{item.service || "Appointment"}</Text>
-            <Text style={styles.muted}>
-              {item.date} · {item.time} · {item.guestName || item.guestEmail || "Guest"}
-            </Text>
-            <Text style={styles.cardText}>{item.status || "Requested"}</Text>
+          <View style={styles.appointmentCard} key={item.id}>
+            <View style={styles.appointmentHeader}>
+              <View style={styles.appointmentIcon}><Ionicons name="calendar-outline" size={20} color="#c55239" /></View>
+              <View style={styles.appointmentIdentity}>
+                <Text style={styles.appointmentTitle}>{item.service || "Salon appointment"}</Text>
+                <Text style={styles.muted}>{item.guestName || item.guestEmail || "Guest"}</Text>
+              </View>
+              <View style={[styles.statusBadge, item.status === "Confirmed" && styles.statusConfirmed, item.status === "Cancelled" && styles.statusCancelled]}>
+                <Text style={[styles.statusText, item.status === "Confirmed" && styles.statusTextConfirmed, item.status === "Cancelled" && styles.statusTextCancelled]}>{item.status || "Requested"}</Text>
+              </View>
+            </View>
+            <View style={styles.appointmentDetails}>
+              <View style={styles.detailItem}><Ionicons name="calendar-clear-outline" size={15} color="#77817c" /><Text style={styles.detailText}>{item.date || "Date pending"}</Text></View>
+              <View style={styles.detailItem}><Ionicons name="time-outline" size={15} color="#77817c" /><Text style={styles.detailText}>{item.time || "Time pending"}</Text></View>
+            </View>
             <View style={styles.actionRow}>
               {item.status === "Requested" ? (
-                <Pressable onPress={() => void updateStatus(item.id, "Confirmed")}>
+                <Pressable style={styles.actionButton} onPress={() => void updateStatus(item.id, "Confirmed")}>
+                  <Ionicons name="checkmark-circle-outline" size={16} color="#26735a" />
                   <Text style={styles.actionText}>Confirm</Text>
                 </Pressable>
               ) : null}
               {item.status !== "Cancelled" ? (
-                <Pressable onPress={() => void updateStatus(item.id, "Cancelled")}>
+                <Pressable style={styles.actionButtonMuted} onPress={() => void updateStatus(item.id, "Cancelled")}>
+                  <Ionicons name="close-circle-outline" size={16} color="#b34d38" />
                   <Text style={styles.actionText}>Cancel</Text>
                 </Pressable>
               ) : null}
@@ -1109,13 +1194,18 @@ function AdminAppointmentsView({ initial }: { initial: any[] }) {
           </View>
         ))
       ) : (
-        <Text style={styles.muted}>No appointments yet.</Text>
+        <View style={styles.emptyCard}>
+          <View style={styles.emptyIcon}><Ionicons name="calendar-outline" size={24} color="#c55239" /></View>
+          <Text style={styles.cardTextDark}>No appointments yet</Text>
+          <Text style={styles.muted}>New booking requests will appear here for quick confirmation.</Text>
+        </View>
       )}
       {message ? <Text style={styles.message}>{message}</Text> : null}
     </View>
   );
 }
 function AdminCustomersView({ initial }: { initial: any[] }) {
+  const { showToast } = useToast();
   const [items, setItems] = useState(initial);
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
@@ -1138,9 +1228,13 @@ function AdminCustomersView({ initial }: { initial: any[] }) {
           currentItem.id === item.id ? { ...currentItem, active } : currentItem,
         ),
       );
-      setMessage(active ? "Customer activated." : "Customer deactivated.");
+      const message = active ? "Customer activated." : "Customer deactivated.";
+      setMessage(message);
+      showToast({ type: "success", message });
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Could not update customer.");
+      const message = e instanceof Error ? e.message : "Could not update customer.";
+      setMessage(message);
+      showToast({ type: "error", message });
     }
   };
   const showHistory = async (item: any) => {
@@ -1157,7 +1251,9 @@ function AdminCustomersView({ initial }: { initial: any[] }) {
       const result = await api<any[]>(`/customers/${item.id}/history`);
       setHistory((current) => ({ ...current, [item.id]: Array.isArray(result) ? result : [] }));
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Could not load customer history.");
+      const message = e instanceof Error ? e.message : "Could not load customer history.";
+      setMessage(message);
+      showToast({ type: "error", message });
     } finally {
       setHistoryBusy("");
     }
@@ -1166,6 +1262,10 @@ function AdminCustomersView({ initial }: { initial: any[] }) {
     <View>
       <Text style={styles.eyebrow}>STUDIO WORKSPACE</Text>
       <Text style={styles.title}>Customers</Text>
+      <View style={styles.customerSummary}>
+        <View style={styles.customerSummaryIcon}><Ionicons name="people-outline" size={23} color="#dfca73" /></View>
+        <View style={styles.customerSummaryCopy}><Text style={styles.customerSummaryTitle}>{items.length} salon guests</Text><Text style={styles.customerSummaryText}>Keep every visit personal and easy to follow.</Text></View>
+      </View>
       <TextInput
         value={search}
         onChangeText={setSearch}
@@ -1175,31 +1275,31 @@ function AdminCustomersView({ initial }: { initial: any[] }) {
       />
       {filtered.length ? (
         filtered.map((item) => (
-          <View style={styles.row} key={item.id}>
-            <Text style={styles.cardTextDark}>{item.name || item.email}</Text>
-            <Text style={styles.muted}>{item.email}</Text>
-            <Text style={styles.cardText}>
-              {item.appointmentCount || 0} visits · {item.active === false ? "Inactive" : "Active"}
-            </Text>
+          <View style={styles.customerCard} key={item.id}>
+            <View style={styles.customerHeader}>
+              <View style={styles.customerAvatar}><Text style={styles.customerAvatarText}>{(item.name || item.email || "G").slice(0, 1).toUpperCase()}</Text></View>
+              <View style={styles.customerIdentity}><Text style={styles.customerName}>{item.name || "Guest customer"}</Text><Text style={styles.customerEmail}>{item.email || "Email not added"}</Text></View>
+              <View style={[styles.customerStatus, item.active === false && styles.customerStatusInactive]}><Text style={[styles.customerStatusText, item.active === false && styles.customerStatusTextInactive]}>{item.active === false ? "Inactive" : "Active"}</Text></View>
+            </View>
+            <View style={styles.customerStats}>
+              <View style={styles.customerStat}><Text style={styles.customerStatValue}>{item.appointmentCount || 0}</Text><Text style={styles.customerStatLabel}>Visits</Text></View>
+              <View style={styles.customerStat}><Text style={styles.customerStatValue}>{item.lastAppointment?.date || "—"}</Text><Text style={styles.customerStatLabel}>Last visit</Text></View>
+            </View>
             <View style={styles.actionRow}>
-              <Pressable onPress={() => void toggle(item)}>
+              <Pressable style={styles.actionButton} onPress={() => void toggle(item)}>
+                <Ionicons name={item.active === false ? "checkmark-circle-outline" : "pause-circle-outline"} size={16} color="#26735a" />
                 <Text style={styles.actionText}>{item.active === false ? "Activate" : "Deactivate"}</Text>
               </Pressable>
-              <Pressable disabled={historyBusy === item.id} onPress={() => void showHistory(item)}>
+              <Pressable style={styles.actionButtonMuted} disabled={historyBusy === item.id} onPress={() => void showHistory(item)}>
+                <Ionicons name="time-outline" size={16} color="#b34d38" />
                 <Text style={styles.actionText}>{historyBusy === item.id ? "Loading..." : history[item.id] ? "Hide history" : "History"}</Text>
               </Pressable>
-              {item.lastAppointment ? (
-                <Text style={styles.muted}>
-                  Last visit: {item.lastAppointment.date || "Not dated"}
-                </Text>
-              ) : null}
             </View>
             {history[item.id]?.length ? (
               <View style={styles.historyBox}>
+                <Text style={styles.historyTitle}>Recent visits</Text>
                 {history[item.id].map((visit: any) => (
-                  <Text key={visit.id} style={styles.muted}>
-                    {visit.date || "Undated"} · {visit.service || "Appointment"} · {visit.status || "Requested"}
-                  </Text>
+                  <View key={visit.id} style={styles.historyRow}><Ionicons name="checkmark-circle-outline" size={15} color="#4c947d" /><Text style={styles.historyText}>{visit.date || "Undated"} · {visit.service || "Appointment"} · {visit.status || "Requested"}</Text></View>
                 ))}
               </View>
             ) : history[item.id] ? (
@@ -1347,31 +1447,37 @@ function AdminConsultationsView({ initial }: { initial: any[] }) {
   };
   return (
     <View>
-      <Text style={styles.eyebrow}>STUDIO WORKSPACE</Text>
-      <Text style={styles.title}>Consultations</Text>
-      <Text style={styles.muted}>Start a guest consultation from the salon floor.</Text>
-      <TextInput value={guestName} onChangeText={setGuestName} placeholder="Guest name" style={styles.input} placeholderTextColor="#9aa19c" />
-      <TextInput value={phone} onChangeText={setPhone} placeholder="Phone" style={styles.input} keyboardType="phone-pad" placeholderTextColor="#9aa19c" />
-      <TextInput value={goal} onChangeText={setGoal} placeholder="What would the guest like?" style={styles.input} placeholderTextColor="#9aa19c" />
-      <Pressable style={styles.primary} onPress={() => void create()}>
+      <SectionBanner icon="chatbubbles-outline" eyebrow="GUEST EXPERIENCE" title="Consultations" description="Capture the guest goal before the service begins." />
+      <View style={styles.consultationSummary}><View style={styles.consultationSummaryIcon}><Ionicons name="person-add-outline" size={22} color="#c55239" /></View><View style={styles.consultationSummaryCopy}><Text style={styles.consultationSummaryTitle}>Start with the guest</Text><Text style={styles.consultationSummaryText}>Capture a little context before taking photos.</Text></View></View>
+      <View style={styles.formCard}>
+        <Text style={styles.formCardTitle}>Guest details</Text>
+        <TextInput value={guestName} onChangeText={setGuestName} placeholder="Guest name" style={styles.input} placeholderTextColor="#9aa19c" />
+        <TextInput value={phone} onChangeText={setPhone} placeholder="Phone" style={styles.input} keyboardType="phone-pad" placeholderTextColor="#9aa19c" />
+        <TextInput value={goal} onChangeText={setGoal} placeholder="What would the guest like?" style={styles.input} placeholderTextColor="#9aa19c" />
+      </View>
+      <Pressable style={[styles.primary, styles.consultationStartButton]} onPress={() => void create()}>
         <Text style={styles.primaryText}>Start consultation</Text>
       </Pressable>
       {selected ? (
-        <View style={styles.cardLight}>
-          <Text style={styles.cardTextDark}>Working with {selected.guestName}</Text>
+        <View style={styles.consultationCard}>
+          <View style={styles.consultationCardHeader}><View style={styles.consultationAvatar}><Text style={styles.consultationAvatarText}>{(selected.guestName || "G").slice(0, 1).toUpperCase()}</Text></View><View style={styles.consultationCardCopy}><Text style={styles.consultationCardTitle}>{selected.guestName}</Text><Text style={styles.muted}>Consultation in progress</Text></View><View style={styles.progressPill}><Text style={styles.progressPillText}>{capturedViews.length}/3 views</Text></View></View>
+          <Text style={styles.formSectionLabel}>CAPTURE ANGLES</Text>
           <Text style={styles.muted}>Capture front, left, and right before analysis.</Text>
-          <View style={styles.actionRow}>
+          <View style={[styles.actionRow, styles.consultationChipRow]}>
             {(["front", "left", "right"] as const).map((view) => (
               <Pressable key={view} style={[styles.choice, capturedViews.includes(view) && styles.choiceActive]} onPress={() => void captureView(view)}>
-                <Text style={styles.cardTextDark}>{capturedViews.includes(view) ? "✓ " : ""}{view}</Text>
+                <Ionicons name={capturedViews.includes(view) ? "checkmark-circle" : "ellipse-outline"} size={15} color={capturedViews.includes(view) ? "#26735a" : "#77817c"} /><Text style={styles.choiceLabel}>{view}</Text>
               </Pressable>
             ))}
           </View>
+          <Text style={styles.formSectionLabel}>PHOTO SOURCE</Text>
           <View style={styles.actionRow}>
-            <Pressable onPress={() => void choosePhoto(true)}>
+            <Pressable style={styles.actionButton} onPress={() => void choosePhoto(true)}>
+              <Ionicons name="camera-outline" size={16} color="#26735a" />
               <Text style={styles.actionText}>Take photo</Text>
             </Pressable>
-            <Pressable onPress={() => void choosePhoto(false)}>
+            <Pressable style={styles.actionButtonMuted} onPress={() => void choosePhoto(false)}>
+              <Ionicons name="images-outline" size={16} color="#b34d38" />
               <Text style={styles.actionText}>Choose photo</Text>
             </Pressable>
           </View>
@@ -1382,14 +1488,14 @@ function AdminConsultationsView({ initial }: { initial: any[] }) {
           </Pressable>
           {selected.report ? (
             <View>
-              <Text style={styles.subheading}>Recommendations</Text>
+              <Text style={styles.formSectionLabel}>RECOMMENDATIONS</Text>
               {(selected.report.recommendations || []).map((item: any) => (
                 <Pressable
                   key={item.name}
-                  style={[styles.choice, selected.selectedStyle === item.name && styles.choiceActive]}
+                  style={[styles.recommendationCard, selected.selectedStyle === item.name && styles.choiceActive]}
                   onPress={() => setSelected((current: any) => ({ ...current, selectedStyle: item.name }))}
                 >
-                  <Text style={styles.cardTextDark}>{item.name} · {item.score || 0}%</Text>
+                  <View style={styles.recommendationTop}><Text style={styles.cardTextDark}>{item.name}</Text><Text style={styles.scorePill}>{item.score || 0}% match</Text></View>
                   <Text style={styles.muted}>{item.description}</Text>
                 </Pressable>
               ))}
@@ -1401,15 +1507,21 @@ function AdminConsultationsView({ initial }: { initial: any[] }) {
         </View>
       ) : null}
       {items.length ? (
-        items.map((item) => (
-          <View style={styles.row} key={item.id}>
-            <Text style={styles.cardTextDark}>{item.guestName || "Guest"}</Text>
-            <Text style={styles.muted}>{item.status || "started"}</Text>
-            {item.goal ? <Text style={styles.cardText}>{item.goal}</Text> : null}
-          </View>
-        ))
+        <View>
+          <Text style={styles.formSectionTitle}>Recent consultations</Text>
+          {items.map((item) => (
+            <View style={styles.consultationHistoryCard} key={item.id}>
+              <View style={styles.consultationHistoryHeader}>
+                <View style={styles.consultationAvatar}><Text style={styles.consultationAvatarText}>{(item.guestName || "G").slice(0, 1).toUpperCase()}</Text></View>
+                <View style={styles.consultationCardCopy}><Text style={styles.consultationCardTitle}>{item.guestName || "Guest"}</Text><Text style={styles.muted}>{item.goal || "Style consultation"}</Text></View>
+                <View style={styles.progressPill}><Text style={styles.progressPillText}>{item.status || "Started"}</Text></View>
+              </View>
+              <View style={styles.consultationHistoryFooter}><Ionicons name="time-outline" size={14} color="#77817c" /><Text style={styles.historyText}>Consultation record</Text></View>
+            </View>
+          ))}
+        </View>
       ) : (
-        <Text style={styles.muted}>No consultations yet.</Text>
+        <View style={styles.emptyCard}><View style={styles.emptyIcon}><Ionicons name="chatbubbles-outline" size={24} color="#c55239" /></View><Text style={styles.cardTextDark}>No consultations yet</Text><Text style={styles.muted}>Start one above when a guest is ready for a style conversation.</Text></View>
       )}
       {message ? <Text style={styles.message}>{message}</Text> : null}
     </View>
@@ -1422,9 +1534,6 @@ function AdminReportsView({ initial }: { initial: any }) {
     : [];
   return (
     <View>
-      <Text style={styles.eyebrow}>STUDIO ANALYTICS</Text>
-      <Text style={styles.title}>Reports and analytics</Text>
-      <Text style={styles.muted}>A quick view of booking activity and revenue.</Text>
       <View style={styles.metricsGrid}>
         <MetricCard label="Bookings" value={analytics.totalBookings || 0} />
         <MetricCard label="Confirmed" value={analytics.confirmedBookings || 0} />
@@ -1434,9 +1543,10 @@ function AdminReportsView({ initial }: { initial: any }) {
       <Text style={styles.subheading}>Booking status</Text>
       {statusBreakdown.length ? (
         statusBreakdown.map((item: any) => (
-          <View style={styles.infoRow} key={item.status}>
-            <Text style={styles.cardTextDark}>{item.status}</Text>
-            <Text style={styles.priceText}>{item.count || 0}</Text>
+          <View style={styles.statusCard} key={item.status}>
+            <View style={styles.statusCardIcon}><Ionicons name="stats-chart-outline" size={17} color="#c55239" /></View>
+            <Text style={styles.statusCardLabel}>{item.status}</Text>
+            <View style={styles.statusCount}><Text style={styles.statusCountText}>{item.count || 0}</Text></View>
           </View>
         ))
       ) : (
@@ -1647,9 +1757,7 @@ function PreferencesView({ initial }: { initial: any }) {
   }
   return (
     <View>
-      <Text style={styles.eyebrow}>PREFERENCES</Text>
-      <Text style={styles.title}>Notifications</Text>
-      <Text style={styles.muted}>Choose how Halo keeps you updated.</Text>
+      <SectionBanner icon="notifications-outline" eyebrow="YOUR PREFERENCES" title="Notifications" description="Choose how Halo keeps you updated about your salon experience." />
       <Pressable style={styles.preference} onPress={() => setEmail(!email)}>
         <Text style={styles.checkbox}>{email ? "✓" : ""}</Text>
         <View>
@@ -1739,8 +1847,7 @@ function BookingView({ salons }: { salons: any[] }) {
   }
   return (
     <View>
-      <Text style={styles.eyebrow}>BOOK A VISIT</Text>
-      <Text style={styles.title}>Make space for your next visit.</Text>
+      <SectionBanner icon="calendar-outline" eyebrow="YOUR NEXT VISIT" title="Book a visit" description="Choose a service, stylist, and time that works for you." />
       {!salon ? (
         <Text style={styles.muted}>No salons are open for booking.</Text>
       ) : (
@@ -1827,8 +1934,7 @@ function PaymentView({ payments }: { payments: Payment[] }) {
   }
   return (
     <View>
-      <Text style={styles.eyebrow}>PAYMENTS</Text>
-      <Text style={styles.title}>Payments and invoices</Text>
+      <SectionBanner icon="card-outline" eyebrow="FINANCE" title="Payments and invoices" description="Keep payment requests and guest invoices in one place." />
       <TextInput
         value={appointmentId}
         onChangeText={setAppointmentId}
@@ -1867,9 +1973,7 @@ function AdminReviewsView({ initial }: { initial: any[] }) {
   };
   return (
     <View>
-      <Text style={styles.eyebrow}>STUDIO MANAGEMENT</Text>
-      <Text style={styles.title}>Review moderation</Text>
-      <Text style={styles.muted}>Publish or reject guest feedback before it appears publicly.</Text>
+      <SectionBanner icon="heart-outline" eyebrow="GUEST FEEDBACK" title="Review moderation" description="Protect the quality of your public guest experience." />
       {items.length ? items.map((item) => (
         <View style={styles.row} key={item.id}>
           <Text style={styles.cardTextDark}>{item.guestName || "Guest"} · {"★".repeat(Number(item.rating || 0))}</Text>
@@ -1916,8 +2020,7 @@ function ReviewView() {
   }
   return (
     <View>
-      <Text style={styles.eyebrow}>YOUR EXPERIENCE</Text>
-      <Text style={styles.title}>Share your experience</Text>
+      <SectionBanner icon="star-outline" eyebrow="GUEST FEEDBACK" title="Share your experience" description="A few stars help your salon keep improving." />
       <Text style={styles.fieldLabel}>Your rating</Text>
       <View style={styles.starPicker}>
         {[1, 2, 3, 4, 5].map((value) => (
@@ -1963,9 +2066,7 @@ function LastVisitView({ history }: { history: any[] }) {
   const lastVisit = history[0];
   return (
     <View>
-      <Text style={styles.eyebrow}>YOUR ACTIVITY</Text>
-      <Text style={styles.title}>Last visit</Text>
-      <Text style={styles.muted}>A quick view of your most recent appointment.</Text>
+      <SectionBanner icon="time-outline" eyebrow="YOUR HALO HISTORY" title="Last visit" description="A quick, friendly reminder of your latest salon experience." />
       {lastVisit ? (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{lastVisit.service || "Salon appointment"}</Text>
@@ -1985,9 +2086,7 @@ function LastVisitView({ history }: { history: any[] }) {
 function MembershipView({ initial }: { initial: any[] }) {
   return (
     <View>
-      <Text style={styles.eyebrow}>MEMBERSHIP</Text>
-      <Text style={styles.title}>Your memberships</Text>
-      <Text style={styles.muted}>Track your balance and services used at each salon.</Text>
+      <SectionBanner icon="ribbon-outline" eyebrow="YOUR MEMBERSHIP" title="Your memberships" description="Track balances, sessions, and the services included in your plan." />
       {initial.length ? initial.map((item) => (
         <View style={styles.membershipCard} key={item.id}>
           <View style={styles.membershipTopline}>
@@ -2010,22 +2109,51 @@ function MembershipView({ initial }: { initial: any[] }) {
   );
 }
 function MembershipAdminView({ initial }: { initial: any[] }) {
+  const [members, setMembers] = useState(initial);
+  const [plans, setPlans] = useState<any[]>([]);
   const [planName, setPlanName] = useState("");
   const [price, setPrice] = useState("");
   const [sessions, setSessions] = useState("5");
+  const [memberEmail, setMemberEmail] = useState("");
+  const [selectedPlan, setSelectedPlan] = useState("");
   const [message, setMessage] = useState("");
+  useEffect(() => {
+    api<any[]>("/memberships/plans")
+      .then((items) => {
+        const available = Array.isArray(items) ? items : [];
+        setPlans(available);
+        setSelectedPlan(available[0]?.id || "");
+      })
+      .catch(() => setPlans([]));
+  }, []);
   const createPlan = async () => {
     if (!planName.trim()) return setMessage("Enter a membership plan name.");
     try {
       await api("/memberships/plans", { method: "POST", body: JSON.stringify({ name: planName, price: Number(price) || 0, sessionCount: Number(sessions) || 1 }) });
+      const available = await api<any[]>("/memberships/plans");
+      setPlans(Array.isArray(available) ? available : []);
+      setSelectedPlan(available?.[0]?.id || "");
       setPlanName(""); setPrice(""); setMessage("Membership plan created.");
     } catch (e) { setMessage(e instanceof Error ? e.message : "Could not create membership plan."); }
   };
+  const assignMembership = async () => {
+    if (!memberEmail.trim() || !selectedPlan) {
+      setMessage("Enter the user email and choose a plan.");
+      return;
+    }
+    try {
+      const member = await api<any>("/memberships", {
+        method: "POST",
+        body: JSON.stringify({ planId: selectedPlan, guestEmail: memberEmail.trim(), amountPaid: Number(price) || undefined }),
+      });
+      setMembers((current) => [member, ...current.filter((item) => item.id !== member.id)]);
+      setMemberEmail("");
+      setMessage("Membership assigned. The user can see it now.");
+    } catch (e) { setMessage(e instanceof Error ? e.message : "Could not assign membership."); }
+  };
   return (
     <View>
-      <Text style={styles.eyebrow}>STUDIO MEMBERSHIPS</Text>
-      <Text style={styles.title}>Memberships</Text>
-      <Text style={styles.muted}>Create plans, add paid members, and record used sessions.</Text>
+      <SectionBanner icon="ribbon-outline" eyebrow="STUDIO MEMBERSHIPS" title="Memberships" description="Create plans, assign members, and keep session balances current." />
       <Text style={styles.subheading}>Create a plan</Text>
       <TextInput value={planName} onChangeText={setPlanName} placeholder="Plan name" style={styles.input} />
       <View style={styles.twoInputs}>
@@ -2034,8 +2162,20 @@ function MembershipAdminView({ initial }: { initial: any[] }) {
       </View>
       <Pressable style={styles.primary} onPress={() => void createPlan()}><Text style={styles.primaryText}>Create membership plan</Text></Pressable>
       {message ? <Text style={styles.message}>{message}</Text> : null}
+      <Text style={styles.subheading}>Add membership after payment</Text>
+      <Text style={styles.muted}>Use the email from the user account. The membership will appear in that user’s More screen.</Text>
+      <TextInput value={memberEmail} onChangeText={setMemberEmail} placeholder="User email address" keyboardType="email-address" autoCapitalize="none" style={styles.input} />
+      <View style={styles.choiceRow}>
+        {plans.map((plan) => (
+          <Pressable key={plan.id} style={[styles.choice, selectedPlan === plan.id && styles.choiceActive]} onPress={() => setSelectedPlan(plan.id)}>
+            <Text style={styles.cardTextDark}>{plan.name}</Text>
+            <Text style={styles.muted}>₹{plan.price} · {plan.sessionCount} sessions</Text>
+          </Pressable>
+        ))}
+      </View>
+      <Pressable disabled={!plans.length} style={[styles.primary, !plans.length && styles.disabled]} onPress={() => void assignMembership()}><Text style={styles.primaryText}>Add membership to user</Text></Pressable>
       <Text style={styles.subheading}>Member balances</Text>
-      {initial.length ? initial.map((item) => (
+      {members.length ? members.map((item) => (
         <View style={styles.infoRow} key={item.id}>
           <View style={styles.infoRowCopy}>
             <Text style={styles.cardTextDark}>{item.guestEmail}</Text>
@@ -2050,9 +2190,7 @@ function MembershipAdminView({ initial }: { initial: any[] }) {
 function ProfileView({ profile, email }: { profile: Profile; email: string }) {
   return (
     <View>
-      <Text style={styles.eyebrow}>YOUR PROFILE</Text>
-      <Text style={styles.title}>{profile.name || "Your profile"}</Text>
-      <Text style={styles.muted}>{profile.email || email}</Text>
+      <SectionBanner icon="person-outline" eyebrow="YOUR HALO ACCOUNT" title="Profile details" description="Keep your personal details ready for a smoother salon visit." />
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Profile details</Text>
         <Text style={styles.cardText}>
@@ -2099,8 +2237,7 @@ function PassportView({ passport }: { passport: Passport }) {
   };
   return (
     <View>
-      <Text style={styles.eyebrow}>HAIR PASSPORT</Text>
-      <Text style={styles.title}>{guestName || "Your hair passport"}</Text>
+      <SectionBanner icon="sparkles-outline" eyebrow="YOUR HAIR PASSPORT" title="Your hair passport" description="Save the details that help your stylist understand your look." />
       {[
         [guestName, setGuestName, "Guest name"],
         [texture, setTexture, "Hair texture"],
@@ -2224,6 +2361,44 @@ const styles = StyleSheet.create({
   identityCopy: { flex: 1 },
   identityTitle: { color: "#20352d", fontWeight: "800", fontSize: 14 },
   identityEmail: { color: "#77817c", fontSize: 12, marginTop: 3 },
+  focusHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#20352d",
+    borderRadius: 18,
+    padding: 15,
+    marginBottom: 12,
+  },
+  focusIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: "rgba(223,202,115,0.16)",
+    borderWidth: 1,
+    borderColor: "rgba(223,202,115,0.36)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  focusCopy: { flex: 1, minWidth: 0 },
+  focusEyebrow: { color: "#a9c9ba", fontSize: 9, fontWeight: "800", letterSpacing: 1.4 },
+  focusTitle: { color: "#fffdfa", fontSize: 20, fontWeight: "800", marginTop: 3 },
+  focusDescription: { color: "#c8d2cb", fontSize: 11, marginTop: 3 },
+  quickNav: { paddingBottom: 8, paddingRight: 16 },
+  quickNavChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#d9d6ce",
+    backgroundColor: "#fffdfa",
+    borderRadius: 18,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    marginRight: 8,
+  },
+  quickNavChipActive: { backgroundColor: "#c55239", borderColor: "#c55239" },
+  quickNavText: { color: "#20352d", fontSize: 11, fontWeight: "800", marginLeft: 5 },
+  quickNavTextActive: { color: "#fffdfa" },
   groupTitle: {
     color: "#77817c",
     fontSize: 11,
@@ -2294,8 +2469,24 @@ const styles = StyleSheet.create({
   membershipTitle: { color: "#fffdfa", fontSize: 18, fontWeight: "800" },
   membershipStatus: { color: "#dfca73", fontWeight: "800", textTransform: "capitalize" },
   membershipBalance: { color: "#fffdfa", fontSize: 22, fontWeight: "800", marginTop: 16, marginBottom: 8 },
-  actionRow: { flexDirection: "row", gap: 18, marginTop: 10 },
-  metricsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 8 },
+  actionRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 12 },
+  actionButton: { flexDirection: "row", alignItems: "center", backgroundColor: "#e5f1eb", borderRadius: 10, paddingHorizontal: 11, paddingVertical: 9, marginRight: 8 },
+  actionButtonMuted: { flexDirection: "row", alignItems: "center", backgroundColor: "#f8e5df", borderRadius: 10, paddingHorizontal: 11, paddingVertical: 9, marginRight: 8 },
+  appointmentCard: { backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 18, padding: 15, marginTop: 12, shadowColor: "#20352d", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
+  appointmentHeader: { flexDirection: "row", alignItems: "center" },
+  appointmentIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: "#f8e5df", alignItems: "center", justifyContent: "center", marginRight: 11 },
+  appointmentIdentity: { flex: 1, minWidth: 0 },
+  appointmentTitle: { color: "#20352d", fontSize: 15, fontWeight: "800" },
+  statusBadge: { backgroundColor: "#fff0d8", borderRadius: 14, paddingHorizontal: 9, paddingVertical: 6, marginLeft: 8 },
+  statusConfirmed: { backgroundColor: "#e5f1eb" },
+  statusCancelled: { backgroundColor: "#f8e5df" },
+  statusText: { color: "#93631d", fontSize: 10, fontWeight: "800" },
+  statusTextConfirmed: { color: "#26735a" },
+  statusTextCancelled: { color: "#b34d38" },
+  appointmentDetails: { flexDirection: "row", flexWrap: "wrap", borderTopWidth: 1, borderTopColor: "#eeeae3", marginTop: 14, paddingTop: 12 },
+  detailItem: { flexDirection: "row", alignItems: "center", marginRight: 16, marginBottom: 2 },
+  detailText: { color: "#60736a", fontSize: 12, fontWeight: "700", marginLeft: 5 },
+  metricsGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginTop: 8 },
   metricCard: {
     width: "47%",
     backgroundColor: "#fffdfa",
@@ -2303,7 +2494,14 @@ const styles = StyleSheet.create({
     borderColor: "#e4e1d9",
     borderRadius: 12,
     padding: 14,
+    marginBottom: 8,
   },
+  metricLabel: { color: "#77817c", fontSize: 10, fontWeight: "800", marginTop: 5, textTransform: "uppercase" },
+  statusCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 14, padding: 12, marginBottom: 9 },
+  statusCardIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: "#f8e5df", alignItems: "center", justifyContent: "center", marginRight: 9 },
+  statusCardLabel: { color: "#20352d", fontSize: 13, fontWeight: "800", flex: 1, textTransform: "capitalize" },
+  statusCount: { minWidth: 34, height: 30, borderRadius: 10, backgroundColor: "#e5f1eb", alignItems: "center", justifyContent: "center" },
+  statusCountText: { color: "#26735a", fontWeight: "800" },
   metricValue: { color: "#20352d", fontSize: 24, fontWeight: "800" },
   center: { alignItems: "center", padding: 35, gap: 8 },
   muted: { color: "#77817c", marginTop: 8 },
@@ -2317,10 +2515,10 @@ const styles = StyleSheet.create({
   },
   title: {
     color: "#20352d",
-    fontSize: 28,
-    fontWeight: "700",
+    fontSize: 30,
+    fontWeight: "800",
     marginTop: 8,
-    marginBottom: 18,
+    marginBottom: 12,
   },
   label: {
     color: "#20352d",
@@ -2337,7 +2535,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderWidth: 1,
     borderColor: "#d9d6ce",
-    borderRadius: 8,
+    borderRadius: 12,
     backgroundColor: "#fffdfa",
     paddingHorizontal: 13,
     color: "#20352d",
@@ -2359,6 +2557,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
+  branchTitleWrap: { flexDirection: "row", alignItems: "center", flex: 1, minWidth: 0 },
+  branchIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: "#f8e5df", alignItems: "center", justifyContent: "center", marginRight: 9 },
+  branchTitle: { color: "#20352d", fontSize: 14, fontWeight: "800" },
+  branchHint: { color: "#77817c", fontSize: 10, marginTop: 2 },
   activeText: { color: "#26735a", fontWeight: "800" },
   secondary: {
     minHeight: 46,
@@ -2371,19 +2573,107 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   multiline: { height: 90, paddingTop: 13, textAlignVertical: "top" },
+  editorCard: { backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 18, padding: 15, marginTop: 4, marginBottom: 4 },
+  editorHeader: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
+  editorHeaderCopy: { flex: 1, minWidth: 0 },
+  editorIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: "#f8e5df", alignItems: "center", justifyContent: "center", marginRight: 10 },
+  editorTitle: { color: "#20352d", fontSize: 14, fontWeight: "800" },
+  editorHint: { color: "#77817c", fontSize: 11, marginTop: 3 },
+  catalogItem: { backgroundColor: "#f8faf7", borderWidth: 1, borderColor: "#e1e8e2", borderRadius: 14, padding: 12, marginTop: 10 },
+  catalogItemHeader: { flexDirection: "row", alignItems: "center" },
+  catalogItemCopy: { flex: 1, minWidth: 0, paddingRight: 8 },
+  catalogItemTitle: { color: "#20352d", fontSize: 14, fontWeight: "800" },
+  catalogItemMeta: { color: "#77817c", fontSize: 12, marginTop: 4 },
+  editButton: { flexDirection: "row", alignItems: "center", backgroundColor: "#e5f1eb", borderRadius: 9, paddingHorizontal: 10, paddingVertical: 8 },
+  editButtonText: { color: "#26735a", fontSize: 12, fontWeight: "800", marginLeft: 4 },
+  catalogEditor: { borderTopWidth: 1, borderTopColor: "#e1e8e2", marginTop: 12, paddingTop: 4 },
+  flexInput: { flex: 1, minWidth: 0 },
+  addItemButton: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", backgroundColor: "#e5f1eb", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginTop: 12 },
+  deleteText: { color: "#b34d38", fontSize: 12, fontWeight: "800", marginTop: 4 },
+  sectionBanner: { flexDirection: "row", alignItems: "center", backgroundColor: "#20352d", borderRadius: 18, padding: 15, marginTop: 4, marginBottom: 14 },
+  sectionBannerIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: "rgba(223,202,115,0.16)", borderWidth: 1, borderColor: "rgba(223,202,115,0.35)", alignItems: "center", justifyContent: "center", marginRight: 11 },
+  sectionBannerCopy: { flex: 1, minWidth: 0 },
+  sectionBannerEyebrow: { color: "#a9c9ba", fontSize: 9, fontWeight: "800", letterSpacing: 1.4 },
+  sectionBannerTitle: { color: "#fffdfa", fontSize: 17, fontWeight: "800", marginTop: 3 },
+  sectionBannerDescription: { color: "#c8d2cb", fontSize: 11, lineHeight: 16, marginTop: 3 },
+  setupSummary: { flexDirection: "row", alignItems: "center", backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 17, padding: 13, marginBottom: 18 },
+  setupSummaryIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: "#f8e5df", alignItems: "center", justifyContent: "center", marginRight: 10 },
+  setupSummaryCopy: { flex: 1, minWidth: 0 },
+  setupSummaryTitle: { color: "#20352d", fontSize: 15, fontWeight: "800" },
+  setupSummaryText: { color: "#77817c", fontSize: 11, marginTop: 3 },
+  activePill: { flexDirection: "row", alignItems: "center", backgroundColor: "#e5f1eb", borderRadius: 14, paddingHorizontal: 8, paddingVertical: 6, marginLeft: 7 },
+  activeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#4c947d", marginRight: 5 },
+  activePillText: { color: "#26735a", fontSize: 10, fontWeight: "800" },
+  formSectionTitle: { color: "#20352d", fontSize: 17, fontWeight: "800", marginBottom: 8 },
+  formSectionLabel: { color: "#91b3a3", fontSize: 10, fontWeight: "800", letterSpacing: 1.3, marginTop: 6, marginBottom: 7 },
+  formCard: { backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 18, padding: 15, marginBottom: 2 },
+  formCardTitle: { color: "#20352d", fontSize: 15, fontWeight: "800", marginBottom: 3 },
+  consultationSummary: { flexDirection: "row", alignItems: "center", backgroundColor: "#e7f1ed", borderRadius: 16, padding: 13, marginBottom: 12 },
+  consultationSummaryIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: "#fffdfa", alignItems: "center", justifyContent: "center", marginRight: 10 },
+  consultationSummaryCopy: { flex: 1 },
+  consultationSummaryTitle: { color: "#20352d", fontSize: 14, fontWeight: "800" },
+  consultationSummaryText: { color: "#60736a", fontSize: 11, marginTop: 3 },
+  consultationCard: { backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 18, padding: 15, marginTop: 16, shadowColor: "#20352d", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
+  consultationCardHeader: { flexDirection: "row", alignItems: "center" },
+  consultationAvatar: { width: 44, height: 44, borderRadius: 14, backgroundColor: "#dceee8", alignItems: "center", justifyContent: "center", marginRight: 10 },
+  consultationAvatarText: { color: "#20352d", fontSize: 18, fontWeight: "800" },
+  consultationCardCopy: { flex: 1 },
+  consultationCardTitle: { color: "#20352d", fontSize: 15, fontWeight: "800" },
+  progressPill: { backgroundColor: "#f8e5df", borderRadius: 14, paddingHorizontal: 8, paddingVertical: 6 },
+  progressPillText: { color: "#b34d38", fontSize: 10, fontWeight: "800" },
+  choiceLabel: { color: "#20352d", fontSize: 12, fontWeight: "700", marginLeft: 5 },
+  recommendationCard: { backgroundColor: "#f7f5f0", borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 13, padding: 12, marginBottom: 8 },
+  recommendationTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  scorePill: { color: "#26735a", backgroundColor: "#e5f1eb", borderRadius: 12, paddingHorizontal: 7, paddingVertical: 4, fontSize: 10, fontWeight: "800" },
+  consultationHistoryCard: { backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 16, padding: 13, marginBottom: 10, shadowColor: "#20352d", shadowOpacity: 0.04, shadowRadius: 7, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
+  consultationHistoryHeader: { flexDirection: "row", alignItems: "center" },
+  consultationHistoryFooter: { flexDirection: "row", alignItems: "center", borderTopWidth: 1, borderTopColor: "#eeeae3", marginTop: 11, paddingTop: 9 },
+  consultationStartButton: { marginBottom: 8 },
+  consultationChipRow: { marginTop: 10 },
+  bannerImageCard: { backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 17, padding: 12, marginBottom: 10 },
+  bannerImagePreview: { width: "100%", height: 150, borderRadius: 12, backgroundColor: "#e7f1ed" },
+  bannerImageEmpty: { height: 100, borderRadius: 12, backgroundColor: "#f7f5f0", alignItems: "center", justifyContent: "center" },
+  bannerListImage: { width: "100%", height: 120, borderRadius: 11, marginBottom: 10, backgroundColor: "#e7f1ed" },
+  customerSummary: { flexDirection: "row", alignItems: "center", backgroundColor: "#20352d", borderRadius: 18, padding: 15, marginTop: 4, marginBottom: 14 },
+  customerSummaryIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: "rgba(223,202,115,0.16)", alignItems: "center", justifyContent: "center", marginRight: 11 },
+  customerSummaryCopy: { flex: 1 },
+  customerSummaryTitle: { color: "#fffdfa", fontSize: 16, fontWeight: "800" },
+  customerSummaryText: { color: "#c8d2cb", fontSize: 11, marginTop: 3 },
+  customerCard: { backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 18, padding: 15, marginTop: 12, shadowColor: "#20352d", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
+  customerHeader: { flexDirection: "row", alignItems: "center" },
+  customerAvatar: { width: 46, height: 46, borderRadius: 15, backgroundColor: "#dceee8", alignItems: "center", justifyContent: "center", marginRight: 11 },
+  customerAvatarText: { color: "#20352d", fontSize: 19, fontWeight: "800" },
+  customerIdentity: { flex: 1, minWidth: 0 },
+  customerName: { color: "#20352d", fontSize: 15, fontWeight: "800" },
+  customerEmail: { color: "#77817c", fontSize: 11, marginTop: 3 },
+  customerStatus: { backgroundColor: "#e5f1eb", borderRadius: 14, paddingHorizontal: 9, paddingVertical: 6, marginLeft: 8 },
+  customerStatusInactive: { backgroundColor: "#f8e5df" },
+  customerStatusText: { color: "#26735a", fontSize: 10, fontWeight: "800" },
+  customerStatusTextInactive: { color: "#b34d38" },
+  customerStats: { flexDirection: "row", borderTopWidth: 1, borderBottomWidth: 1, borderColor: "#eeeae3", marginTop: 14, paddingVertical: 11 },
+  customerStat: { minWidth: 105, marginRight: 18 },
+  customerStatValue: { color: "#20352d", fontSize: 13, fontWeight: "800" },
+  customerStatLabel: { color: "#77817c", fontSize: 10, marginTop: 3, textTransform: "uppercase", fontWeight: "700" },
+  historyTitle: { color: "#20352d", fontSize: 12, fontWeight: "800", marginBottom: 7 },
+  historyRow: { flexDirection: "row", alignItems: "center", marginBottom: 5 },
+  historyText: { color: "#60736a", fontSize: 11, marginLeft: 6, flexShrink: 1 },
   choiceRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   choice: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 9,
     borderRadius: 20,
     backgroundColor: "#fffdfa",
     borderWidth: 1,
     borderColor: "#d9d6ce",
+    marginRight: 8,
+    marginBottom: 8,
   },
   choiceActive: { backgroundColor: "#dceee8", borderColor: "#dceee8" },
   primary: {
-    height: 48,
-    borderRadius: 8,
+    minHeight: 50,
+    borderRadius: 12,
     backgroundColor: "#c55239",
     alignItems: "center",
     justifyContent: "center",
@@ -2406,7 +2696,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingTop: 1,
   },
-  cardTextDark: { color: "#20352d" },
+  cardTextDark: { color: "#20352d", fontSize: 14, fontWeight: "700" },
   card: {
     backgroundColor: "#20352d",
     borderRadius: 14,
@@ -2439,11 +2729,19 @@ const styles = StyleSheet.create({
   row: {
     backgroundColor: "#fffdfa",
     borderWidth: 1,
-    borderColor: "#d9d6ce",
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 10,
+    borderColor: "#e1ddd4",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: "#20352d",
+    shadowOpacity: 0.04,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 1,
   },
+  actionText: { color: "#20352d", fontSize: 12, fontWeight: "800", marginLeft: 5 },
+  emptyCard: { backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 18, alignItems: "center", padding: 24, marginTop: 14 },
+  emptyIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: "#f8e5df", alignItems: "center", justifyContent: "center", marginBottom: 10 },
   historyBox: {
     marginTop: 10,
     paddingTop: 10,
