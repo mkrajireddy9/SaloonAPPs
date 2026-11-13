@@ -105,6 +105,8 @@ export default function Directory() {
       return 0;
     });
   const featured = filteredSalons.slice(0, 3);
+  const openSalon = (id: string) =>
+    router.push({ pathname: "/salon/[id]", params: { id, hairstyle } });
   return (
     <SafeAreaView style={s.safeArea}>
       <ScrollView
@@ -173,7 +175,6 @@ export default function Directory() {
             <Text style={s.filterHint}>Distance filtering uses the location data returned by the salon directory API.</Text>
           </View>
         ) : null}
-        <AiDemoCard />
         {error ? <Text style={s.error}>{error}</Text> : null}
         {featured.length ? (
           <>
@@ -189,7 +190,7 @@ export default function Directory() {
                 <FeaturedSalon
                   key={salon.id}
                   salon={salon}
-                  onPress={() => router.push({ pathname: "/(tabs)/salon/[id]", params: { id: salon.id, hairstyle } })}
+                  onPress={() => openSalon(salon.id)}
                 />
               ))}
             </ScrollView>
@@ -203,7 +204,7 @@ export default function Directory() {
           <Text style={s.resultCount}>{filteredSalons.length}</Text>
         </View>
         {filteredSalons.map((salon) => (
-          <View style={s.card} key={salon.id}>
+          <View style={[s.card, s.compactCard]} key={salon.id}>
             <View style={s.cardHeader}>
               <View style={s.salonBadge}><Text style={s.salonBadgeText}>{salon.name.slice(0, 1).toUpperCase()}</Text></View>
               <View style={s.cardIdentity}><Text style={s.cardTitle}>{salon.name}</Text><Text style={s.muted}>{salon.location || "Location not set"}</Text></View>
@@ -214,14 +215,11 @@ export default function Directory() {
               {salon.services.length} services · {salon.stylists.length}{" "}
               stylists
             </Text>
-            <View style={s.serviceTags}>{salon.services.slice(0, 3).map((service) => <Text style={s.serviceTag} key={service}>{service}</Text>)}</View>
+            <View style={s.serviceTags}>{salon.services.slice(0, 2).map((service) => <Text style={s.serviceTag} key={service}>{service}</Text>)}</View>
             <Pressable
               style={s.primary}
               onPress={() =>
-                router.push({
-                  pathname: "/(tabs)/salon/[id]",
-                  params: { id: salon.id, hairstyle },
-                })
+                openSalon(salon.id)
               }
             >
               <Text style={s.primaryText}>View salon and book</Text>
@@ -368,24 +366,24 @@ const s = StyleSheet.create({
   filterOptionText: { color: "#20352d", fontSize: 11, fontWeight: "700" },
   filterOptionTextSelected: { color: "#fff" },
   filterHint: { color: "#77817c", fontSize: 10, lineHeight: 15, marginTop: 12 },
-  sectionHeading: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", marginTop: 18, marginBottom: 10 },
+  sectionHeading: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", marginTop: 16, marginBottom: 8 },
   sectionEyebrow: { color: "#91b3a3", fontSize: 10, fontWeight: "800", letterSpacing: 1.2 },
   sectionTitle: { color: "#20352d", fontSize: 18, fontWeight: "800", marginTop: 4 },
   resultCount: { color: "#77817c", fontSize: 11, fontWeight: "700" },
   featuredRow: { gap: 12, paddingBottom: 2 },
-  featuredCard: { width: 230, overflow: "hidden", backgroundColor: "#fffdfa", borderRadius: 15, borderWidth: 1, borderColor: "#d9d6ce", paddingBottom: 13 },
-  featuredImage: { height: 108, backgroundColor: "#20352d", alignItems: "center", justifyContent: "center" },
-  offerBadge: { flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start", backgroundColor: "#c55239", borderRadius: 7, paddingHorizontal: 8, paddingVertical: 5, margin: 10 },
+  featuredCard: { width: 205, overflow: "hidden", backgroundColor: "#fffdfa", borderRadius: 14, borderWidth: 1, borderColor: "#d9d6ce", paddingBottom: 11 },
+  featuredImage: { height: 82, backgroundColor: "#20352d", alignItems: "center", justifyContent: "center" },
+  offerBadge: { flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start", backgroundColor: "#c55239", borderRadius: 7, paddingHorizontal: 7, paddingVertical: 4, margin: 8 },
   offerText: { color: "#fff", fontSize: 10, fontWeight: "800" },
-  featuredTitle: { color: "#20352d", fontSize: 16, fontWeight: "800", marginHorizontal: 11 },
-  featuredLocation: { color: "#77817c", fontSize: 12, marginHorizontal: 11, marginTop: 4 },
+  featuredTitle: { color: "#20352d", fontSize: 15, fontWeight: "800", marginHorizontal: 10 },
+  featuredLocation: { color: "#77817c", fontSize: 11, marginHorizontal: 10, marginTop: 3 },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
-  salonBadge: { width: 48, height: 48, borderRadius: 13, backgroundColor: "#dcece5", alignItems: "center", justifyContent: "center" },
-  salonBadgeText: { color: "#20352d", fontSize: 21, fontWeight: "800" },
+  salonBadge: { width: 42, height: 42, borderRadius: 11, backgroundColor: "#dcece5", alignItems: "center", justifyContent: "center" },
+  salonBadgeText: { color: "#20352d", fontSize: 18, fontWeight: "800" },
   cardIdentity: { flex: 1 },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 12 },
-  serviceTags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 10 },
-  serviceTag: { color: "#4c7567", backgroundColor: "#e5f1eb", borderRadius: 7, paddingHorizontal: 8, paddingVertical: 5, fontSize: 10, fontWeight: "700" },
+  metaRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 9 },
+  serviceTags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 },
+  serviceTag: { color: "#4c7567", backgroundColor: "#e5f1eb", borderRadius: 7, paddingHorizontal: 7, paddingVertical: 4, fontSize: 9, fontWeight: "700" },
   clearButton: { alignSelf: "flex-start", backgroundColor: "#e5f1eb", borderRadius: 9, paddingHorizontal: 12, paddingVertical: 9, marginTop: 14 },
   clearButtonText: { color: "#20352d", fontWeight: "800", fontSize: 12 },
   card: {
@@ -393,17 +391,19 @@ const s = StyleSheet.create({
     borderColor: "#d9d6ce",
     borderWidth: 1,
     borderRadius: 14,
-    padding: 18,
-    marginTop: 12,
+    padding: 14,
+    marginTop: 8,
   },
+  compactCard: { marginTop: 8 },
   cardTitle: { color: "#20352d", fontSize: 18, fontWeight: "700" },
   muted: { color: "#77817c", marginTop: 6 },
   primary: {
     backgroundColor: "#c55239",
     borderRadius: 8,
-    padding: 12,
+    padding: 10,
     alignItems: "center",
-    marginTop: 14,
+    marginTop: 12,
+    minHeight: 44,
   },
   primaryText: { color: "#fff", fontWeight: "800" },
   empty: {
