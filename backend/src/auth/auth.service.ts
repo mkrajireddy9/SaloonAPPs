@@ -344,8 +344,11 @@ export class AuthService implements OnModuleInit {
   }
 
   async googleLogin(dto: GoogleLoginDto) {
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    if (!clientId)
+    const clientIds = (process.env.GOOGLE_CLIENT_IDS || process.env.GOOGLE_CLIENT_ID || "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+    if (!clientIds.length)
       throw new UnauthorizedException("Google sign-in is not configured yet");
     let payload: {
       aud?: string;
@@ -368,7 +371,7 @@ export class AuthService implements OnModuleInit {
     }
     const expiresAt = Number(payload.exp);
     if (
-      payload.aud !== clientId ||
+      !clientIds.includes(payload.aud || "") ||
       !["accounts.google.com", "https://accounts.google.com"].includes(
         payload.iss || "",
       ) ||
@@ -381,15 +384,7 @@ export class AuthService implements OnModuleInit {
         "Google sign-in could not be verified. Please try again.",
       );
     const email = payload.email.toLowerCase().trim();
-    const adminEmails = (process.env.ADMIN_GOOGLE_EMAILS || "")
-      .split(",")
-      .map((value) => value.trim().toLowerCase())
-      .filter(Boolean);
     const requestedAdmin = dto.role === UserRole.ADMIN;
-    if (requestedAdmin && !adminEmails.includes(email))
-      throw new UnauthorizedException(
-        "This Google email is not approved for admin access.",
-      );
     if (requestedAdmin && !dto.tenantCode?.trim())
       throw new UnauthorizedException(
         "A salon tenant code is required for admin registration",
@@ -416,11 +411,7 @@ export class AuthService implements OnModuleInit {
       user &&
       dto.role &&
       user.role !== dto.role &&
-      !(
-        dto.role === UserRole.ADMIN &&
-        adminEmails.includes(email) &&
-        user.role === UserRole.USER
-      )
+      !(dto.role === UserRole.ADMIN && user.role === UserRole.USER)
     )
       throw new UnauthorizedException(
         `This Google account is registered as ${user.role === UserRole.ADMIN ? "admin" : "guest"}. Select the matching workspace.`,

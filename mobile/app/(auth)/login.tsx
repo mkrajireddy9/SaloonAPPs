@@ -1,5 +1,6 @@
 import { Link, router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
+import { useIdTokenAuthRequest } from "expo-auth-session/providers/google";
 import {
   ActivityIndicator,
   Animated,
@@ -35,6 +36,13 @@ export default function Login() {
   const [tenantCode, setTenantCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const googleClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || "not-configured.apps.googleusercontent.com";
+  const googleConfigured = Boolean(process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID);
+  const [googleRequest, googleResponse, promptGoogleAsync] = useIdTokenAuthRequest({
+    clientId: googleClientId,
+    selectAccount: true,
+    scopes: ["openid", "profile", "email"],
+  });
   const [locationPrompt, setLocationPrompt] = useState<{
     title: string;
     message: string;
@@ -68,6 +76,21 @@ export default function Login() {
       useNativeDriver: true,
     }).start();
   }, [otpSent, otpTransition]);
+  useEffect(() => {
+    if (!googleResponse) return;
+    if (googleResponse.type !== "success") {
+      setBusy(false);
+      return;
+    }
+    const response = googleResponse as any;
+    const credential = response.params?.id_token || response.authentication?.idToken;
+    if (!credential) {
+      setBusy(false);
+      showToast({ type: "error", message: "Google sign-in did not return a valid account token." });
+      return;
+    }
+    void completeGoogleLogin(credential);
+  }, [googleResponse]);
   const selectRole = (nextRole: "user" | "admin") => {
     setRole(nextRole);
     setOtpSent(false);
@@ -110,6 +133,47 @@ export default function Login() {
         message: "Please turn on location services in Settings so Halo can show nearby salons.",
         action: "settings",
       });
+    }
+  };
+  const completeGoogleLogin = async (credential: string) => {
+    try {
+      const response = await fetch(`${API_URL}/auth/google`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ credential, role: "admin", tenantCode: tenantCode.trim() }),
+      });
+      const body = await response.json();
+      if (!response.ok)
+        throw new Error(Array.isArray(body.message) ? body.message.join(" ") : body.message || "Unable to sign in with Google.");
+      if (body.pendingApproval) {
+        showToast({ type: "info", message: body.message || "Your admin access is waiting for approval." });
+        return;
+      }
+      await setSession(body.accessToken, body.refreshToken);
+      router.replace("/admin");
+    } catch (e) {
+      showToast({ type: "error", message: e instanceof Error ? e.message : "Unable to sign in with Google." });
+    } finally {
+      setBusy(false);
+    }
+  };
+  const startGoogleSignIn = async () => {
+    if (!tenantCode.trim()) {
+      setSubmitted(true);
+      showToast({ type: "warning", message: "Enter the salon tenant code to continue as admin." });
+      return;
+    }
+    if (!googleConfigured || !googleRequest) {
+      showToast({ type: "error", message: "Google sign-in is not configured for this app yet." });
+      return;
+    }
+    setBusy(true);
+    try {
+      const result = await promptGoogleAsync();
+      if (result.type !== "success") setBusy(false);
+    } catch (e) {
+      setBusy(false);
+      showToast({ type: "error", message: e instanceof Error ? e.message : "Unable to open Google sign-in." });
     }
   };
   const submit = async () => {
@@ -218,8 +282,8 @@ export default function Login() {
               />
             </>
           )}
-          <Text style={s.label}>{role === "user" ? "Mobile number" : "Email address"}</Text>
-          {role === "user" ? (
+          {role === "user" ? <>
+            <Text style={s.label}>Mobile number</Text>
             <View style={[s.phoneRow, submitted && !/^\d{10}$/.test(phone) && s.inputError]}>
               <Text style={s.countryCode}>+91</Text>
               <TextInput
@@ -232,16 +296,7 @@ export default function Login() {
                 style={s.phoneInput}
               />
             </View>
-          ) : (
-            <TextInput
-              value={email}
-              onChangeText={setEmail}
-              placeholder="Enter your admin email address"
-              autoCapitalize="none"
-              keyboardType="email-address"
-              style={[s.input, submitted && !email.trim() && s.inputError]}
-            />
-          )}
+          </> : null}
           {role === "user" && otpSent ? (
             <Animated.View style={{ opacity: otpTransition, transform: [{ translateY: otpTransition.interpolate({ inputRange: [0, 1], outputRange: [-8, 0] }) }] }}>
               <Text style={s.label}>Login code</Text>
@@ -258,46 +313,24 @@ export default function Login() {
                 <Text style={s.link}>Use a different number or resend code</Text>
               </Pressable>
             </Animated.View>
-          ) : role !== "user" ? (
-            <>
-              <Text style={s.label}>Password</Text>
-              <View style={s.passwordRow}>
-                <TextInput
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Enter your password"
-                  secureTextEntry={!showPassword}
-                  style={[s.input, s.passwordInput, submitted && !password && s.inputError]}
-                />
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={showPassword ? "Hide password" : "Show password"}
-                  onPress={() => setShowPassword((value) => !value)}
-                  style={s.passwordToggle}
-                >
-                  <Text style={s.passwordToggleText}>{showPassword ? "Hide" : "Show"}</Text>
-                </Pressable>
-              </View>
-            </>
           ) : null}
-          <AnimatedPressable
+          {role === "user" ? <AnimatedPressable
             disabled={busy}
             style={[s.primary, { transform: [{ scale: buttonScale }] }]}
             onPressIn={() => Animated.spring(buttonScale, { toValue: 0.97, useNativeDriver: true, speed: 24, bounciness: 4 }).start()}
             onPressOut={() => Animated.spring(buttonScale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 5 }).start()}
             onPress={() => void submit()}
           >
-            {busy ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={s.primaryText}>
-                {role === "user" ? (otpSent ? "Verify code" : "Send login code") : "Continue as admin"}
-              </Text>
-            )}
-          </AnimatedPressable>
-          {role !== "user" ? <Link href="/(auth)/forgot-password" style={s.link}>
-            Forgot password?
-          </Link> : null}
+            {busy ? <ActivityIndicator color="#fff" /> : <Text style={s.primaryText}>{otpSent ? "Verify code" : "Send login code"}</Text>}
+          </AnimatedPressable> : (
+            <>
+              <Text style={s.label}>Admin authentication</Text>
+              <Text style={s.copy}>Continue with any verified Google account. Admin access will be reviewed for this salon before it is activated.</Text>
+              <Pressable disabled={busy || !googleConfigured} style={s.google} onPress={() => void startGoogleSignIn()}>
+                {busy ? <ActivityIndicator color="#20352d" /> : <><Ionicons name="logo-google" size={18} color="#4285F4" /><Text style={s.googleText}>{googleConfigured ? "Continue with Google" : "Google sign-in needs setup"}</Text></>}
+              </Pressable>
+            </>
+          )}
           {role === "user" ? (
             <>
               <Text style={s.link}>New customers can sign in with their mobile number.</Text>
