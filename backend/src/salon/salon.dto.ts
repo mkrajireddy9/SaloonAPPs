@@ -209,6 +209,11 @@ export class SalonBranchDto {
 }
 
 export class PriceListItemDto {
+  @ApiPropertyOptional({ example: "Hair" })
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  category?: string;
   @ApiProperty({ example: "Signature cut" })
   @IsString()
   @MinLength(2)

@@ -20,6 +20,7 @@ export class Salon {
   @Column({ type: "jsonb", default: "[]" }) services!: string[];
   @Column({ type: "jsonb", default: "[]" }) stylists!: string[];
   @Column({ type: "jsonb", default: "[]" }) serviceDetails!: {
+    category?: string;
     name: string;
     durationMinutes: number;
     price: number;

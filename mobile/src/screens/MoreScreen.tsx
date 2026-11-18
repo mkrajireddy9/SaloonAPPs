@@ -794,7 +794,7 @@ function AdminPriceView({ initial }: { initial: Price[] }) {
   const updateItem = (index: number, values: any) =>
     setItems((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...values } : item));
   const addItem = () => {
-    setItems((current) => [...current, { name: "", price: "", durationMinutes: "60", active: true }]);
+    setItems((current) => [...current, { category: "General", name: "", price: "", durationMinutes: "60", active: true }]);
     setEditing(items.length);
     setMessage("");
   };
@@ -822,6 +822,7 @@ function AdminPriceView({ initial }: { initial: Price[] }) {
             <View style={styles.catalogItemHeader}>
               <View style={styles.catalogItemCopy}>
                 <Text style={styles.catalogItemTitle}>{item.name || "New service"}</Text>
+                <Text style={styles.catalogItemMeta}>{item.category || "General"}</Text>
                 <Text style={styles.catalogItemMeta}>₹{Number(item.price) || 0} · {item.durationMinutes || 60} minutes</Text>
               </View>
               <Pressable style={styles.editButton} onPress={() => setEditing(editing === index ? null : index)}>
@@ -831,6 +832,8 @@ function AdminPriceView({ initial }: { initial: Price[] }) {
             </View>
             {editing === index ? (
               <View style={styles.catalogEditor}>
+                <Text style={styles.fieldLabel}>SERVICE CATEGORY</Text>
+                <TextInput value={item.category || ""} onChangeText={(value) => updateItem(index, { category: value })} placeholder="Enter category, e.g. Hair, Nails, Skin" style={styles.input} placeholderTextColor="#9aa19c" />
                 <Text style={styles.fieldLabel}>SERVICE NAME</Text>
                 <TextInput value={item.name} onChangeText={(value) => updateItem(index, { name: value })} placeholder="Enter service name, e.g. Haircut" style={styles.input} placeholderTextColor="#9aa19c" />
                 <View style={styles.twoInputs}>
@@ -1883,12 +1886,18 @@ function PreferencesView({ initial }: { initial: any }) {
 }
 function BookingView({ salons }: { salons: any[] }) {
   const salon = salons[0];
-  const services = salon?.services || [];
+  const serviceDetails = salon?.serviceDetails || [];
+  const categories = Array.from(new Set((serviceDetails.length ? serviceDetails.map((item: any) => item.category || "General") : ["General"]).filter(Boolean)));
   const stylists = salon?.stylists || [];
+  const [serviceCategory, setServiceCategory] = useState(categories[0] || "General");
+  const services = serviceDetails.length ? serviceDetails.filter((item: any) => (item.category || "General") === serviceCategory).map((item: any) => item.name) : (salon?.services || []);
   const [service, setService] = useState(services[0] || "Haircut");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("10:00 AM");
   const [stylist, setStylist] = useState(stylists[0] || "");
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [serviceOpen, setServiceOpen] = useState(false);
+  const [stylistOpen, setStylistOpen] = useState(false);
   const [notes, setNotes] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1911,6 +1920,9 @@ function BookingView({ salons }: { salons: any[] }) {
           notes,
         }),
       });
+      setDate("");
+      setTime("");
+      setNotes("");
       setMessage("Appointment request sent to the salon.");
     } catch (e) {
       setMessage(
@@ -1930,18 +1942,24 @@ function BookingView({ salons }: { salons: any[] }) {
           <Text style={styles.muted}>
             {salon.name} · {salon.location}
           </Text>
+          <Text style={styles.label}>Service category</Text>
+          <Pressable style={styles.dropdown} onPress={() => { setCategoryOpen((open) => !open); setServiceOpen(false); setStylistOpen(false); }}>
+            <Text style={styles.cardTextDark}>{serviceCategory || "Select a category"}</Text>
+            <Ionicons name={categoryOpen ? "chevron-up" : "chevron-down"} size={18} color="#c55239" />
+          </Pressable>
+          {categoryOpen ? <View style={styles.dropdownMenu}>{categories.map((item: string) => <Pressable key={item} style={styles.dropdownOption} onPress={() => { const next = serviceDetails.filter((detail: any) => (detail.category || "General") === item).map((detail: any) => detail.name); setServiceCategory(item); setService(next[0] || salon.services?.[0] || ""); setCategoryOpen(false); }}><Text style={styles.cardTextDark}>{item}</Text></Pressable>)}</View> : null}
           <Text style={styles.label}>Service</Text>
-          <View style={styles.choiceRow}>
-            {services.map((item: string) => (
-              <Pressable
-                key={item}
-                style={[styles.choice, service === item && styles.choiceActive]}
-                onPress={() => setService(item)}
-              >
-                <Text>{item}</Text>
-              </Pressable>
-            ))}
-          </View>
+          <Pressable style={styles.dropdown} onPress={() => { setServiceOpen((open) => !open); setCategoryOpen(false); setStylistOpen(false); }}>
+            <Text style={styles.cardTextDark}>{service || "Select a service"}</Text>
+            <Ionicons name={serviceOpen ? "chevron-up" : "chevron-down"} size={18} color="#c55239" />
+          </Pressable>
+          {serviceOpen ? <View style={styles.dropdownMenu}>{services.map((item: string) => <Pressable key={item} style={styles.dropdownOption} onPress={() => { setService(item); setServiceOpen(false); }}><Text style={styles.cardTextDark}>{item}</Text></Pressable>)}</View> : null}
+          <Text style={styles.label}>Preferred stylist</Text>
+          <Pressable style={styles.dropdown} onPress={() => { setStylistOpen((open) => !open); setServiceOpen(false); setCategoryOpen(false); }}>
+            <Text style={styles.cardTextDark}>{stylist || "Select a stylist"}</Text>
+            <Ionicons name={stylistOpen ? "chevron-up" : "chevron-down"} size={18} color="#c55239" />
+          </Pressable>
+          {stylistOpen ? <View style={styles.dropdownMenu}>{stylists.map((item: string) => <Pressable key={item} style={styles.dropdownOption} onPress={() => { setStylist(item); setStylistOpen(false); }}><Text style={styles.cardTextDark}>{item}</Text></Pressable>)}</View> : null}
           <Text style={styles.label}>Date</Text>
           <TextInput
             value={date}
@@ -2743,6 +2761,9 @@ const styles = StyleSheet.create({
   historyRow: { flexDirection: "row", alignItems: "center", marginBottom: 5 },
   historyText: { color: "#60736a", fontSize: 11, marginLeft: 6, flexShrink: 1 },
   choiceRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  dropdown: { minHeight: 50, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#fffdfa", borderColor: "#d9d6ce", borderWidth: 1, borderRadius: 9, paddingHorizontal: 13 },
+  dropdownMenu: { backgroundColor: "#fffdfa", borderColor: "#d9d6ce", borderWidth: 1, borderRadius: 9, marginTop: 6, overflow: "hidden" },
+  dropdownOption: { paddingHorizontal: 13, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: "#eeeae2" },
   choice: {
     flexDirection: "row",
     alignItems: "center",

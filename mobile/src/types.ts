@@ -6,6 +6,7 @@ export type Salon = {
   services?: string[];
   stylists?: string[];
   serviceDetails?: Array<{
+    category?: string;
     name: string;
     price: number;
     durationMinutes: number;

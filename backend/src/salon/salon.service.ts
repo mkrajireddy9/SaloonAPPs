@@ -161,6 +161,7 @@ export class SalonService {
           branches,
           services: salon.services,
           stylists: salon.stylists,
+          serviceDetails: salon.serviceDetails,
           distanceKm: branches.reduce<number | null>(
             (nearest, branch) =>
               branch.distanceKm === null
