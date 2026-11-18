@@ -80,7 +80,7 @@ export default function Payments() {
           <TextInput
             value={appointmentId}
             onChangeText={setAppointmentId}
-            placeholder="Appointment ID"
+            placeholder="Enter your appointment ID"
             placeholderTextColor="#9aa19c"
             style={s.input}
           />

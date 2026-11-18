@@ -48,7 +48,7 @@ export default function ForgotPassword() {
         <TextInput
           value={email}
           onChangeText={setEmail}
-          placeholder="you@example.com"
+          placeholder="Enter your email address"
           autoCapitalize="none"
           keyboardType="email-address"
           style={[s.input, submitted && !email.trim() && s.inputError]}

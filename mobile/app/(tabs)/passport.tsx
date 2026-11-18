@@ -172,35 +172,35 @@ export default function Passport() {
         <TextInput
           value={guestName}
           onChangeText={setGuestName}
-          placeholder="Your name"
+          placeholder="Enter your name"
           style={s.input}
         />
         <Text style={s.label}>Hair texture</Text>
         <TextInput
           value={texture}
           onChangeText={setTexture}
-          placeholder="e.g. Wavy, curly, straight"
+          placeholder="Describe your hair texture"
           style={s.input}
         />
         <Text style={s.label}>Hair length</Text>
         <TextInput
           value={length}
           onChangeText={setLength}
-          placeholder="e.g. Shoulder length"
+          placeholder="Describe your hair length"
           style={s.input}
         />
         <Text style={s.label}>Preferred stylist</Text>
         <TextInput
           value={preferredStylist}
           onChangeText={setPreferredStylist}
-          placeholder="Stylist name"
+          placeholder="Enter your preferred stylist"
           style={s.input}
         />
         <Text style={s.label}>Stylist notes</Text>
         <TextInput
           value={notes}
           onChangeText={setNotes}
-          placeholder="Add anything your stylist should know"
+          placeholder="Add notes for your stylist"
           multiline
           style={[s.input, s.multiline]}
         />

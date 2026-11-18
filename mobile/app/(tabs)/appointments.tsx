@@ -114,13 +114,13 @@ function AppointmentCard({
               value={date}
               onChangeText={setDate}
               style={s.smallInput}
-              placeholder="YYYY-MM-DD"
+              placeholder="Enter date (YYYY-MM-DD)"
             />
             <TextInput
               value={time}
               onChangeText={setTime}
               style={s.smallInput}
-              placeholder="Time"
+              placeholder="Enter preferred time"
             />
           </View>
           <View style={s.row}>
@@ -433,7 +433,7 @@ export default function Appointments() {
                 </Pressable>
               ))}
             </View>
-            <TextInput value={date} onChangeText={setDate} style={s.input} placeholder="YYYY-MM-DD" />
+        <TextInput value={date} onChangeText={setDate} style={s.input} placeholder="Enter date (YYYY-MM-DD)" />
             <Text style={s.label}>Available time</Text>
             <View style={s.timeChoices}>
               {slots.map((item) => (
@@ -451,7 +451,7 @@ export default function Appointments() {
                 setPhoneError("");
               }}
               style={[s.input, phoneError ? s.inputError : null]}
-              placeholder="+91 98450 12345"
+              placeholder="Enter guest mobile number"
               keyboardType="phone-pad"
             />
             {phoneError ? <Text style={s.error}>{phoneError}</Text> : null}

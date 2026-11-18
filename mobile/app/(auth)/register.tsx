@@ -117,7 +117,7 @@ export default function Register() {
           <TextInput
             value={name}
             onChangeText={setName}
-            placeholder="Your name"
+            placeholder="Enter your full name"
             style={[s.input, submitted && !name.trim() && s.inputError]}
           />
           {role === "admin" ? (
@@ -126,14 +126,14 @@ export default function Register() {
               <TextInput
                 value={salonName}
                 onChangeText={setSalonName}
-                placeholder="Your salon name"
+                placeholder="Enter your salon name"
                 style={[s.input, submitted && !salonName.trim() && s.inputError]}
               />
               <Text style={s.label}>Salon location</Text>
               <TextInput
                 value={salonLocation}
                 onChangeText={setSalonLocation}
-                placeholder="City or address"
+                placeholder="Enter your salon location"
                 style={[s.input, submitted && !salonLocation.trim() && s.inputError]}
               />
             </>
@@ -142,7 +142,7 @@ export default function Register() {
           <TextInput
             value={email}
             onChangeText={setEmail}
-            placeholder="you@example.com"
+            placeholder="Enter your email address"
             autoCapitalize="none"
             keyboardType="email-address"
             style={[s.input, submitted && !email.trim() && s.inputError]}
@@ -152,7 +152,7 @@ export default function Register() {
             <TextInput
               value={password}
               onChangeText={setPassword}
-              placeholder="At least 8 characters"
+              placeholder="Create a password (8+ characters)"
               secureTextEntry={!showPassword}
               style={[s.input, s.passwordInput, submitted && password.length < 8 && s.inputError]}
             />

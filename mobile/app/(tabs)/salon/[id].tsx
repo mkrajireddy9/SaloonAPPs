@@ -240,7 +240,7 @@ export default function SalonDetails() {
         <TextInput
           value={date}
           onChangeText={setDate}
-          placeholder="2026-10-20"
+          placeholder="Enter date (YYYY-MM-DD)"
           style={s.input}
         />
         <Text style={s.label}>Available time</Text>
@@ -262,7 +262,7 @@ export default function SalonDetails() {
         <TextInput
           value={notes}
           onChangeText={setNotes}
-          placeholder="Tell us about your hair goals"
+          placeholder="Tell us about your hair goals or preferences"
           multiline
           style={[s.input, s.multiline]}
         />

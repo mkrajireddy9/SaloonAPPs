@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
+  AppState,
   Animated,
   Easing,
   Pressable,
@@ -14,6 +15,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { api, getUserLocation } from "../../src/api";
+import { setUserLocation } from "../../src/api";
+import * as Location from "expo-location";
 import { AccountDrawer } from "../../src/components/AccountDrawer";
 
 type Salon = {
@@ -52,7 +55,21 @@ export default function Directory() {
   const load = async () => {
     setLoading(true);
     try {
-      const location = await getUserLocation();
+      let location = await getUserLocation();
+      if (!location) {
+        const permission = await Location.getForegroundPermissionsAsync();
+        const servicesEnabled = await Location.hasServicesEnabledAsync();
+        if (servicesEnabled && permission.status === Location.PermissionStatus.GRANTED) {
+          const position = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          location = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          };
+          await setUserLocation(location);
+        }
+      }
       const query = location
         ? `?latitude=${encodeURIComponent(location.latitude)}&longitude=${encodeURIComponent(location.longitude)}&radiusKm=25`
         : "";
@@ -69,6 +86,12 @@ export default function Directory() {
     api<{ name?: string; email?: string }>("/customers/me")
       .then(setProfile)
       .catch(() => setProfile(null));
+  }, []);
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") void load();
+    });
+    return () => subscription.remove();
   }, []);
   const categories = [
     "All",
@@ -132,7 +155,7 @@ export default function Directory() {
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="Search salons, services, or locations"
+            placeholder="Search by salon, service, or location"
             placeholderTextColor="#9ba39e"
             style={s.searchInput}
             returnKeyType="search"

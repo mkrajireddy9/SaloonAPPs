@@ -545,20 +545,20 @@ function AppContent() {
               label="Salon tenant code"
               value={tenantCode}
               onChangeText={setTenantCode}
-              placeholder="salon-xxxxxxxx"
+              placeholder="Enter the salon tenant code"
             />
           )}
           <Field
             label="Email address"
             value={email}
             onChangeText={setEmail}
-            placeholder="Enter your email"
+              placeholder="Enter your email address"
           />
           <Field
             label="Password"
             value={password}
             onChangeText={setPassword}
-            placeholder="Enter your password"
+              placeholder="Enter your password"
             secureTextEntry
           />
           <Pressable style={s.button} onPress={login} disabled={busy}>

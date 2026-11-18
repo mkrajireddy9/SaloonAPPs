@@ -221,7 +221,7 @@ export class AuthService implements OnModuleInit {
 
   async requestUserOtp(dto: RequestUserOtpDto) {
     const phone = this.normalizePhone(dto.phone);
-    if (!this.limited(`user-otp-request:${phone}`, 5))
+    if (!this.fixedOtpEnabled() && !this.limited(`user-otp-request:${phone}`, 5))
       throw new UnauthorizedException("Too many OTP requests. Try again later.");
     await this.twilioStartVerification(phone);
     return { message: "If the number is eligible, a login code has been sent." };

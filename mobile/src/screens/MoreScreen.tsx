@@ -616,16 +616,16 @@ function AdminSalonView({ salon }: { salon: any }) {
         <View style={styles.activePill}><View style={styles.activeDot} /><Text style={styles.activePillText}>Live setup</Text></View>
       </View>
       <Text style={styles.formSectionTitle}>Salon details</Text>
-      <TextInput value={name} onChangeText={setName} placeholder="Salon name" style={styles.input} placeholderTextColor="#9aa19c" />
-      <TextInput value={location} onChangeText={setLocation} placeholder="Main location" style={styles.input} placeholderTextColor="#9aa19c" />
+      <TextInput value={name} onChangeText={setName} placeholder="Enter salon name" style={styles.input} placeholderTextColor="#9aa19c" />
+      <TextInput value={location} onChangeText={setLocation} placeholder="Enter main salon location" style={styles.input} placeholderTextColor="#9aa19c" />
       <Text style={styles.formSectionLabel}>OPENING HOURS</Text>
       <View style={styles.twoInputs}>
-        <TextInput value={opening} onChangeText={setOpening} placeholder="Opening HH:MM" style={[styles.input, styles.halfInput]} placeholderTextColor="#9aa19c" />
-        <TextInput value={closing} onChangeText={setClosing} placeholder="Closing HH:MM" style={[styles.input, styles.halfInput]} placeholderTextColor="#9aa19c" />
+        <TextInput value={opening} onChangeText={setOpening} placeholder="Enter opening time (HH:MM)" style={[styles.input, styles.halfInput]} placeholderTextColor="#9aa19c" />
+        <TextInput value={closing} onChangeText={setClosing} placeholder="Enter closing time (HH:MM)" style={[styles.input, styles.halfInput]} placeholderTextColor="#9aa19c" />
       </View>
-      <TextInput value={services} onChangeText={setServices} placeholder="Services separated by commas" style={styles.input} placeholderTextColor="#9aa19c" />
-      <TextInput value={stylists} onChangeText={setStylists} placeholder="Stylists separated by commas" style={styles.input} placeholderTextColor="#9aa19c" />
-      <TextInput value={closedDays} onChangeText={setClosedDays} placeholder="Closed days, e.g. Sunday" style={styles.input} placeholderTextColor="#9aa19c" />
+      <TextInput value={services} onChangeText={setServices} placeholder="Enter services separated by commas" style={styles.input} placeholderTextColor="#9aa19c" />
+      <TextInput value={stylists} onChangeText={setStylists} placeholder="Enter stylist names separated by commas" style={styles.input} placeholderTextColor="#9aa19c" />
+      <TextInput value={closedDays} onChangeText={setClosedDays} placeholder="Enter closed days, e.g. Sunday" style={styles.input} placeholderTextColor="#9aa19c" />
       <Text style={styles.subheading}>Stylist profiles and schedules</Text>
       {stylists.split(",").map((value: string) => value.trim()).filter(Boolean).map((stylist: string) => {
         const profile = stylistProfiles[stylist] || { bio: "", imageUrl: "" };
@@ -636,14 +636,14 @@ function AdminSalonView({ salon }: { salon: any }) {
             <TextInput
               value={profile.bio || ""}
               onChangeText={(value) => setStylistProfiles((current: any) => ({ ...current, [stylist]: { ...profile, bio: value } }))}
-              placeholder="Stylist bio"
+              placeholder="Enter stylist bio"
               style={styles.input}
               placeholderTextColor="#9aa19c"
             />
             <TextInput
               value={profile.imageUrl || ""}
               onChangeText={(value) => setStylistProfiles((current: any) => ({ ...current, [stylist]: { ...profile, imageUrl: value } }))}
-              placeholder="Profile image URL"
+              placeholder="Enter profile image URL"
               style={styles.input}
               placeholderTextColor="#9aa19c"
               autoCapitalize="none"
@@ -651,14 +651,14 @@ function AdminSalonView({ salon }: { salon: any }) {
             <TextInput
               value={(schedule.workingDays || []).join(", ")}
               onChangeText={(value) => setStylistSchedules((current: any) => ({ ...current, [stylist]: { ...schedule, workingDays: value.split(",").map((day: string) => day.trim()).filter(Boolean) } }))}
-              placeholder="Working days, e.g. Monday, Tuesday"
+              placeholder="Enter working days, e.g. Monday, Tuesday"
               style={styles.input}
               placeholderTextColor="#9aa19c"
             />
             <TextInput
               value={(schedule.leaveDates || []).join(", ")}
               onChangeText={(value) => setStylistSchedules((current: any) => ({ ...current, [stylist]: { ...schedule, leaveDates: value.split(",").map((day: string) => day.trim()).filter(Boolean) } }))}
-              placeholder="Leave dates, e.g. 2026-11-20"
+              placeholder="Enter leave dates, e.g. 2026-11-20"
               style={styles.input}
               placeholderTextColor="#9aa19c"
             />
@@ -678,12 +678,12 @@ function AdminSalonView({ salon }: { salon: any }) {
               </Text>
             </Pressable>
           </View>
-          <TextInput value={branch.name} onChangeText={(value) => updateBranch(branch.id, { name: value })} placeholder="Branch name" style={styles.input} placeholderTextColor="#9aa19c" />
-          <TextInput value={branch.location} onChangeText={(value) => updateBranch(branch.id, { location: value })} placeholder="Branch location" style={styles.input} placeholderTextColor="#9aa19c" />
-          <TextInput value={branch.contact || ""} onChangeText={(value) => updateBranch(branch.id, { contact: value })} placeholder="Contact phone or email" style={styles.input} placeholderTextColor="#9aa19c" />
+          <TextInput value={branch.name} onChangeText={(value) => updateBranch(branch.id, { name: value })} placeholder="Enter branch name" style={styles.input} placeholderTextColor="#9aa19c" />
+          <TextInput value={branch.location} onChangeText={(value) => updateBranch(branch.id, { location: value })} placeholder="Enter branch location" style={styles.input} placeholderTextColor="#9aa19c" />
+          <TextInput value={branch.contact || ""} onChangeText={(value) => updateBranch(branch.id, { contact: value })} placeholder="Enter branch phone or email" style={styles.input} placeholderTextColor="#9aa19c" />
           <View style={styles.twoInputs}>
-            <TextInput value={branch.openingHours?.open || opening} onChangeText={(value) => updateBranch(branch.id, { openingHours: { ...branch.openingHours, open: value } })} placeholder="Opening" style={[styles.input, styles.halfInput]} placeholderTextColor="#9aa19c" />
-            <TextInput value={branch.openingHours?.close || closing} onChangeText={(value) => updateBranch(branch.id, { openingHours: { ...branch.openingHours, close: value } })} placeholder="Closing" style={[styles.input, styles.halfInput]} placeholderTextColor="#9aa19c" />
+            <TextInput value={branch.openingHours?.open || opening} onChangeText={(value) => updateBranch(branch.id, { openingHours: { ...branch.openingHours, open: value } })} placeholder="Enter opening time" style={[styles.input, styles.halfInput]} placeholderTextColor="#9aa19c" />
+            <TextInput value={branch.openingHours?.close || closing} onChangeText={(value) => updateBranch(branch.id, { openingHours: { ...branch.openingHours, close: value } })} placeholder="Enter closing time" style={[styles.input, styles.halfInput]} placeholderTextColor="#9aa19c" />
           </View>
           <TextInput
             value={(branch.closedDays || []).join(", ")}
@@ -692,13 +692,13 @@ function AdminSalonView({ salon }: { salon: any }) {
                 closedDays: value.split(",").map((day: string) => day.trim()).filter(Boolean),
               })
             }
-            placeholder="Closed days, e.g. Sunday"
+            placeholder="Enter closed days, e.g. Sunday"
             style={styles.input}
             placeholderTextColor="#9aa19c"
           />
           <View style={styles.twoInputs}>
-            <TextInput value={branch.latitude == null ? "" : String(branch.latitude)} onChangeText={(value) => updateBranch(branch.id, { latitude: value })} placeholder="Latitude" keyboardType="numeric" style={[styles.input, styles.halfInput]} placeholderTextColor="#9aa19c" />
-            <TextInput value={branch.longitude == null ? "" : String(branch.longitude)} onChangeText={(value) => updateBranch(branch.id, { longitude: value })} placeholder="Longitude" keyboardType="numeric" style={[styles.input, styles.halfInput]} placeholderTextColor="#9aa19c" />
+          <TextInput value={branch.latitude == null ? "" : String(branch.latitude)} onChangeText={(value) => updateBranch(branch.id, { latitude: value })} placeholder="Enter latitude" keyboardType="numeric" style={[styles.input, styles.halfInput]} placeholderTextColor="#9aa19c" />
+          <TextInput value={branch.longitude == null ? "" : String(branch.longitude)} onChangeText={(value) => updateBranch(branch.id, { longitude: value })} placeholder="Enter longitude" keyboardType="numeric" style={[styles.input, styles.halfInput]} placeholderTextColor="#9aa19c" />
           </View>
         </View>
       ))}
@@ -757,10 +757,10 @@ function AdminPriceView({ initial }: { initial: Price[] }) {
             {editing === index ? (
               <View style={styles.catalogEditor}>
                 <Text style={styles.fieldLabel}>SERVICE NAME</Text>
-                <TextInput value={item.name} onChangeText={(value) => updateItem(index, { name: value })} placeholder="e.g. Haircut" style={styles.input} placeholderTextColor="#9aa19c" />
+                <TextInput value={item.name} onChangeText={(value) => updateItem(index, { name: value })} placeholder="Enter service name, e.g. Haircut" style={styles.input} placeholderTextColor="#9aa19c" />
                 <View style={styles.twoInputs}>
-                  <View style={styles.flexInput}><Text style={styles.fieldLabel}>PRICE (₹)</Text><TextInput value={String(item.price ?? "")} onChangeText={(value) => updateItem(index, { price: value })} keyboardType="numeric" placeholder="500" style={styles.input} placeholderTextColor="#9aa19c" /></View>
-                  <View style={styles.flexInput}><Text style={styles.fieldLabel}>DURATION (MIN)</Text><TextInput value={String(item.durationMinutes ?? "")} onChangeText={(value) => updateItem(index, { durationMinutes: value })} keyboardType="numeric" placeholder="60" style={styles.input} placeholderTextColor="#9aa19c" /></View>
+                  <View style={styles.flexInput}><Text style={styles.fieldLabel}>PRICE (₹)</Text><TextInput value={String(item.price ?? "")} onChangeText={(value) => updateItem(index, { price: value })} keyboardType="numeric" placeholder="Enter price" style={styles.input} placeholderTextColor="#9aa19c" /></View>
+                  <View style={styles.flexInput}><Text style={styles.fieldLabel}>DURATION (MIN)</Text><TextInput value={String(item.durationMinutes ?? "")} onChangeText={(value) => updateItem(index, { durationMinutes: value })} keyboardType="numeric" placeholder="Enter duration in minutes" style={styles.input} placeholderTextColor="#9aa19c" /></View>
                 </View>
                 <TextInput value={item.offerText || ""} onChangeText={(value) => updateItem(index, { offerText: value })} placeholder="Optional offer text" style={styles.input} placeholderTextColor="#9aa19c" />
                 <Pressable onPress={() => { setItems((current) => current.filter((_, itemIndex) => itemIndex !== index)); setEditing(null); }}>
@@ -818,9 +818,9 @@ function AdminProductView({ initial }: { initial: Product[] }) {
             {editing === index ? (
               <View style={styles.catalogEditor}>
                 <Text style={styles.fieldLabel}>PRODUCT NAME</Text>
-                <TextInput value={item.name} onChangeText={(value) => updateItem(index, { name: value })} placeholder="e.g. L'Oreal shampoo" style={styles.input} placeholderTextColor="#9aa19c" />
+                <TextInput value={item.name} onChangeText={(value) => updateItem(index, { name: value })} placeholder="Enter product name, e.g. L'Oreal shampoo" style={styles.input} placeholderTextColor="#9aa19c" />
                 <Text style={styles.fieldLabel}>DESCRIPTION</Text>
-                <TextInput value={item.description || ""} onChangeText={(value) => updateItem(index, { description: value })} placeholder="What is this product used for?" style={[styles.input, styles.multiline]} multiline placeholderTextColor="#9aa19c" />
+                <TextInput value={item.description || ""} onChangeText={(value) => updateItem(index, { description: value })} placeholder="Describe what this product is used for" style={[styles.input, styles.multiline]} multiline placeholderTextColor="#9aa19c" />
                 <Pressable onPress={() => { setItems((current) => current.filter((_, itemIndex) => itemIndex !== index)); setEditing(null); }}><Text style={styles.deleteText}>Remove product</Text></Pressable>
               </View>
             ) : null}
@@ -1000,7 +1000,7 @@ function AdminMediaView({ salon }: { salon: any }) {
           <Text style={styles.cardTextDark}>Stylist image</Text>
         </Pressable>
       </View>
-      <TextInput value={name} onChangeText={setName} placeholder={kind === "service" ? "Service name" : "Stylist name"} style={styles.input} placeholderTextColor="#9aa19c" />
+      <TextInput value={name} onChangeText={setName} placeholder={kind === "service" ? "Enter service name" : "Enter stylist name"} style={styles.input} placeholderTextColor="#9aa19c" />
       <Text style={styles.muted}>Available: {names.join(", ") || "None configured"}</Text>
       <Pressable style={[styles.secondary, busy && styles.disabled]} disabled={busy} onPress={() => void chooseAndUpload()}>
         <Text style={styles.actionText}>{busy ? "Working..." : "Choose and upload image"}</Text>
@@ -1090,7 +1090,7 @@ function AdminBannerView({ initial }: { initial: any[] }) {
       <TextInput
         value={title}
         onChangeText={setTitle}
-        placeholder="Banner title"
+        placeholder="Enter banner title"
         style={styles.input}
         placeholderTextColor="#9aa19c"
       />
@@ -1104,7 +1104,7 @@ function AdminBannerView({ initial }: { initial: any[] }) {
       <TextInput
         value={message}
         onChangeText={setMessage}
-        placeholder="Banner message"
+        placeholder="Enter banner message"
         style={styles.input}
         placeholderTextColor="#9aa19c"
       />
@@ -1269,7 +1269,7 @@ function AdminCustomersView({ initial }: { initial: any[] }) {
       <TextInput
         value={search}
         onChangeText={setSearch}
-        placeholder="Search customers"
+        placeholder="Search customers by name, email, or phone"
         style={styles.input}
         placeholderTextColor="#9aa19c"
       />
@@ -1451,8 +1451,8 @@ function AdminConsultationsView({ initial }: { initial: any[] }) {
       <View style={styles.consultationSummary}><View style={styles.consultationSummaryIcon}><Ionicons name="person-add-outline" size={22} color="#c55239" /></View><View style={styles.consultationSummaryCopy}><Text style={styles.consultationSummaryTitle}>Start with the guest</Text><Text style={styles.consultationSummaryText}>Capture a little context before taking photos.</Text></View></View>
       <View style={styles.formCard}>
         <Text style={styles.formCardTitle}>Guest details</Text>
-        <TextInput value={guestName} onChangeText={setGuestName} placeholder="Guest name" style={styles.input} placeholderTextColor="#9aa19c" />
-        <TextInput value={phone} onChangeText={setPhone} placeholder="Phone" style={styles.input} keyboardType="phone-pad" placeholderTextColor="#9aa19c" />
+        <TextInput value={guestName} onChangeText={setGuestName} placeholder="Enter guest name" style={styles.input} placeholderTextColor="#9aa19c" />
+        <TextInput value={phone} onChangeText={setPhone} placeholder="Enter guest mobile number" style={styles.input} keyboardType="phone-pad" placeholderTextColor="#9aa19c" />
         <TextInput value={goal} onChangeText={setGoal} placeholder="What would the guest like?" style={styles.input} placeholderTextColor="#9aa19c" />
       </View>
       <Pressable style={[styles.primary, styles.consultationStartButton]} onPress={() => void create()}>
@@ -1871,7 +1871,7 @@ function BookingView({ salons }: { salons: any[] }) {
           <TextInput
             value={date}
             onChangeText={setDate}
-            placeholder="2026-10-20"
+            placeholder="Enter appointment date (YYYY-MM-DD)"
             style={styles.input}
             placeholderTextColor="#9aa19c"
           />
@@ -1879,7 +1879,7 @@ function BookingView({ salons }: { salons: any[] }) {
           <TextInput
             value={time}
             onChangeText={setTime}
-            placeholder="10:00 AM"
+            placeholder="Enter appointment time"
             style={styles.input}
             placeholderTextColor="#9aa19c"
           />
@@ -1887,7 +1887,7 @@ function BookingView({ salons }: { salons: any[] }) {
           <TextInput
             value={notes}
             onChangeText={setNotes}
-            placeholder="Tell us about your hair goals"
+            placeholder="Tell us about the guest's hair goals"
             style={[styles.input, styles.multiline]}
             multiline
             placeholderTextColor="#9aa19c"
@@ -1938,7 +1938,7 @@ function PaymentView({ payments }: { payments: Payment[] }) {
       <TextInput
         value={appointmentId}
         onChangeText={setAppointmentId}
-        placeholder="Appointment ID"
+        placeholder="Enter appointment ID"
         style={styles.input}
         placeholderTextColor="#9aa19c"
       />
@@ -2155,16 +2155,16 @@ function MembershipAdminView({ initial }: { initial: any[] }) {
     <View>
       <SectionBanner icon="ribbon-outline" eyebrow="STUDIO MEMBERSHIPS" title="Memberships" description="Create plans, assign members, and keep session balances current." />
       <Text style={styles.subheading}>Create a plan</Text>
-      <TextInput value={planName} onChangeText={setPlanName} placeholder="Plan name" style={styles.input} />
+      <TextInput value={planName} onChangeText={setPlanName} placeholder="Enter membership plan name" style={styles.input} />
       <View style={styles.twoInputs}>
-        <TextInput value={price} onChangeText={setPrice} placeholder="Price" keyboardType="numeric" style={[styles.input, styles.halfInput]} />
-        <TextInput value={sessions} onChangeText={setSessions} placeholder="Sessions" keyboardType="numeric" style={[styles.input, styles.halfInput]} />
+        <TextInput value={price} onChangeText={setPrice} placeholder="Enter price" keyboardType="numeric" style={[styles.input, styles.halfInput]} />
+        <TextInput value={sessions} onChangeText={setSessions} placeholder="Enter session count" keyboardType="numeric" style={[styles.input, styles.halfInput]} />
       </View>
       <Pressable style={styles.primary} onPress={() => void createPlan()}><Text style={styles.primaryText}>Create membership plan</Text></Pressable>
       {message ? <Text style={styles.message}>{message}</Text> : null}
       <Text style={styles.subheading}>Add membership after payment</Text>
       <Text style={styles.muted}>Use the email from the user account. The membership will appear in that user’s More screen.</Text>
-      <TextInput value={memberEmail} onChangeText={setMemberEmail} placeholder="User email address" keyboardType="email-address" autoCapitalize="none" style={styles.input} />
+      <TextInput value={memberEmail} onChangeText={setMemberEmail} placeholder="Enter member email address" keyboardType="email-address" autoCapitalize="none" style={styles.input} />
       <View style={styles.choiceRow}>
         {plans.map((plan) => (
           <Pressable key={plan.id} style={[styles.choice, selectedPlan === plan.id && styles.choiceActive]} onPress={() => setSelectedPlan(plan.id)}>
@@ -2256,7 +2256,7 @@ function PassportView({ passport }: { passport: Passport }) {
       <TextInput
         value={notes}
         onChangeText={setNotes}
-        placeholder="Stylist notes"
+        placeholder="Add notes for the stylist"
         multiline
         style={[styles.input, styles.multiline]}
         placeholderTextColor="#9aa19c"

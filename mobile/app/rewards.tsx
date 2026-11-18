@@ -67,7 +67,7 @@ export default function Rewards() {
               value={coupon}
               onChangeText={setCoupon}
               autoCapitalize="characters"
-              placeholder="Enter coupon code"
+              placeholder="Enter your coupon code"
               placeholderTextColor="#9aa19c"
               style={s.input}
             />

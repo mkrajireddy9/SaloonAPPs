@@ -299,7 +299,7 @@ function PlatformWorkspace({
       </View>
       <View style={s.filterCard}>
         <Text style={s.filterTitle}>Filter platform data</Text>
-        <TextInput value={search} onChangeText={setSearch} placeholder="Search salons" style={s.input} />
+        <TextInput value={search} onChangeText={setSearch} placeholder="Search salons by name or location" style={s.input} />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterChips}>
           {([['all', 'All'], ['active', 'Active'], ['inactive', 'Inactive'], ['bookings', 'With bookings']] as const).map(([value, label]) => (
             <Pressable key={value} style={[s.filterChip, filter === value && s.filterChipActive]} onPress={() => setFilter(value)}>
@@ -344,8 +344,8 @@ function PlatformWorkspace({
       <View style={s.card}>
         <Text style={s.sectionTitle}>Create tenant</Text>
         <Text style={s.muted}>Create a salon workspace and share its tenant code with the owner.</Text>
-        <TextInput value={name} onChangeText={setName} placeholder="Salon name" style={s.input} />
-        <TextInput value={location} onChangeText={setLocation} placeholder="Location" style={s.input} />
+        <TextInput value={name} onChangeText={setName} placeholder="Enter salon name" style={s.input} />
+        <TextInput value={location} onChangeText={setLocation} placeholder="Enter salon location" style={s.input} />
         <Action label={busy === "create" ? "Creating..." : "Create salon"} onPress={createSalon} disabled={Boolean(busy)} />
       </View>
 

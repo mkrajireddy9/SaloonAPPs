@@ -46,7 +46,7 @@ export default function ResetPassword() {
           <TextInput
             value={password}
             onChangeText={setPassword}
-            placeholder="New password"
+            placeholder="Enter your new password"
             secureTextEntry={!showPassword}
             style={[s.input, s.passwordInput, submitted && password.length < 8 && s.inputError]}
           />
