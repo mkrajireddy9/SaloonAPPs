@@ -22,6 +22,10 @@ export class CreatePaymentDto {
   @IsInt()
   @Min(0)
   discount?: number;
+  @ApiPropertyOptional({ example: "WELCOME10" })
+  @IsOptional()
+  @IsString()
+  couponCode?: string;
 }
 
 export class PaymentWebhookDto {

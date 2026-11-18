@@ -17,6 +17,7 @@ import {
   VerifyRazorpayPaymentDto,
 } from "./payment.dto";
 import { Payment } from "./payment.entity";
+import { RewardsService } from "../rewards/rewards.service";
 
 @Injectable()
 export class PaymentService {
@@ -24,6 +25,7 @@ export class PaymentService {
     @InjectRepository(Payment) private readonly payments: Repository<Payment>,
     @InjectRepository(Appointment)
     private readonly appointments: Repository<Appointment>,
+    private readonly rewards: RewardsService,
   ) {}
 
   private canAccess(
@@ -76,7 +78,7 @@ export class PaymentService {
       throw new ConflictException("Cancelled appointments cannot be paid");
     const subtotal = Math.max(0, Number(appointment.price || 0));
     // Discounts must come from the server-side appointment/catalog state, never from the client payload.
-    const discount = 0;
+    const { discount } = await this.rewards.applyCoupon(dto.couponCode || appointment.couponCode || undefined, appointment.salonId, subtotal);
     const tax = Math.round(
       (subtotal - discount) * Number(process.env.PAYMENT_TAX_RATE || 0),
     );
@@ -193,7 +195,7 @@ export class PaymentService {
       providerPaymentId = result.id || providerPaymentId;
       paymentStatus = result.status === "paid" ? "Paid" : "Pending";
     }
-    return this.payments.save(
+    const saved = await this.payments.save(
       this.payments.create({
         salonId: appointment.salonId,
         appointmentId: appointment.id,
@@ -213,6 +215,8 @@ export class PaymentService {
         refundedAt: null,
       }),
     );
+    if (paymentStatus === "Paid") await this.rewards.completeReferral(appointment.guestEmail, appointment.salonId);
+    return saved;
   }
 
   async verifyRazorpay(
@@ -237,7 +241,9 @@ export class PaymentService {
     payment.providerPaymentId = dto.razorpayPaymentId;
     payment.status = "Paid";
     payment.paidAt = new Date();
-    return this.payments.save(payment);
+    const saved = await this.payments.save(payment);
+    if (saved.status === "Paid") await this.rewards.completeReferral(saved.guestEmail, saved.salonId);
+    return saved;
   }
 
   async webhook(dto: PaymentWebhookDto, secret?: string) {
@@ -259,7 +265,9 @@ export class PaymentService {
     if (payment.status === "Paid")
       payment.paidAt = payment.paidAt || new Date();
     if (payment.status === "Refunded") payment.refundedAt = new Date();
-    return this.payments.save(payment);
+    const saved = await this.payments.save(payment);
+    if (saved.status === "Paid") await this.rewards.completeReferral(saved.guestEmail, saved.salonId);
+    return saved;
   }
 
   async refund(id: string, dto: RefundPaymentDto, salonId?: string) {

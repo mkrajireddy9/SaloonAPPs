@@ -29,6 +29,7 @@ type Salon = {
   products?: { name: string; description?: string }[];
 };
 type Review = { id: string; guestName?: string; rating: number; comment?: string; createdAt?: string };
+type Coupon = { id: string; code: string; discountType: "percent" | "fixed"; discountValue: number; maxUses?: number | null; usedCount?: number };
 export default function SalonDetails() {
   const { id, hairstyle } = useLocalSearchParams<{
     id: string;
@@ -46,6 +47,8 @@ export default function SalonDetails() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
   const branch = useMemo(
     () =>
       salon?.branches?.find((item) => item.id === branchId) ||
@@ -73,6 +76,9 @@ export default function SalonDetails() {
     api<Review[]>(`/reviews?salonId=${encodeURIComponent(id)}`)
       .then(setReviews)
       .catch(() => setReviews([]));
+    api<Coupon[]>(`/rewards/coupons/available?salonId=${encodeURIComponent(id)}`)
+      .then((result) => setCoupons(Array.isArray(result) ? result : []))
+      .catch(() => setCoupons([]));
   }, [id, hairstyle]);
   useEffect(() => {
     if (!salon || !date || !service || !branch?.id) return;
@@ -104,6 +110,7 @@ export default function SalonDetails() {
           time,
           stylist,
           notes,
+          ...(selectedCoupon ? { couponCode: selectedCoupon.code } : {}),
         }),
       });
       setMessage("Appointment request sent.");
@@ -266,6 +273,24 @@ export default function SalonDetails() {
           multiline
           style={[s.input, s.multiline]}
         />
+        <Text style={s.label}>Available coupons</Text>
+        {coupons.length ? (
+          <View style={s.couponChoices}>
+            <Pressable style={[s.couponChoice, !selectedCoupon && s.selected]} onPress={() => setSelectedCoupon(null)}>
+              <Text style={s.choiceText}>No coupon</Text>
+            </Pressable>
+            {coupons.map((coupon) => (
+              <Pressable key={coupon.id} style={[s.couponChoice, selectedCoupon?.id === coupon.id && s.selected]} onPress={() => setSelectedCoupon(coupon)}>
+                <View style={s.couponCopy}>
+                  <Text style={s.choiceText}>{coupon.code}</Text>
+                  <Text style={s.muted}>{coupon.discountType === "percent" ? `${coupon.discountValue}% off` : `₹${coupon.discountValue} off`}</Text>
+                </View>
+                {selectedCoupon?.id === coupon.id ? <Text style={s.couponApplied}>Selected</Text> : null}
+              </Pressable>
+            ))}
+          </View>
+        ) : <Text style={s.muted}>No coupons available for this salon right now.</Text>}
+        {selectedCoupon ? <Text style={s.couponNote}>Coupon {selectedCoupon.code} will be checked again when payment is created.</Text> : null}
         <Pressable
           disabled={busy}
           style={s.primary}
@@ -332,6 +357,11 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   choices: { gap: 8 },
+  couponChoices: { gap: 8 },
+  couponChoice: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#fffdfa", borderColor: "#d9d6ce", borderWidth: 1, borderRadius: 10, padding: 12 },
+  couponCopy: { flex: 1 },
+  couponApplied: { color: "#4c947d", fontWeight: "800", marginLeft: 8 },
+  couponNote: { color: "#77817c", fontSize: 12, lineHeight: 18, marginTop: 8 },
   timeChoices: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   timeChoice: {
     minWidth: 92,

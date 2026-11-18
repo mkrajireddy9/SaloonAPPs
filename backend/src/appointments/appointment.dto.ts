@@ -55,6 +55,10 @@ export class CreateAppointmentDto {
   @IsOptional()
   @IsString()
   notes?: string;
+  @ApiPropertyOptional({ example: "WELCOME10" })
+  @IsOptional()
+  @IsString()
+  couponCode?: string;
 }
 
 export class UpdateAppointmentStatusDto {

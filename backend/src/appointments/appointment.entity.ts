@@ -20,6 +20,7 @@ export class Appointment {
   @Column() time!: string;
   @Column({ default: 60 }) durationMinutes!: number;
   @Column({ type: "int", default: 0 }) price!: number;
+  @Column({ type: "varchar", nullable: true }) couponCode!: string | null;
   @Column({ default: "Meera Nair" }) stylist!: string;
   @Column({ default: "" }) notes!: string;
   @Column({ default: "Requested" }) status!:

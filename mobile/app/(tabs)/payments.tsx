@@ -24,6 +24,7 @@ type Payment = {
 export default function Payments() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [appointmentId, setAppointmentId] = useState("");
+  const [couponCode, setCouponCode] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -49,6 +50,7 @@ export default function Payments() {
         method: "POST",
         body: JSON.stringify({
           appointmentId: appointmentId.trim(),
+          ...(couponCode.trim() ? { couponCode: couponCode.trim().toUpperCase() } : {}),
           idempotencyKey: `${appointmentId.trim()}-mobile-${Date.now()}`,
         }),
       });
@@ -81,6 +83,14 @@ export default function Payments() {
             value={appointmentId}
             onChangeText={setAppointmentId}
             placeholder="Enter your appointment ID"
+            placeholderTextColor="#9aa19c"
+            style={s.input}
+          />
+          <TextInput
+            value={couponCode}
+            onChangeText={setCouponCode}
+            autoCapitalize="characters"
+            placeholder="Enter a coupon code (optional)"
             placeholderTextColor="#9aa19c"
             style={s.input}
           />

@@ -78,6 +78,13 @@ import { TenantIntegrity2100000000000 } from "./database/migrations/210000000000
 import { MembershipModule } from "./memberships/membership.module";
 import { Membership, MembershipPlan, MembershipUsage } from "./memberships/membership.entity";
 import { Memberships2110000000000 } from "./database/migrations/2110000000000-Memberships";
+import { Coupon } from "./rewards/coupon.entity";
+import { Referral } from "./rewards/referral.entity";
+import { RewardsModule } from "./rewards/rewards.module";
+import { Rewards2120000000000 } from "./database/migrations/2120000000000-Rewards";
+import { ReferralSalonScope2130000000000 } from "./database/migrations/2130000000000-ReferralSalonScope";
+import { SalonReferralReward2140000000000 } from "./database/migrations/2140000000000-SalonReferralReward";
+import { AppointmentCoupon2150000000000 } from "./database/migrations/2150000000000-AppointmentCoupon";
 
 @Module({
   imports: [
@@ -154,6 +161,8 @@ import { Memberships2110000000000 } from "./database/migrations/2110000000000-Me
         MembershipPlan,
         Membership,
         MembershipUsage,
+        Coupon,
+        Referral,
       ],
       migrations: [
         InitialSchema1710000000000,
@@ -196,6 +205,10 @@ import { Memberships2110000000000 } from "./database/migrations/2110000000000-Me
         UniqueSalonOwner2090000000000,
         TenantIntegrity2100000000000,
         Memberships2110000000000,
+        Rewards2120000000000,
+        ReferralSalonScope2130000000000,
+        SalonReferralReward2140000000000,
+        AppointmentCoupon2150000000000,
       ],
       migrationsRun: true,
       synchronize: false,
@@ -217,6 +230,7 @@ import { Memberships2110000000000 } from "./database/migrations/2110000000000-Me
     HealthModule,
     BannerModule,
     MembershipModule,
+    RewardsModule,
   ],
 })
 export class AppModule {}

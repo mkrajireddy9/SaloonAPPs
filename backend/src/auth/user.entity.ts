@@ -54,6 +54,7 @@ export class User {
   @Column({ type: "timestamptz", nullable: true, select: false })
   emailVerificationExpiresAt!: Date | null;
   @Column({ default: true }) active!: boolean;
+  @Column({ type: "int", default: 0 }) referralCredits!: number;
   @Column({ type: "timestamptz", nullable: true }) lastSeenAt!: Date | null;
   @Column({ type: "timestamptz", nullable: true }) lastLoginAt!: Date | null;
   @Column({ type: "timestamptz", nullable: true }) lastLogoutAt!: Date | null;

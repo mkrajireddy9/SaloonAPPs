@@ -115,6 +115,7 @@ export function MoreScreen({
           notifications: "/auth/preferences",
           approvals: "/auth/admin-requests",
           memberships: "/memberships/admin/members",
+          rewards: "/rewards/coupons/admin",
         }
       : {
           booking: "/salon/directory",
@@ -233,6 +234,7 @@ export function MoreScreen({
           {section === "consultations" && (
             <AdminConsultationsView initial={Array.isArray(data) ? data : []} />
           )}
+          {section === "rewards" && <AdminRewardsView initial={data || {}} />}
         </View>
       )}
         </ScrollView>
@@ -329,6 +331,11 @@ const sectionMeta: Record<
     description: "Review pending access",
     icon: "checkmark-circle",
   },
+  rewards: {
+    label: "Coupons and referrals",
+    description: "Manage salon offers and referral reward settings",
+    icon: "gift",
+  },
 };
 function MoreHeader({
   endpoints,
@@ -370,6 +377,7 @@ function MoreHeader({
               "passport",
               "notifications",
               "memberships",
+              "rewards",
             ],
           },
         ]
@@ -499,6 +507,73 @@ function SectionBanner({ icon, eyebrow, title, description }: { icon: any; eyebr
         <Text style={styles.sectionBannerTitle}>{title}</Text>
         <Text style={styles.sectionBannerDescription}>{description}</Text>
       </View>
+    </View>
+  );
+}
+
+function AdminRewardsView({ initial }: { initial: any }) {
+  const [coupons, setCoupons] = useState<any[]>(initial.coupons || []);
+  const [reward, setReward] = useState(String(initial.referralRewardAmount ?? 100));
+  const [code, setCode] = useState("");
+  const [discountType, setDiscountType] = useState<"percent" | "fixed">("percent");
+  const [discountValue, setDiscountValue] = useState("");
+  const [maxUses, setMaxUses] = useState("");
+  const [message, setMessage] = useState("");
+  const saveReward = async () => {
+    try {
+      await api("/rewards/referral-settings", {
+        method: "PATCH",
+        body: JSON.stringify({ rewardAmount: Number(reward) }),
+      });
+      setMessage("Referral reward saved.");
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Could not save referral reward.");
+    }
+  };
+  const addCoupon = async () => {
+    if (!code.trim() || !discountValue.trim()) return setMessage("Enter a coupon code and discount value.");
+    try {
+      const coupon = await api<any>("/rewards/coupons", {
+        method: "POST",
+        body: JSON.stringify({ code: code.trim().toUpperCase(), discountType, discountValue: Number(discountValue), ...(maxUses.trim() ? { maxUses: Number(maxUses) } : {}) }),
+      });
+      setCoupons((items) => [coupon, ...items]);
+      setCode(""); setDiscountValue(""); setMaxUses("");
+      setMessage("Coupon added and available to customers now.");
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Could not add coupon.");
+    }
+  };
+  const toggleCoupon = async (coupon: any) => {
+    try {
+      const updated = await api<any>(`/rewards/coupons/${coupon.id}`, { method: "PATCH", body: JSON.stringify({ active: !coupon.active }) });
+      setCoupons((items) => items.map((item) => item.id === updated.id ? updated : item));
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Could not update coupon.");
+    }
+  };
+  return (
+    <View>
+      <SectionBanner icon="gift-outline" eyebrow="REWARDS" title="Coupons and referrals" description="Change offers from the admin app. Customer checkout reads these settings live." />
+      <Text style={styles.formSectionTitle}>Referral reward</Text>
+      <TextInput value={reward} onChangeText={setReward} keyboardType="numeric" placeholder="Enter reward amount in INR" style={styles.input} placeholderTextColor="#9aa19c" />
+      <Pressable style={styles.primary} onPress={() => void saveReward()}><Text style={styles.primaryText}>Save referral reward</Text></Pressable>
+      <Text style={styles.formSectionTitle}>Add coupon</Text>
+      <TextInput value={code} onChangeText={setCode} autoCapitalize="characters" placeholder="Enter coupon code" style={styles.input} placeholderTextColor="#9aa19c" />
+      <View style={styles.twoInputs}>
+        <TextInput value={discountValue} onChangeText={setDiscountValue} keyboardType="numeric" placeholder={discountType === "percent" ? "Discount %" : "Discount ₹"} style={[styles.input, styles.halfInput]} placeholderTextColor="#9aa19c" />
+        <Pressable style={[styles.input, styles.halfInput, { justifyContent: "center" }]} onPress={() => setDiscountType((value) => value === "percent" ? "fixed" : "percent")}><Text style={styles.cardTextDark}>{discountType === "percent" ? "Percentage" : "Fixed amount"}</Text></Pressable>
+      </View>
+      <TextInput value={maxUses} onChangeText={setMaxUses} keyboardType="numeric" placeholder="Maximum uses (optional)" style={styles.input} placeholderTextColor="#9aa19c" />
+      <Pressable style={styles.secondary} onPress={() => void addCoupon()}><Text style={styles.actionText}>Add coupon</Text></Pressable>
+      <Text style={styles.formSectionTitle}>Existing coupons</Text>
+      {coupons.length ? coupons.map((coupon) => (
+        <View style={styles.branchCard} key={coupon.id}>
+          <View style={styles.branchHeader}><Text style={styles.cardTextDark}>{coupon.code}</Text><Pressable onPress={() => void toggleCoupon(coupon)}><Text style={coupon.active ? styles.activeText : styles.actionText}>{coupon.active ? "Active" : "Inactive"}</Text></Pressable></View>
+          <Text style={styles.muted}>{coupon.discountType === "percent" ? `${coupon.discountValue}% off` : `₹${coupon.discountValue} off`} · Used {coupon.usedCount || 0}{coupon.maxUses ? ` / ${coupon.maxUses}` : ""}</Text>
+        </View>
+      )) : <Text style={styles.muted}>No coupons created yet.</Text>}
+      {message ? <Text style={styles.message}>{message}</Text> : null}
     </View>
   );
 }
@@ -1911,6 +1986,7 @@ function BookingView({ salons }: { salons: any[] }) {
 }
 function PaymentView({ payments }: { payments: Payment[] }) {
   const [appointmentId, setAppointmentId] = useState("");
+  const [couponCode, setCouponCode] = useState("");
   const [message, setMessage] = useState("");
   const safePayments = Array.isArray(payments) ? payments : [];
   async function createIntent() {
@@ -1921,6 +1997,7 @@ function PaymentView({ payments }: { payments: Payment[] }) {
         method: "POST",
         body: JSON.stringify({
           appointmentId: appointmentId.trim(),
+          ...(couponCode.trim() ? { couponCode: couponCode.trim().toUpperCase() } : {}),
           idempotencyKey: `${appointmentId.trim()}-mobile-${Date.now()}`,
         }),
       });
@@ -1939,6 +2016,14 @@ function PaymentView({ payments }: { payments: Payment[] }) {
         value={appointmentId}
         onChangeText={setAppointmentId}
         placeholder="Enter appointment ID"
+        style={styles.input}
+        placeholderTextColor="#9aa19c"
+      />
+      <TextInput
+        value={couponCode}
+        onChangeText={setCouponCode}
+        autoCapitalize="characters"
+        placeholder="Enter a coupon code (optional)"
         style={styles.input}
         placeholderTextColor="#9aa19c"
       />

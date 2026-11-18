@@ -14,6 +14,7 @@ export class Salon {
   @Index("IDX_salons_ownerId", { unique: true, where: '"ownerId" IS NOT NULL' })
   @Column({ type: "uuid", nullable: true }) ownerId!: string | null;
   @Column({ default: true }) active!: boolean;
+  @Column({ type: "int", default: 100 }) referralRewardAmount!: number;
   @Column({ default: "Halo Studio" }) name!: string;
   @Column({ default: "Indiranagar, Bengaluru" }) location!: string;
   @Column({ type: "jsonb", default: "[]" }) services!: string[];

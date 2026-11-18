@@ -36,6 +36,11 @@ export class UpdateSalonDto {
   @IsString()
   @MinLength(2)
   location?: string;
+  @ApiPropertyOptional({ example: 100, description: "Referral reward in INR for this salon" })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  referralRewardAmount?: number;
   @ApiProperty({ example: ["Signature cut", "Gloss refresh"] })
   @IsArray()
   @ArrayNotEmpty()
