@@ -19,7 +19,9 @@ import {
   NotificationPreferencesDto,
   RefreshTokenDto,
   RegisterDto,
+  RequestUserOtpDto,
   ResetPasswordDto,
+  VerifyUserOtpDto,
   VerifyEmailDto,
 } from "./auth.dto";
 import { JwtAuthGuard } from "./auth.guard";
@@ -40,6 +42,16 @@ export class AuthController {
   @ApiOperation({ summary: "Login and receive a JWT access token" })
   login(@Body() dto: LoginDto) {
     return this.service.login(dto);
+  }
+  @Post("user/request-otp")
+  @ApiOperation({ summary: "Send a one-time login code to a customer" })
+  requestUserOtp(@Body() dto: RequestUserOtpDto) {
+    return this.service.requestUserOtp(dto);
+  }
+  @Post("user/verify-otp")
+  @ApiOperation({ summary: "Verify a customer login code and receive JWT tokens" })
+  verifyUserOtp(@Body() dto: VerifyUserOtpDto) {
+    return this.service.verifyUserOtp(dto);
   }
   @Post("google") @ApiOperation({ summary: "Sign in with Google" }) google(
     @Body() dto: GoogleLoginDto,

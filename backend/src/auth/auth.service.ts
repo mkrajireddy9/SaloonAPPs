@@ -17,7 +17,9 @@ import {
   NotificationPreferencesDto,
   RefreshTokenDto,
   RegisterDto,
+  RequestUserOtpDto,
   ResetPasswordDto,
+  VerifyUserOtpDto,
 } from "./auth.dto";
 import { AdminApprovalStatus, User, UserRole } from "./user.entity";
 import { Salon } from "../salon/salon.entity";
@@ -86,6 +88,9 @@ export class AuthService implements OnModuleInit {
     );
     await this.users.query(
       `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "lastLogoutAt" TIMESTAMP WITH TIME ZONE`,
+    );
+    await this.users.query(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "IDX_users_phone" ON "users" ("phone") WHERE "phone" IS NOT NULL`,
     );
   }
 
@@ -212,6 +217,105 @@ export class AuthService implements OnModuleInit {
         "Please verify your email before signing in",
       );
     return this.issueToken(user);
+  }
+
+  async requestUserOtp(dto: RequestUserOtpDto) {
+    const phone = this.normalizePhone(dto.phone);
+    if (!this.limited(`user-otp-request:${phone}`, 5))
+      throw new UnauthorizedException("Too many OTP requests. Try again later.");
+    await this.twilioStartVerification(phone);
+    return { message: "If the number is eligible, a login code has been sent." };
+  }
+
+  async verifyUserOtp(dto: VerifyUserOtpDto) {
+    const phone = this.normalizePhone(dto.phone);
+    const approved = await this.twilioCheckVerification(phone, dto.code);
+    if (!approved) throw new UnauthorizedException("Invalid or expired login code");
+    const user = await this.users
+      .createQueryBuilder("user")
+      .where("user.phone = :phone", { phone })
+      .getOne();
+    if (user?.role && user.role !== UserRole.USER)
+      throw new UnauthorizedException("This number belongs to an admin account");
+    if (user && !user.active)
+      throw new UnauthorizedException("This account has been deactivated");
+    const savedUser = user || this.users.create({
+      name: "Halo guest",
+      email: `phone-${this.hashToken(phone).slice(0, 32)}@users.halo.local`,
+      passwordHash: await bcrypt.hash(randomBytes(32).toString("hex"), 12),
+      role: UserRole.USER,
+      adminApprovalStatus: AdminApprovalStatus.NOT_REQUIRED,
+      salonId: null,
+      phone,
+      refreshTokenHash: null,
+      emailVerified: false,
+      active: true,
+    });
+    savedUser.phone = phone;
+    savedUser.emailVerified = true;
+    await this.users.save(savedUser);
+    return this.issueToken(savedUser);
+  }
+
+  private normalizePhone(value: string) {
+    const phone = value.replace(/[\s().-]/g, "");
+    if (!/^\+[1-9]\d{7,14}$/.test(phone))
+      throw new UnauthorizedException("Enter a valid phone number with country code, e.g. +919876543210");
+    return phone;
+  }
+
+  private async twilioStartVerification(phone: string) {
+    if (this.fixedOtpEnabled()) return;
+    const response = await fetch(
+      `https://verify.twilio.com/v2/Services/${this.twilioConfig().serviceSid}/Verifications`,
+      {
+        method: "POST",
+        headers: this.twilioHeaders(),
+        body: new URLSearchParams({ to: phone, channel: "sms" }),
+      },
+    );
+    if (!response.ok) {
+      this.logger.error(`Twilio verification request failed with status ${response.status}`);
+      throw new UnauthorizedException("Unable to send SMS code. Please try again.");
+    }
+  }
+
+  private async twilioCheckVerification(phone: string, code: string) {
+    if (this.fixedOtpEnabled())
+      return code === (process.env.SMS_FIXED_OTP || "123456");
+    if (!/^\d{4,10}$/.test(code)) return false;
+    const response = await fetch(
+      `https://verify.twilio.com/v2/Services/${this.twilioConfig().serviceSid}/VerificationCheck`,
+      {
+        method: "POST",
+        headers: this.twilioHeaders(),
+        body: new URLSearchParams({ to: phone, code }),
+      },
+    );
+    if (!response.ok) return false;
+    const body = (await response.json()) as { status?: string };
+    return body.status === "approved";
+  }
+
+  private twilioConfig() {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID;
+    if (!accountSid || !authToken || !serviceSid)
+      throw new UnauthorizedException("SMS login is not configured yet");
+    return { accountSid, authToken, serviceSid };
+  }
+
+  private fixedOtpEnabled() {
+    return process.env.SMS_FIXED_OTP_ENABLED === "true";
+  }
+
+  private twilioHeaders() {
+    const { accountSid, authToken } = this.twilioConfig();
+    return {
+      authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
+      "content-type": "application/x-www-form-urlencoded",
+    };
   }
 
   async validateAccessSession(payload: {

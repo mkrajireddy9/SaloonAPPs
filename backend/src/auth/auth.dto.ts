@@ -72,6 +72,24 @@ export class LoginDto {
   role?: UserRole;
 }
 
+export class RequestUserOtpDto {
+  @ApiProperty({ example: "+919876543210" })
+  @IsNotEmpty()
+  @IsString()
+  phone!: string;
+}
+
+export class VerifyUserOtpDto {
+  @ApiProperty({ example: "123456" })
+  @IsNotEmpty()
+  @IsString()
+  code!: string;
+  @ApiProperty({ example: "+919876543210" })
+  @IsNotEmpty()
+  @IsString()
+  phone!: string;
+}
+
 export class GoogleLoginDto {
   @ApiProperty({ description: "Google Identity Services ID token credential." })
   @IsNotEmpty()

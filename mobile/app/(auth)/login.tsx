@@ -19,35 +19,64 @@ import { useToast } from "../../src/components/ToastProvider";
 export default function Login() {
   const { showToast } = useToast();
   const [role, setRole] = useState<"user" | "admin" | "platform_admin">("user");
+  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [tenantCode, setTenantCode] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const selectRole = (nextRole: "user" | "admin" | "platform_admin") => {
+    setRole(nextRole);
+    setOtpSent(false);
+    setOtp("");
+    setSubmitted(false);
+  };
   const submit = async () => {
     setSubmitted(true);
-    setError("");
-    if (!email.trim() || !password) {
-      const message = "Enter your email and password.";
-      setError(message); showToast({ type: "warning", message });
+    if ((role === "user" ? !phone.trim() : !email.trim()) || (role === "user" ? (otpSent ? !/^\d{4,10}$/.test(otp) : false) : !password)) {
+      const message = role === "user"
+        ? otpSent ? "Enter the SMS code." : "Enter your phone number with country code."
+        : "Enter your email and password.";
+      showToast({ type: "warning", message });
+      return;
+    }
+    if (role === "user" && !otpSent) {
+      setBusy(true);
+      try {
+        const response = await fetch(`${API_URL}/auth/user/request-otp`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ phone: phone.trim() }),
+        });
+        const body = await response.json();
+        if (!response.ok)
+          throw new Error(Array.isArray(body.message) ? body.message.join(" ") : body.message || "Unable to send login code.");
+        setOtpSent(true);
+        showToast({ type: "success", message: "Login code sent by SMS." });
+      } catch (e) {
+        showToast({ type: "error", message: e instanceof Error ? e.message : "Unable to send login code." });
+      } finally {
+        setBusy(false);
+      }
       return;
     }
     if (role === "admin" && !tenantCode.trim()) {
       const message = "Enter the salon tenant code to continue as admin.";
-      setError(message); showToast({ type: "warning", message });
+      showToast({ type: "warning", message });
       return;
     }
     setBusy(true);
     try {
-      const response = await fetch(`${API_URL}/auth/login`, {
+      const response = await fetch(`${API_URL}${role === "user" ? "/auth/user/verify-otp" : "/auth/login"}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          email: email.trim(),
-          password,
-          role,
+          ...(role === "user" ? { phone: phone.trim() } : { email: email.trim() }),
+          ...(role === "user" ? { code: otp } : { password, role }),
+          ...(role === "admin" ? { role } : {}),
           tenantCode: role === "admin" ? tenantCode.trim() : undefined,
         }),
       });
@@ -78,7 +107,7 @@ export default function Login() {
       router.replace(body.user?.role === "user" ? "/(tabs)/directory" : "/admin");
     } catch (e) {
       const message = e instanceof Error ? e.message : "Unable to sign in.";
-      setError(message); showToast({ type: "error", message });
+      showToast({ type: "error", message });
     } finally {
       setBusy(false);
     }
@@ -110,21 +139,21 @@ export default function Login() {
           <View style={s.roles}>
             <Pressable
               style={[s.role, role === "user" && s.selected]}
-              onPress={() => setRole("user")}
+              onPress={() => selectRole("user")}
             >
               <Text style={s.roleTitle}>Guest</Text>
-              <Text style={s.roleCopy}>Book an appointment</Text>
+              <Text style={s.roleCopy}>Sign in with SMS OTP</Text>
             </Pressable>
             <Pressable
               style={[s.role, role === "admin" && s.selected]}
-              onPress={() => setRole("admin")}
+              onPress={() => selectRole("admin")}
             >
               <Text style={s.roleTitle}>Admin</Text>
               <Text style={s.roleCopy}>Manage the studio</Text>
             </Pressable>
             <Pressable
               style={[s.role, role === "platform_admin" && s.selected]}
-              onPress={() => setRole("platform_admin")}
+              onPress={() => selectRole("platform_admin")}
             >
               <Text style={s.roleTitle}>Platform</Text>
               <Text style={s.roleCopy}>Manage all salons</Text>
@@ -143,33 +172,53 @@ export default function Login() {
               />
             </>
           )}
-          <Text style={s.label}>Email address</Text>
+          <Text style={s.label}>{role === "user" ? "Mobile number" : "Email address"}</Text>
           <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="you@example.com"
+            value={role === "user" ? phone : email}
+            onChangeText={role === "user" ? setPhone : setEmail}
+            placeholder={role === "user" ? "+91 9876543210" : "you@example.com"}
             autoCapitalize="none"
-            keyboardType="default"
-            style={[s.input, submitted && !email.trim() && s.inputError]}
+            keyboardType={role === "user" ? "phone-pad" : "email-address"}
+            style={[s.input, submitted && !(role === "user" ? phone.trim() : email.trim()) && s.inputError]}
           />
-          <Text style={s.label}>Password</Text>
-          <View style={s.passwordRow}>
-            <TextInput
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Your password"
-              secureTextEntry={!showPassword}
-              style={[s.input, s.passwordInput, submitted && !password && s.inputError]}
-            />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={showPassword ? "Hide password" : "Show password"}
-              onPress={() => setShowPassword((value) => !value)}
-              style={s.passwordToggle}
-            >
-              <Text style={s.passwordToggleText}>{showPassword ? "Hide" : "Show"}</Text>
-            </Pressable>
-          </View>
+          {role === "user" && otpSent ? (
+            <>
+              <Text style={s.label}>Login code</Text>
+              <TextInput
+                value={otp}
+                onChangeText={(value) => setOtp(value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="SMS code"
+                keyboardType="number-pad"
+                maxLength={6}
+                autoFocus
+                style={[s.input, submitted && !/^\d{4,10}$/.test(otp) && s.inputError]}
+              />
+              <Pressable onPress={() => { setOtpSent(false); setOtp(""); }}>
+                <Text style={s.link}>Use a different number or resend code</Text>
+              </Pressable>
+            </>
+          ) : role === "admin" ? (
+            <>
+              <Text style={s.label}>Password</Text>
+              <View style={s.passwordRow}>
+                <TextInput
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Your password"
+                  secureTextEntry={!showPassword}
+                  style={[s.input, s.passwordInput, submitted && !password && s.inputError]}
+                />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                  onPress={() => setShowPassword((value) => !value)}
+                  style={s.passwordToggle}
+                >
+                  <Text style={s.passwordToggleText}>{showPassword ? "Hide" : "Show"}</Text>
+                </Pressable>
+              </View>
+            </>
+          ) : null}
           <Pressable
             disabled={busy}
             style={s.primary}
@@ -179,15 +228,16 @@ export default function Login() {
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={s.primaryText}>
-                Continue as {role === "platform_admin" ? "platform admin" : role === "admin" ? "admin" : "guest"}
+                {role === "user" ? (otpSent ? "Verify code" : "Send login code") : `Continue as ${role === "platform_admin" ? "platform admin" : "admin"}`}
               </Text>
             )}
           </Pressable>
-          {error ? <Text style={s.error}>{error}</Text> : null}
-          <Link href="/(auth)/forgot-password" style={s.link}>
+          {role !== "user" ? <Link href="/(auth)/forgot-password" style={s.link}>
             Forgot password?
-          </Link>
-          {role === "platform_admin" ? (
+          </Link> : null}
+          {role === "user" ? (
+            <Text style={s.link}>New customers can sign in with their mobile number.</Text>
+          ) : role === "platform_admin" ? (
             <Text style={s.link}>Platform admin accounts are provisioned by Halo.</Text>
           ) : (
             <Pressable
