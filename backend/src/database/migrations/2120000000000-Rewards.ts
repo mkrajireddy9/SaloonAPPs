@@ -8,7 +8,6 @@ export class Rewards2120000000000 implements MigrationInterface {
       "id" uuid NOT NULL DEFAULT gen_random_uuid(),
       "salonId" uuid NULL,
       "code" varchar NOT NULL,
-      "salonId" uuid NOT NULL,
       "discountType" varchar NOT NULL DEFAULT 'percent',
       "discountValue" integer NOT NULL,
       "maxUses" integer NULL,
@@ -33,7 +32,6 @@ export class Rewards2120000000000 implements MigrationInterface {
     )`);
     await queryRunner.query(`CREATE UNIQUE INDEX IF NOT EXISTS "IDX_referrals_code" ON "referrals" ("code")`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_referrals_referrer" ON "referrals" ("referrerId")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_referrals_salon" ON "referrals" ("salonId")`);
   }
   async down(queryRunner: QueryRunner) {
     await queryRunner.query(`DROP TABLE IF EXISTS "referrals"`);
