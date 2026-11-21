@@ -28,12 +28,12 @@ export default function Login() {
   const { showToast } = useToast();
   const [role, setRole] = useState<"user" | "admin">("user");
   const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState(__DEV__ ? "test@example.com" : "");
+  const [password, setPassword] = useState(__DEV__ ? "test" : "");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [tenantCode, setTenantCode] = useState("");
+  const [tenantCode, setTenantCode] = useState(__DEV__ ? "test" : "");
   const [busy, setBusy] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const googleClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || "not-configured.apps.googleusercontent.com";
@@ -324,11 +324,43 @@ export default function Login() {
             {busy ? <ActivityIndicator color="#fff" /> : <><Text style={s.primaryText}>{otpSent ? "Verify code" : "Send login code"}</Text><Ionicons name="arrow-forward" size={18} color="#fff" /></>}
           </AnimatedPressable> : (
             <>
-              <Text style={s.label}>Admin authentication</Text>
-              <Text style={s.copy}>Continue with any verified Google account. Admin access will be reviewed for this salon before it is activated.</Text>
-              <Pressable disabled={busy || !googleConfigured} style={s.google} onPress={() => void startGoogleSignIn()}>
-                {busy ? <ActivityIndicator color="#20352d" /> : <><Ionicons name="logo-google" size={18} color="#4285F4" /><Text style={s.googleText}>{googleConfigured ? "Continue with Google" : "Google sign-in needs setup"}</Text></>}
-              </Pressable>
+              {!tenantCode.trim() ? (
+                <View style={s.adminHint}>
+                  <Ionicons name="key-outline" size={18} color="#4c947d" />
+                  <Text style={s.adminHintText}>Enter your salon tenant code to unlock admin sign in.</Text>
+                </View>
+              ) : (
+                <Animated.View style={{ opacity: formOpacity }}>
+                  <Text style={s.label}>Admin email</Text>
+                  <TextInput
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="Enter your admin email"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="email-address"
+                    style={[s.input, submitted && !email.trim() && s.inputError]}
+                  />
+                  <Text style={s.label}>Password</Text>
+                  <View style={s.passwordRow}>
+                    <TextInput
+                      value={password}
+                      onChangeText={setPassword}
+                      placeholder="Enter your password"
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      style={[s.input, s.passwordInput, submitted && !password && s.inputError]}
+                    />
+                    <Pressable style={s.passwordToggle} onPress={() => setShowPassword((value) => !value)}>
+                      <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={19} color="#c55239" />
+                    </Pressable>
+                  </View>
+                  <Pressable disabled={busy} style={s.primary} onPress={() => void submit()}>
+                    {busy ? <ActivityIndicator color="#fff" /> : <><Text style={s.primaryText}>Sign in as admin</Text><Ionicons name="arrow-forward" size={18} color="#fff" /></>}
+                  </Pressable>
+                </Animated.View>
+              )}
             </>
           )}
           {role === "user" ? (
@@ -488,6 +520,8 @@ const s = StyleSheet.create({
     marginTop: 12,
   },
   googleText: { color: "#20352d", fontWeight: "700" },
+  adminHint: { flexDirection: "row", alignItems: "center", gap: 9, backgroundColor: "#e7f1ed", borderRadius: 14, padding: 12, marginTop: 14 },
+  adminHintText: { flex: 1, color: "#60736a", fontSize: 12, lineHeight: 18 },
   error: { color: "#c55239", textAlign: "center", marginTop: 12 },
   link: {
     color: "#c55239",

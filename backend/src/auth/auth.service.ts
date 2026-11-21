@@ -171,6 +171,32 @@ export class AuthService implements OnModuleInit {
     if (!this.limited(`login:${email}`, 10))
       throw new UnauthorizedException("Too many login attempts. Try again later.");
     if (
+      process.env.NODE_ENV !== "production" &&
+      process.env.DEV_ADMIN_LOGIN_ENABLED === "true" &&
+      dto.role === UserRole.ADMIN &&
+      email === (process.env.DEV_ADMIN_EMAIL || "test@example.com").toLowerCase().trim() &&
+      dto.password === (process.env.DEV_ADMIN_PASSWORD || "test")
+    ) {
+      const tenantCode = (dto.tenantCode || process.env.DEV_ADMIN_TENANT_CODE || "test").trim().toLowerCase();
+      const salon = await this.salons.findOne({ where: { tenantCode, active: true } });
+      if (!salon) throw new UnauthorizedException("Development test salon was not found or is inactive");
+      let devUser = await this.users.findOne({ where: { email } });
+      if (!devUser) {
+        devUser = await this.users.save(this.users.create({
+          name: "Development Admin",
+          email,
+          passwordHash: await bcrypt.hash(process.env.DEV_ADMIN_PASSWORD || "test", 12),
+          role: UserRole.ADMIN,
+          adminApprovalStatus: AdminApprovalStatus.APPROVED,
+          salonId: salon.id,
+          refreshTokenHash: null,
+          emailVerified: true,
+          active: true,
+        }));
+      }
+      return this.issueToken(devUser);
+    }
+    if (
       (dto.role === UserRole.ADMIN || dto.role === UserRole.PLATFORM_ADMIN) &&
       process.env.NODE_ENV !== "production" &&
       process.env.PLATFORM_ADMIN_TEST_LOGIN === "true" &&
