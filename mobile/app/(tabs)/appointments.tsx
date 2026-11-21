@@ -10,6 +10,7 @@ import {
   Pressable,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { api } from "../../src/api";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -31,6 +32,7 @@ type Branch = {
 type Salon = {
   id: string;
   name: string;
+  location?: string;
   services: string[];
   stylists: string[];
   branches?: Branch[];
@@ -101,12 +103,19 @@ function AppointmentCard({
   };
   return (
     <View style={s.card}>
-      <Text style={s.cardTitle}>{item.service}</Text>
-      <Text style={s.muted}>
-        {item.date} · {item.time}
-      </Text>
-      <Text style={s.muted}>{item.stylist || "Stylist to be confirmed"}</Text>
-      <Text style={s.status}>{item.status}</Text>
+      <View style={s.appointmentTop}>
+        <View style={s.appointmentIcon}><Ionicons name="calendar-outline" size={21} color="#c55239" /></View>
+        <View style={s.appointmentIdentity}>
+          <Text style={s.cardTitle} numberOfLines={1}>{item.service}</Text>
+          <Text style={s.muted}>Salon appointment</Text>
+        </View>
+        <View style={s.statusBadge}><Text style={s.statusBadgeText}>{item.status}</Text></View>
+      </View>
+      <View style={s.appointmentDetails}>
+        <View style={s.detailItem}><Ionicons name="calendar-clear-outline" size={15} color="#4c947d" /><Text style={s.detailText}>{item.date}</Text></View>
+        <View style={s.detailItem}><Ionicons name="time-outline" size={15} color="#4c947d" /><Text style={s.detailText}>{item.time}</Text></View>
+        <View style={s.detailItem}><Ionicons name="person-outline" size={15} color="#4c947d" /><Text style={s.detailText}>{item.stylist || "Stylist to be confirmed"}</Text></View>
+      </View>
       {item.status !== "Cancelled" ? (
         <>
           <View style={s.row}>
@@ -304,8 +313,8 @@ export default function Appointments() {
       >
         <View style={s.headingRow}>
           <View style={s.headingCopy}>
-            <Text style={s.eyebrow}>YOUR VISITS</Text>
-            <Text style={s.title}>Your next salon moment.</Text>
+            <Text style={s.eyebrow}>{bookingOpen ? "NEW APPOINTMENT" : "YOUR SCHEDULE"}</Text>
+            <Text style={s.title}>{bookingOpen ? "Book your salon visit." : "Your next salon moment."}</Text>
             <Text style={s.subtitle}>
               Request a visit here and track it while the salon reviews your time.
             </Text>
@@ -314,12 +323,23 @@ export default function Appointments() {
             style={s.topBookButton}
             onPress={() => setBookingOpen((current) => !current)}
           >
+            <Ionicons name={bookingOpen ? "arrow-back" : "add"} size={16} color="#fff" />
             <Text style={s.topBookText}>{bookingOpen ? "Back" : "Book"}</Text>
           </Pressable>
         </View>
         {bookingOpen ? (
           <View style={s.bookingCard}>
-            <Text style={s.formTitle}>Request an appointment</Text>
+            <View style={s.bookingHeader}>
+              <View>
+                <Text style={s.formTitle}>Book appointment</Text>
+                <Text style={s.formSubtitle}>Choose a time that works for you.</Text>
+              </View>
+              <View style={s.bookingHeaderIcon}><Ionicons name="calendar-outline" size={22} color="#c55239" /></View>
+            </View>
+            <View style={s.providerCard}>
+              <View style={s.providerAvatar}><Ionicons name="sparkles-outline" size={21} color="#4c947d" /></View>
+              <View style={s.providerCopy}><Text style={s.providerName}>{selectedSalon?.name || "Choose a salon"}</Text><Text style={s.providerMeta}>{selectedSalon?.location || "Salon location"} · Salon services</Text></View>
+            </View>
             <Text style={s.label}>Salon</Text>
             <View style={s.choices}>
               {salons.map((salon) => (
@@ -380,7 +400,7 @@ export default function Appointments() {
                 </Pressable>
               ))}
             </View>
-            <Text style={s.label}>Date</Text>
+            <Text style={s.label}>Select date</Text>
             <View style={s.calendarPanel}>
               <View style={s.calendarHeader}>
                 <Pressable
@@ -415,7 +435,7 @@ export default function Appointments() {
                         setMonth(new Date(item.getFullYear(), item.getMonth(), 1));
                       }}
                     >
-                      <Text style={[s.calendarDayText, outside && s.outsideDayText]}>{item.getDate()}</Text>
+                      <Text style={[s.calendarDayText, outside && s.outsideDayText, date === value && s.selectedDayText]}>{item.getDate()}</Text>
                     </Pressable>
                   );
                 })}
@@ -428,13 +448,13 @@ export default function Appointments() {
                   style={[s.dateChoice, item.selected && s.selected]}
                   onPress={() => setDate(item.value)}
                 >
-                  <Text style={s.dateDay}>{item.day}</Text>
-                  <Text style={s.dateNumber}>{item.number}</Text>
+                  <Text style={[s.dateDay, item.selected && s.selectedDateText]}>{item.day}</Text>
+                  <Text style={[s.dateNumber, item.selected && s.selectedDateText]}>{item.number}</Text>
                 </Pressable>
               ))}
             </View>
         <TextInput value={date} onChangeText={setDate} style={s.input} placeholder="Enter date (YYYY-MM-DD)" />
-            <Text style={s.label}>Available time</Text>
+            <Text style={s.label}>Available slots</Text>
             <View style={s.timeChoices}>
               {slots.map((item) => (
                 <Pressable key={item} style={[s.timeChoice, time === item && s.selected]} onPress={() => setTime(item)}>
@@ -455,10 +475,10 @@ export default function Appointments() {
               keyboardType="phone-pad"
             />
             {phoneError ? <Text style={s.error}>{phoneError}</Text> : null}
-            <Text style={s.label}>Notes</Text>
+            <Text style={s.label}>Notes for the salon</Text>
             <TextInput value={notes} onChangeText={setNotes} style={[s.input, s.multiline]} multiline placeholder="Tell us about your hair goals" />
             <Pressable disabled={bookingBusy} style={s.primary} onPress={() => void submitBooking()}>
-              {bookingBusy ? <ActivityIndicator color="#fff" /> : <Text style={s.primaryText}>Request appointment</Text>}
+              {bookingBusy ? <ActivityIndicator color="#fff" /> : <><Text style={s.primaryText}>Confirm booking</Text><Ionicons name="arrow-forward" size={17} color="#fff" /></>}
             </Pressable>
             {bookingMessage ? <Text style={bookingMessage.includes("sent") ? s.success : s.error}>{bookingMessage}</Text> : null}
           </View>
@@ -492,46 +512,69 @@ export default function Appointments() {
 const s = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#f7f5f0" },
   screen: { flex: 1, backgroundColor: "#f7f5f0" },
-  content: { padding: 22, paddingBottom: 40 },
+  content: { padding: 18, paddingBottom: 40 },
   headingRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   headingCopy: { flex: 1 },
   eyebrow: {
-    color: "#91b3a3",
+    color: "#c55239",
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1.5,
   },
   title: {
     color: "#20352d",
-    fontSize: 30,
-    lineHeight: 36,
-    fontWeight: "700",
-    marginTop: 12,
+    fontSize: 29,
+    lineHeight: 35,
+    fontWeight: "800",
+    marginTop: 9,
   },
-  subtitle: { color: "#77817c", lineHeight: 20, marginTop: 8 },
+  subtitle: { color: "#77817c", lineHeight: 19, marginTop: 7 },
   card: {
     backgroundColor: "#fffdfa",
-    borderColor: "#d9d6ce",
+    borderColor: "#e1ddd4",
     borderWidth: 1,
-    borderRadius: 14,
-    padding: 18,
+    borderRadius: 18,
+    padding: 15,
     marginTop: 12,
+    shadowColor: "#20352d",
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 1,
   },
-  cardTitle: { color: "#20352d", fontSize: 18, fontWeight: "700" },
-  muted: { color: "#77817c", marginTop: 6 },
+  cardTitle: { color: "#20352d", fontSize: 16, fontWeight: "800" },
+  muted: { color: "#77817c", marginTop: 5, lineHeight: 17 },
   status: { color: "#4c947d", fontWeight: "700", marginTop: 8 },
+  appointmentTop: { flexDirection: "row", alignItems: "center" },
+  appointmentIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: "#f8e5df", alignItems: "center", justifyContent: "center", marginRight: 10 },
+  appointmentIdentity: { flex: 1, minWidth: 0 },
+  statusBadge: { backgroundColor: "#e7f1ed", borderRadius: 14, paddingHorizontal: 9, paddingVertical: 6, marginLeft: 8 },
+  statusBadgeText: { color: "#26735a", fontSize: 10, fontWeight: "800" },
+  appointmentDetails: { flexDirection: "row", flexWrap: "wrap", borderTopWidth: 1, borderTopColor: "#eeeae3", marginTop: 14, paddingTop: 12 },
+  detailItem: { flexDirection: "row", alignItems: "center", marginRight: 14, marginBottom: 3 },
+  detailText: { color: "#60736a", fontSize: 11, fontWeight: "700", marginLeft: 5 },
   primary: {
     backgroundColor: "#c55239",
-    minHeight: 48,
-    borderRadius: 9,
+    minHeight: 52,
+    borderRadius: 26,
+    flexDirection: "row",
+    gap: 9,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 16,
+    marginTop: 18,
+    shadowColor: "#c55239",
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 3,
   },
   primaryText: { color: "#fff", fontWeight: "800" },
   topBookButton: {
     backgroundColor: "#c55239",
     borderRadius: 999,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginTop: 2,
@@ -541,11 +584,16 @@ const s = StyleSheet.create({
   backToListText: { color: "#c55239", fontWeight: "800" },
   bookingCard: {
     backgroundColor: "#fffdfa",
-    borderColor: "#d9d6ce",
+    borderColor: "#e1ddd4",
     borderWidth: 1,
-    borderRadius: 14,
-    padding: 16,
-    marginTop: 14,
+    borderRadius: 20,
+    padding: 15,
+    marginTop: 16,
+    shadowColor: "#20352d",
+    shadowOpacity: 0.04,
+    shadowRadius: 9,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 1,
   },
   contextCard: {
     backgroundColor: "#20352d",
@@ -554,37 +602,46 @@ const s = StyleSheet.create({
     marginTop: 16,
   },
   contextEyebrow: {
-    color: "#91b3a3",
+    color: "#dfca73",
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1.2,
   },
   contextTitle: { color: "#fffdfa", fontSize: 19, fontWeight: "800", marginTop: 8 },
   formTitle: { color: "#20352d", fontSize: 20, fontWeight: "800" },
+  formSubtitle: { color: "#77817c", fontSize: 12, marginTop: 4 },
+  bookingHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  bookingHeaderIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: "#f8e5df", alignItems: "center", justifyContent: "center" },
+  providerCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#edf5f1", borderRadius: 15, padding: 11, marginTop: 16 },
+  providerAvatar: { width: 40, height: 40, borderRadius: 13, backgroundColor: "#fffdfa", alignItems: "center", justifyContent: "center", marginRight: 10 },
+  providerCopy: { flex: 1 },
+  providerName: { color: "#20352d", fontSize: 14, fontWeight: "800" },
+  providerMeta: { color: "#60736a", fontSize: 11, marginTop: 3 },
   label: {
     color: "#20352d",
     fontSize: 12,
     fontWeight: "700",
-    marginTop: 18,
+    marginTop: 19,
     marginBottom: 7,
   },
   choices: { gap: 8 },
   timeChoices: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   timeChoice: {
-    minWidth: 92,
+    width: "31%",
+    minWidth: 0,
     alignItems: "center",
     backgroundColor: "#fffdfa",
     borderColor: "#d9d6ce",
     borderWidth: 1,
-    borderRadius: 20,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 11,
   },
   choice: {
     backgroundColor: "#fffdfa",
-    borderColor: "#d9d6ce",
+    borderColor: "#e1ddd4",
     borderWidth: 1,
-    borderRadius: 9,
+    borderRadius: 13,
     padding: 12,
   },
   selected: { borderColor: "#c55239", backgroundColor: "#fff4ef" },
@@ -598,10 +655,10 @@ const s = StyleSheet.create({
     color: "#20352d",
   },
   inputError: { borderColor: "#c55239" },
-  dateChoices: { flexDirection: "row", flexWrap: "wrap", gap: 7, marginBottom: 9 },
-  calendarPanel: { borderWidth: 1, borderColor: "#d9d6ce", borderRadius: 10, padding: 10, backgroundColor: "#fffdfa", marginBottom: 10 },
+  dateChoices: { flexDirection: "row", justifyContent: "space-between", marginBottom: 9 },
+  calendarPanel: { borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 16, padding: 11, backgroundColor: "#fffdfa", marginBottom: 10 },
   calendarHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
-  monthButton: { width: 30, height: 30, borderRadius: 8, backgroundColor: "#f7f5f0", alignItems: "center", justifyContent: "center" },
+  monthButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#f7f5f0", alignItems: "center", justifyContent: "center" },
   monthButtonText: { color: "#20352d", fontSize: 24, lineHeight: 25 },
   monthTitle: { color: "#20352d", fontWeight: "800" },
   weekdays: { flexDirection: "row", justifyContent: "space-between", marginBottom: 5 },
@@ -610,20 +667,24 @@ const s = StyleSheet.create({
   calendarDay: { width: "14.2%", aspectRatio: 1.15, alignItems: "center", justifyContent: "center", borderRadius: 7 },
   calendarDayText: { color: "#20352d", fontSize: 12, fontWeight: "700" },
   selectedDay: { backgroundColor: "#c55239" },
+  selectedDayText: { color: "#fffdfa" },
   outsideDay: { opacity: 0.3 },
   outsideDayText: { color: "#77817c" },
   dateChoice: {
-    minWidth: 43,
+    flex: 1,
+    minWidth: 0,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#d9d6ce",
-    borderRadius: 9,
+    borderColor: "#e1ddd4",
+    borderRadius: 12,
     paddingVertical: 8,
-    paddingHorizontal: 6,
+    paddingHorizontal: 3,
+    marginRight: 6,
     backgroundColor: "#fffdfa",
   },
   dateDay: { color: "#77817c", fontSize: 10, fontWeight: "700" },
   dateNumber: { color: "#20352d", fontSize: 15, fontWeight: "800", marginTop: 3 },
+  selectedDateText: { color: "#c55239" },
   multiline: { minHeight: 90, textAlignVertical: "top" },
   row: { flexDirection: "row", gap: 10, marginTop: 12, alignItems: "center" },
   smallInput: {

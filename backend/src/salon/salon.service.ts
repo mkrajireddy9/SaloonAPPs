@@ -15,6 +15,7 @@ import {
 } from "./salon.dto";
 import { Salon } from "./salon.entity";
 import { User, UserRole } from "../auth/user.entity";
+import { Review } from "../reviews/review.entity";
 
 const days = [
   "Monday",
@@ -90,6 +91,7 @@ export class SalonService {
   constructor(
     @InjectRepository(Salon) private readonly repo: Repository<Salon>,
     @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(Review) private readonly reviews: Repository<Review>,
   ) {}
 
   async get(salonId?: string) {
@@ -122,6 +124,23 @@ export class SalonService {
   }
 
   async listPublic(latitude?: number, longitude?: number, radiusKm = 25) {
+    const reviewRows = await this.reviews
+      .createQueryBuilder("review")
+      .select('review."salonId"', "salonId")
+      .addSelect("AVG(review.rating)", "ratingAverage")
+      .addSelect("COUNT(review.id)", "ratingCount")
+      .where('review.status = :status', { status: "Published" })
+      .groupBy('review."salonId"')
+      .getRawMany<{ salonId: string; ratingAverage: string; ratingCount: string }>();
+    const reviewSummary = new Map(
+      reviewRows.map((row) => [
+        row.salonId,
+        {
+          ratingAverage: Number(Number(row.ratingAverage).toFixed(1)),
+          ratingCount: Number(row.ratingCount),
+        },
+      ]),
+    );
     const salons = await this.repo.find({
       where: { active: true },
       order: { name: "ASC" },
@@ -146,6 +165,10 @@ export class SalonService {
     };
     return salons
       .map((salon) => {
+        const ratings = reviewSummary.get(salon.id) || {
+          ratingAverage: null,
+          ratingCount: 0,
+        };
         const branches = (salon.branches || [])
           .filter((branch) => branch.active !== false)
           .map((branch) => ({ ...branch, distanceKm: distance(branch) }))
@@ -162,6 +185,10 @@ export class SalonService {
           services: salon.services,
           stylists: salon.stylists,
           serviceDetails: salon.serviceDetails,
+          openingHours: salon.openingHours,
+          closedDays: salon.closedDays,
+          ratingAverage: ratings.ratingAverage,
+          ratingCount: ratings.ratingCount,
           distanceKm: branches.reduce<number | null>(
             (nearest, branch) =>
               branch.distanceKm === null

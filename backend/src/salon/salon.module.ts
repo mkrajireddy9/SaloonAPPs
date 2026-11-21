@@ -5,10 +5,12 @@ import { SalonController } from "./salon.controller";
 import { Salon } from "./salon.entity";
 import { SalonService } from "./salon.service";
 import { User } from "../auth/user.entity";
+import { Review } from "../reviews/review.entity";
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Salon, User]), AuthModule],
+  imports: [TypeOrmModule.forFeature([Salon, User, Review]), AuthModule],
   controllers: [SalonController],
   providers: [SalonService],
+  exports: [SalonService],
 })
 export class SalonModule {}

@@ -2448,7 +2448,6 @@ function PassportView({ passport }: { passport: Passport }) {
 function List({ title, items }: { title: string; items: string[] }) {
   return (
     <View>
-      <Text style={styles.eyebrow}>HALO</Text>
       <Text style={styles.title}>{title}</Text>
       {items.length ? (
         items.map((item, index) => (

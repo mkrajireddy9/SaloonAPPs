@@ -4,6 +4,7 @@
     "slug": "halo-salon",
     "version": "1.0.0",
     "orientation": "portrait",
+    "scheme": "halosalon",
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash-icon.png",

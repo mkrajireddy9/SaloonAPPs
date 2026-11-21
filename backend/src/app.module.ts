@@ -88,6 +88,9 @@ import { AppointmentCoupon2150000000000 } from "./database/migrations/2150000000
 import { MobilePushNotifications2160000000000 } from "./database/migrations/2160000000000-MobilePushNotifications";
 import { DevicePushToken } from "./notifications/device-push-token.entity";
 import { UserNotification } from "./notifications/user-notification.entity";
+import { WishlistModule } from "./wishlist/wishlist.module";
+import { SalonWishlist } from "./wishlist/wishlist.entity";
+import { SalonWishlists2170000000000 } from "./database/migrations/2170000000000-SalonWishlists";
 
 @Module({
   imports: [
@@ -156,6 +159,7 @@ import { UserNotification } from "./notifications/user-notification.entity";
         PushSubscription,
         DevicePushToken,
         UserNotification,
+        SalonWishlist,
         MediaAsset,
         AuditLog,
         Banner,
@@ -215,6 +219,7 @@ import { UserNotification } from "./notifications/user-notification.entity";
         SalonReferralReward2140000000000,
         AppointmentCoupon2150000000000,
         MobilePushNotifications2160000000000,
+        SalonWishlists2170000000000,
       ],
       migrationsRun: true,
       synchronize: false,
@@ -237,6 +242,7 @@ import { UserNotification } from "./notifications/user-notification.entity";
     BannerModule,
     MembershipModule,
     RewardsModule,
+    WishlistModule,
   ],
 })
 export class AppModule {}
