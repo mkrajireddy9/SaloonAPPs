@@ -261,7 +261,7 @@ export default function Login() {
               A better conversation{`\n`}starts here.
             </Text>
           </Animated.View>
-          <Animated.View style={{ opacity: formOpacity, transform: [{ translateY: formOffset }] }}>
+          <Animated.View style={[s.formSurface, { opacity: formOpacity, transform: [{ translateY: formOffset }] }]}>
           <Text style={s.eyebrow}>{role === "user" ? "WELCOME TO HALO" : "SALON TEAM"}</Text>
           <Text style={s.title}>{role === "user" ? "Welcome to halo" : "Admin sign in"}</Text>
           <Text style={s.copy}>
@@ -321,7 +321,7 @@ export default function Login() {
             onPressOut={() => Animated.spring(buttonScale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 5 }).start()}
             onPress={() => void submit()}
           >
-            {busy ? <ActivityIndicator color="#fff" /> : <Text style={s.primaryText}>{otpSent ? "Verify code" : "Send login code"}</Text>}
+            {busy ? <ActivityIndicator color="#fff" /> : <><Text style={s.primaryText}>{otpSent ? "Verify code" : "Send login code"}</Text><Ionicons name="arrow-forward" size={18} color="#fff" /></>}
           </AnimatedPressable> : (
             <>
               <Text style={s.label}>Admin authentication</Text>
@@ -333,14 +333,18 @@ export default function Login() {
           )}
           {role === "user" ? (
             <>
-              <Text style={s.link}>New customers can sign in with their mobile number.</Text>
-              <Pressable onPress={() => selectRole("admin")}>
-                <Text style={s.link}>Salon team ? Admin sign in</Text>
+              <Text style={s.helperText}>New customers can sign in with their mobile number.</Text>
+              <Pressable style={s.roleSwitch} onPress={() => selectRole("admin")}>
+                <View style={s.roleSwitchIcon}><Ionicons name="storefront-outline" size={18} color="#c55239" /></View>
+                <View style={s.roleSwitchCopy}><Text style={s.roleSwitchTitle}>Salon team</Text><Text style={s.roleSwitchDescription}>Sign in to manage your salon</Text></View>
+                <Ionicons name="chevron-forward" size={17} color="#a7afa9" />
               </Pressable>
             </>
           ) : (
-            <Pressable onPress={() => selectRole("user")}>
-              <Text style={s.link}>Back to customer sign in</Text>
+            <Pressable style={s.roleSwitch} onPress={() => selectRole("user")}>
+              <View style={s.roleSwitchIcon}><Ionicons name="person-outline" size={18} color="#c55239" /></View>
+              <View style={s.roleSwitchCopy}><Text style={s.roleSwitchTitle}>Customer sign in</Text><Text style={s.roleSwitchDescription}>Book and manage salon visits</Text></View>
+              <Ionicons name="chevron-forward" size={17} color="#a7afa9" />
             </Pressable>
           )}
           </Animated.View>
@@ -381,14 +385,14 @@ export default function Login() {
 const s = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#f7f5f0" },
   screen: { flex: 1, backgroundColor: "#f7f5f0" },
-  content: { padding: 24, paddingBottom: 40 },
+  content: { padding: 18, paddingBottom: 34 },
   hero: {
     backgroundColor: "#20352d",
-    borderRadius: 18,
-    padding: 24,
-    minHeight: 240,
+    borderRadius: 26,
+    padding: 22,
+    minHeight: 225,
     justifyContent: "space-between",
-    marginBottom: 28,
+    marginBottom: 16,
   },
   mark: {
     color: "#dfca73",
@@ -409,14 +413,15 @@ const s = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1.5,
   },
-  title: { color: "#20352d", fontSize: 30, fontWeight: "700", marginTop: 10 },
+  formSurface: { backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#e5e1d8", borderRadius: 24, padding: 20, shadowColor: "#20352d", shadowOpacity: 0.05, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 2 },
+  title: { color: "#20352d", fontSize: 28, fontWeight: "800", marginTop: 8 },
   copy: { color: "#77817c", lineHeight: 20, marginTop: 8, marginBottom: 18 },
   roles: { flexDirection: "row", gap: 10, marginTop: 4, marginBottom: 8 },
   role: {
     flex: 1,
     borderWidth: 1,
     borderColor: "#d9d6ce",
-    borderRadius: 9,
+    borderRadius: 13,
     padding: 12,
     backgroundColor: "#fffdfa",
   },
@@ -434,7 +439,7 @@ const s = StyleSheet.create({
     backgroundColor: "#fffdfa",
     borderColor: "#d9d6ce",
     borderWidth: 1,
-    borderRadius: 9,
+    borderRadius: 13,
     padding: 14,
     color: "#20352d",
   },
@@ -444,7 +449,7 @@ const s = StyleSheet.create({
     backgroundColor: "#fffdfa",
     borderColor: "#d9d6ce",
     borderWidth: 1,
-    borderRadius: 9,
+    borderRadius: 15,
   },
   countryCode: {
     color: "#20352d",
@@ -463,8 +468,10 @@ const s = StyleSheet.create({
   passwordToggleText: { color: "#c55239", fontWeight: "700", fontSize: 12 },
   primary: {
     backgroundColor: "#c55239",
-    borderRadius: 9,
-    minHeight: 50,
+    borderRadius: 15,
+    minHeight: 54,
+    flexDirection: "row",
+    gap: 8,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 22,
@@ -488,6 +495,12 @@ const s = StyleSheet.create({
     marginTop: 18,
     fontWeight: "700",
   },
+  helperText: { color: "#77817c", textAlign: "center", marginTop: 17, fontSize: 12, lineHeight: 18 },
+  roleSwitch: { minHeight: 58, flexDirection: "row", alignItems: "center", backgroundColor: "#fdfbf7", borderWidth: 1, borderColor: "#eee9df", borderRadius: 15, paddingHorizontal: 10, marginTop: 18 },
+  roleSwitchIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: "#fff1ed", alignItems: "center", justifyContent: "center", marginRight: 10 },
+  roleSwitchCopy: { flex: 1 },
+  roleSwitchTitle: { color: "#20352d", fontSize: 12, fontWeight: "800" },
+  roleSwitchDescription: { color: "#77817c", fontSize: 10, marginTop: 3 },
   modalBackdrop: {
     flex: 1,
     backgroundColor: "rgba(20, 38, 31, 0.58)",
