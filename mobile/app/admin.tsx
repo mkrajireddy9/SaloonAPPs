@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { api, signOut } from "../src/api";
+import { useToast } from "../src/components/ToastProvider";
 import { MoreScreen } from "../src/screens/MoreScreen";
 
 type Role = "admin" | "platform_admin";
@@ -43,6 +44,7 @@ type AdminRequest = {
 };
 
 export default function Admin() {
+  const { showToast } = useToast();
   const [me, setMe] = useState<Me>({});
   const [summary, setSummary] = useState<Summary | null>(null);
   const [salons, setSalons] = useState<PlatformSalon[]>([]);
@@ -74,7 +76,8 @@ export default function Admin() {
         setSummary(await api<Summary>("/dashboard/summary"));
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to load workspace.");
+      setError("load-failed");
+      showToast({ type: "error", message: e instanceof Error ? e.message : "Unable to load workspace." });
     } finally {
       setLoading(false);
     }
@@ -124,7 +127,8 @@ export default function Admin() {
         <ActivityIndicator color="#c55239" style={s.loader} />
       ) : error ? (
         <View style={s.content}>
-          <Text style={s.error}>{error}</Text>
+          <Text style={s.sectionTitle}>Workspace unavailable</Text>
+          <Text style={s.muted}>We could not load the latest admin data.</Text>
           <Action label="Try again" onPress={() => void load()} />
         </View>
       ) : me.role === "platform_admin" ? (
@@ -134,7 +138,8 @@ export default function Admin() {
             metrics={metrics}
             requests={requests}
             onRefresh={load}
-            onError={setError}
+            onError={(message) => showToast({ type: "error", message })}
+            onSuccess={(message) => showToast({ type: "success", message })}
           />
         </KeyboardAvoidingView>
       ) : (
@@ -219,12 +224,14 @@ function PlatformWorkspace({
   requests,
   onRefresh,
   onError,
+  onSuccess,
 }: {
   salons: PlatformSalon[];
   metrics: PlatformMetrics[];
   requests: AdminRequest[];
   onRefresh: () => Promise<void>;
   onError: (message: string) => void;
+  onSuccess: (message: string) => void;
 }) {
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
@@ -260,6 +267,7 @@ function PlatformWorkspace({
     try {
       await action();
       await onRefresh();
+      onSuccess(successMessage(key));
     } catch (e) {
       onError(e instanceof Error ? e.message : "Action could not be completed.");
     } finally {
@@ -437,6 +445,15 @@ function PlatformWorkspace({
   );
 }
 
+function successMessage(key: string) {
+  if (key === "create") return "Salon workspace created.";
+  if (key.startsWith("approve-")) return "Admin access approved.";
+  if (key.startsWith("reject-")) return "Admin access rejected.";
+  if (key.startsWith("status-")) return "Salon status updated.";
+  if (key.startsWith("rotate-")) return "Tenant code rotated.";
+  return "Changes saved successfully.";
+}
+
 function Metric({ label, value, icon = "ellipse-outline" }: { label: string; value: number | string; icon?: any }) {
   return (
     <View style={s.metric}>
@@ -448,34 +465,60 @@ function Metric({ label, value, icon = "ellipse-outline" }: { label: string; val
 }
 
 function Action({ label, onPress, disabled = false, compact = false }: { label: string; onPress: () => void; disabled?: boolean; compact?: boolean }) {
+  const icon = actionIcon(label);
   return (
     <Pressable disabled={disabled} style={[s.action, compact && s.actionCompact, disabled && s.disabled]} onPress={onPress}>
-      <View style={s.actionContent}><View style={s.actionIcon}><Ionicons name="arrow-forward-outline" size={15} color="#c55239" /></View><Text style={s.actionText}>{label}</Text></View>
-      <Ionicons name="chevron-forward" size={16} color="#c55239" />
+      <View style={s.actionContent}><View style={s.actionIcon}><Ionicons name={icon} size={16} color="#c55239" /></View><Text style={s.actionText}>{label}</Text></View>
+      <View style={s.actionChevron}><Ionicons name="arrow-forward" size={14} color="#c55239" /></View>
     </Pressable>
   );
 }
 
+function actionIcon(label: string): any {
+  const value = label.toLowerCase();
+  if (value.includes("appointment") || value.includes("booking")) return "calendar-outline";
+  if (value.includes("customer")) return "people-outline";
+  if (value.includes("consultation")) return "chatbubbles-outline";
+  if (value.includes("review")) return "star-outline";
+  if (value.includes("service") || value.includes("price")) return "cut-outline";
+  if (value.includes("product")) return "bag-handle-outline";
+  if (value.includes("offer") || value.includes("banner")) return "pricetag-outline";
+  if (value.includes("brand")) return "color-palette-outline";
+  if (value.includes("media")) return "images-outline";
+  if (value.includes("report") || value.includes("analytic")) return "bar-chart-outline";
+  if (value.includes("payment") || value.includes("invoice")) return "card-outline";
+  if (value.includes("notification")) return "notifications-outline";
+  if (value.includes("passport")) return "sparkles-outline";
+  if (value.includes("salon") || value.includes("tenant")) return "business-outline";
+  if (value.includes("approve")) return "checkmark-circle-outline";
+  if (value.includes("reject") || value.includes("deactivate")) return "close-circle-outline";
+  if (value.includes("activate")) return "checkmark-circle-outline";
+  if (value.includes("rotate")) return "refresh-outline";
+  if (value.includes("create")) return "add-circle-outline";
+  if (value.includes("try")) return "refresh-outline";
+  return "arrow-forward-outline";
+}
+
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#f7f5f0" },
-  header: { backgroundColor: "#20352d", padding: 20, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  safe: { flex: 1, backgroundColor: "#f3f1ec" },
+  header: { backgroundColor: "#20352d", paddingHorizontal: 20, paddingTop: 18, paddingBottom: 20, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderBottomLeftRadius: 26, borderBottomRightRadius: 26 },
   headerIdentity: { flexDirection: "row", alignItems: "center", flex: 1, minWidth: 0, flexShrink: 1 },
-  headerAvatar: { width: 42, height: 42, borderRadius: 14, backgroundColor: "rgba(223,202,115,0.16)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(223,202,115,0.38)" },
+  headerAvatar: { width: 48, height: 48, borderRadius: 16, backgroundColor: "#c55239", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.25)" },
   headerCopy: { flex: 1, minWidth: 0, marginLeft: 11 },
   headerEmail: { color: "#b8c9c0", fontSize: 11, marginTop: 3 },
   eyebrow: { color: "#91b3a3", fontSize: 10, fontWeight: "700", letterSpacing: 1.5 },
-  title: { color: "#f7f5f0", fontSize: 28, fontWeight: "700", marginTop: 6 },
-  signOutButton: { flexDirection: "row", alignItems: "center", padding: 7, flexShrink: 0 },
+  title: { color: "#fffdfa", fontSize: 26, fontWeight: "800", marginTop: 5 },
+  signOutButton: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 9, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.08)", flexShrink: 0 },
   signOut: { color: "#dfca73", fontWeight: "700", fontSize: 12 },
-  content: { padding: 22, paddingBottom: 40 },
-  copy: { color: "#77817c", lineHeight: 20, marginBottom: 18 },
+  content: { paddingHorizontal: 18, paddingTop: 20, paddingBottom: 42 },
+  copy: { color: "#68756e", lineHeight: 20, marginBottom: 16, fontSize: 13 },
   metrics: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
-  metric: { width: "48%", marginBottom: 10, backgroundColor: "#fffdfa", borderRadius: 16, padding: 15, borderWidth: 1, borderColor: "#ebe7df", shadowColor: "#20352d", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
-  metricIcon: { width: 30, height: 30, borderRadius: 10, backgroundColor: "#f8e5df", alignItems: "center", justifyContent: "center", marginBottom: 10 },
-  metricValue: { color: "#20352d", fontSize: 25, fontWeight: "700" },
+  metric: { width: "48.5%", marginBottom: 10, backgroundColor: "#fffefa", borderRadius: 18, padding: 14, borderWidth: 1, borderColor: "#e5e1d9", shadowColor: "#20352d", shadowOpacity: 0.07, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
+  metricIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: "#f8e5df", alignItems: "center", justifyContent: "center", marginBottom: 9 },
+  metricValue: { color: "#20352d", fontSize: 24, fontWeight: "800" },
   muted: { color: "#77817c", marginTop: 4 },
-  sectionTitle: { color: "#20352d", fontSize: 18, fontWeight: "700", marginTop: 24, marginBottom: 10 },
-  groupTitle: { color: "#20352d", fontSize: 14, fontWeight: "800", marginTop: 20, marginBottom: 4 },
+  sectionTitle: { color: "#20352d", fontSize: 20, fontWeight: "800", marginTop: 26, marginBottom: 8 },
+  groupTitle: { color: "#718078", fontSize: 11, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase", marginTop: 22, marginBottom: 5 },
   toolGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
   card: { backgroundColor: "#fffdfa", borderRadius: 16, padding: 16, marginTop: 10, borderWidth: 1, borderColor: "#ebe7df", shadowColor: "#20352d", shadowOpacity: 0.04, shadowRadius: 7, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
   welcomeCard: { backgroundColor: "#20352d", borderRadius: 18, padding: 16, flexDirection: "row", alignItems: "center", marginBottom: 16 },
@@ -498,11 +541,12 @@ const s = StyleSheet.create({
   filterResult: { color: "#8a958e", fontSize: 11, marginTop: 8 },
   cardTitle: { color: "#20352d", fontSize: 16, fontWeight: "700" },
   input: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#d9d8d1", borderRadius: 9, padding: 13, marginTop: 10, color: "#20352d" },
-  action: { backgroundColor: "#edf5f1", borderRadius: 12, padding: 13, marginTop: 10, flexDirection: "row", justifyContent: "space-between", alignItems: "center", flexGrow: 1, flexShrink: 1, minWidth: 0, borderWidth: 1, borderColor: "#dcebe4" },
-  actionCompact: { width: "48%", flexGrow: 0, marginTop: 8, padding: 12 },
+  action: { backgroundColor: "#fffefa", borderRadius: 16, padding: 13, marginTop: 10, flexDirection: "row", justifyContent: "space-between", alignItems: "center", flexGrow: 1, flexShrink: 1, minWidth: 0, borderWidth: 1, borderColor: "#e6e2da", shadowColor: "#20352d", shadowOpacity: 0.045, shadowRadius: 7, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
+  actionCompact: { width: "48.5%", flexGrow: 0, marginTop: 8, padding: 13, minHeight: 62 },
   actionContent: { flexDirection: "row", alignItems: "center", flex: 1, minWidth: 0 },
-  actionIcon: { width: 24, height: 24, borderRadius: 8, backgroundColor: "#fffdfa", alignItems: "center", justifyContent: "center" },
+  actionIcon: { width: 32, height: 32, borderRadius: 11, backgroundColor: "#f8e5df", alignItems: "center", justifyContent: "center" },
   actionText: { color: "#20352d", fontWeight: "700", fontSize: 12, flexShrink: 1, marginLeft: 8 },
+  actionChevron: { width: 25, height: 25, borderRadius: 9, backgroundColor: "#fff3ef", alignItems: "center", justifyContent: "center", marginLeft: 5 },
   request: { borderTopWidth: 1, borderTopColor: "#e5e1d9", paddingTop: 12, marginTop: 12 },
   chartRow: { marginTop: 12 },
   chartTrack: { height: 9, borderRadius: 5, backgroundColor: "#e7eee9", overflow: "hidden", marginTop: 6 },
