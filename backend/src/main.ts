@@ -76,7 +76,7 @@ function requestSecurityMiddleware(
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   app.use(requestObservabilityMiddleware);
   app.use(requestSecurityMiddleware);
   app.use(json({ limit: process.env.JSON_BODY_LIMIT || "10mb" }));

@@ -5,6 +5,7 @@ import {
   Param,
   Post,
   Req,
+  BadRequestException,
   UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
@@ -15,6 +16,7 @@ import { RolesGuard } from "../auth/roles.guard";
 import { NotificationService } from "./notification.service";
 import { PushService } from "./push.service";
 import { PushSubscriptionDto } from "./push-subscription.dto";
+import { SendWhatsAppDto } from "./whatsapp.dto";
 
 @Controller("notifications")
 @ApiTags("notifications")
@@ -25,6 +27,18 @@ export class NotificationController {
     private readonly service: NotificationService,
     private readonly push: PushService,
   ) {}
+  @Post("whatsapp/send")
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Send a manual WhatsApp message to a salon customer" })
+  sendWhatsApp(
+    @Body() dto: SendWhatsAppDto,
+    @Req() request: { user: { salonId?: string } },
+  ) {
+    if (!request.user.salonId)
+      throw new BadRequestException("Salon admin has no assigned salon");
+    return this.service.sendManualWhatsApp(dto, request.user.salonId);
+  }
   @Post("push/subscribe")
   @ApiOperation({
     summary: "Register the authenticated browser for push notifications",

@@ -43,7 +43,11 @@ export class User {
     type: "jsonb",
     default: '{"email":true,"appointmentReminders":true}',
   })
-  notificationPreferences!: { email: boolean; appointmentReminders: boolean };
+  notificationPreferences!: {
+    email: boolean;
+    whatsapp?: boolean;
+    appointmentReminders: boolean;
+  };
   @Column({ default: false }) emailVerified!: boolean;
   @Column({ type: "varchar", nullable: true, select: false })
   passwordResetTokenHash!: string | null;

@@ -220,7 +220,7 @@ export function MoreScreen({
           )}
           {section === "reviews" && (role === "admin" ? <AdminReviewsView initial={Array.isArray(data) ? data : []} /> : <ReviewView />)}
           {section === "notifications" && (
-            <PreferencesView initial={data || {}} />
+            <PreferencesView initial={data || {}} role={role} />
           )}
           {section === "customers" && (
             <AdminCustomersView
@@ -1808,13 +1808,17 @@ function SalonInfoView({ salon }: { salon: any }) {
     </View>
   );
 }
-function PreferencesView({ initial }: { initial: any }) {
+function PreferencesView({ initial, role }: { initial: any; role: "user" | "admin" }) {
   const [email, setEmail] = useState(initial.email !== false);
+  const [whatsapp, setWhatsapp] = useState(initial.whatsapp !== false);
   const [appointmentReminders, setAppointmentReminders] = useState(
     initial.appointmentReminders !== false,
   );
   const [history, setHistory] = useState<any[]>([]);
   const [message, setMessage] = useState("");
+  const [recipientPhone, setRecipientPhone] = useState("");
+  const [manualMessage, setManualMessage] = useState("");
+  const [sending, setSending] = useState(false);
   useEffect(() => {
     api<any>("/notifications")
       .then((result) => setHistory(Array.isArray(result) ? result : []))
@@ -1824,13 +1828,32 @@ function PreferencesView({ initial }: { initial: any }) {
     try {
       await api("/auth/preferences", {
         method: "PUT",
-        body: JSON.stringify({ email, appointmentReminders }),
+        body: JSON.stringify({ email, whatsapp, appointmentReminders }),
       });
       setMessage("Preferences saved.");
     } catch (e) {
       setMessage(
         e instanceof Error ? e.message : "Could not save preferences.",
       );
+    }
+  }
+  async function sendManualWhatsApp() {
+    if (!recipientPhone.trim() || !manualMessage.trim()) {
+      setMessage("Enter a recipient phone number and message.");
+      return;
+    }
+    setSending(true);
+    try {
+      await api("/notifications/whatsapp/send", {
+        method: "POST",
+        body: JSON.stringify({ recipientPhone: recipientPhone.trim(), message: manualMessage.trim() }),
+      });
+      setMessage("WhatsApp message sent.");
+      setManualMessage("");
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Could not send WhatsApp message.");
+    } finally {
+      setSending(false);
     }
   }
   return (
@@ -1853,11 +1876,43 @@ function PreferencesView({ initial }: { initial: any }) {
           <Text style={styles.preferenceHint}>Never miss your next visit</Text>
         </View>
       </Pressable>
+      <Pressable style={styles.preference} onPress={() => setWhatsapp(!whatsapp)}>
+        <Text style={styles.checkbox}>{whatsapp ? "✓" : ""}</Text>
+        <View>
+          <Text style={styles.cardTextDark}>WhatsApp updates</Text>
+          <Text style={styles.preferenceHint}>Appointment messages and salon updates</Text>
+        </View>
+      </Pressable>
       <Pressable style={styles.primary} onPress={() => void save()}>
         <Text style={styles.primaryText}>Save preferences</Text>
       </Pressable>
       {message ? <Text style={styles.message}>{message}</Text> : null}
       <Text style={styles.subheading}>Recent notifications</Text>
+      {role === "admin" ? (
+        <View style={styles.manualNotificationCard}>
+          <Text style={styles.subheading}>Send WhatsApp message</Text>
+          <Text style={styles.preferenceHint}>Use international format, for example +919876543210.</Text>
+          <TextInput
+            value={recipientPhone}
+            onChangeText={setRecipientPhone}
+            placeholder="Customer WhatsApp number"
+            keyboardType="phone-pad"
+            style={styles.input}
+          />
+          <TextInput
+            value={manualMessage}
+            onChangeText={setManualMessage}
+            placeholder="Write a reminder, product update, or salon message"
+            multiline
+            maxLength={4096}
+            style={[styles.input, styles.multilineInput]}
+          />
+          <Pressable style={styles.primary} onPress={() => void sendManualWhatsApp()} disabled={sending}>
+            {sending ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Send on WhatsApp</Text>}
+          </Pressable>
+          <Text style={styles.preferenceHint}>WhatsApp may only allow free-form messages during the customer-service window. Use an approved template for outbound reminders outside that window.</Text>
+        </View>
+      ) : null}
       {history.length ? (
         history.map((item: any, index: number) => (
           <View
@@ -2643,6 +2698,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     color: "#20352d",
     marginBottom: 10,
+  },
+  multilineInput: { height: 108, paddingTop: 13, textAlignVertical: "top" },
+  manualNotificationCard: {
+    backgroundColor: "#f4f8f5",
+    borderWidth: 1,
+    borderColor: "#d9e8df",
+    borderRadius: 16,
+    padding: 15,
+    marginBottom: 18,
   },
   twoInputs: { flexDirection: "row", gap: 10 },
   halfInput: { flex: 1 },

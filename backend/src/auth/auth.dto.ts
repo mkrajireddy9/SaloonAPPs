@@ -122,6 +122,10 @@ export class NotificationPreferencesDto {
   @ApiPropertyOptional({ default: true })
   @IsOptional()
   @IsBoolean()
+  whatsapp?: boolean;
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
   appointmentReminders?: boolean;
 }
 

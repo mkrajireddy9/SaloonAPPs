@@ -7,8 +7,13 @@ import {
   UpdateDateColumn,
 } from "typeorm";
 
-export type NotificationChannel = "email";
-export type NotificationStatus = "Queued" | "Sent" | "Failed";
+export type NotificationChannel = "email" | "whatsapp";
+export type NotificationStatus =
+  | "Queued"
+  | "Sent"
+  | "Delivered"
+  | "Read"
+  | "Failed";
 
 @Entity("notifications")
 @Index(["appointmentId", "event", "channel"], { unique: true })

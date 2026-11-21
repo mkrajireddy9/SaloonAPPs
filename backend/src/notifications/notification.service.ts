@@ -10,6 +10,10 @@ import { Repository } from "typeorm";
 import { User } from "../auth/user.entity";
 import { Appointment } from "../appointments/appointment.entity";
 import { Notification, NotificationChannel } from "./notification.entity";
+import { Salon } from "../salon/salon.entity";
+import { WhatsAppService } from "./whatsapp.service";
+import { SendWhatsAppDto } from "./whatsapp.dto";
+import { BadRequestException } from "@nestjs/common";
 
 @Injectable()
 export class NotificationService implements OnModuleInit, OnModuleDestroy {
@@ -18,6 +22,8 @@ export class NotificationService implements OnModuleInit, OnModuleDestroy {
     @InjectRepository(Notification)
     private readonly repo: Repository<Notification>,
     @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(Salon) private readonly salons: Repository<Salon>,
+    private readonly whatsapp: WhatsAppService,
   ) {}
 
   private reminderTimer?: NodeJS.Timeout;
@@ -37,8 +43,13 @@ export class NotificationService implements OnModuleInit, OnModuleDestroy {
       where: { email: appointment.guestEmail },
     });
     const recipientPhone = appointment.guestPhone || user?.phone || null;
+    const salon = await this.salons.findOne({
+      where: { id: appointment.salonId },
+      select: ["id", "name"],
+    });
     const preferences = user?.notificationPreferences || {
       email: true,
+      whatsapp: true,
       appointmentReminders: true,
     };
     if (
@@ -47,8 +58,13 @@ export class NotificationService implements OnModuleInit, OnModuleDestroy {
         .appointmentReminders === false
     )
       return [];
-    const channels = (["email"] as NotificationChannel[]).filter(
-      (channel) => preferences[channel],
+    const channels = (["email", "whatsapp"] as NotificationChannel[]).filter(
+      (channel) =>
+        channel === "email"
+          ? preferences.email
+          : recipientPhone &&
+            preferences.whatsapp !== false &&
+            this.whatsapp.isConfigured(),
     );
     const records = await Promise.all(
       channels.map(async (channel) => {
@@ -77,6 +93,7 @@ export class NotificationService implements OnModuleInit, OnModuleDestroy {
               time: appointment.time,
               stylist: appointment.stylist,
               status: appointment.status,
+              salonName: salon?.name || "Halo Salon",
             },
             status: "Queued",
             attempts: 0,
@@ -100,6 +117,57 @@ export class NotificationService implements OnModuleInit, OnModuleDestroy {
         : { recipientEmail: email, salonId: salonId || undefined },
       order: { createdAt: "DESC" },
     });
+  }
+
+  async sendManualWhatsApp(dto: SendWhatsAppDto, salonId: string) {
+    if (!this.whatsapp.isConfigured())
+      throw new BadRequestException("WhatsApp notifications are not configured");
+    const record = await this.repo.save(
+      this.repo.create({
+        salonId,
+        appointmentId: null,
+        recipientEmail: "",
+        recipientPhone: dto.recipientPhone,
+        channel: "whatsapp",
+        event: `manual.${dto.subject?.trim() || "message"}`.slice(0, 160),
+        payload: { message: dto.message, subject: dto.subject || null },
+        status: "Queued",
+        attempts: 0,
+        maxAttempts: 3,
+        providerMessageId: null,
+        lastError: null,
+        scheduledAt: null,
+        sentAt: null,
+      }),
+    );
+    return this.deliver(record.id, salonId);
+  }
+
+  async applyWhatsAppStatuses(
+    statuses: Array<{ id?: string; status?: string; errors?: unknown }>,
+  ) {
+    let updated = 0;
+    for (const status of statuses) {
+      if (!status.id) continue;
+      const item = await this.repo.findOne({
+        where: { providerMessageId: status.id },
+      });
+      if (!item) continue;
+      const nextStatus: Notification["status"] =
+        status.status === "read"
+          ? "Read"
+          : status.status === "delivered"
+            ? "Delivered"
+            : status.status === "failed"
+              ? "Failed"
+              : "Sent";
+      item.status = nextStatus;
+      if (nextStatus === "Failed")
+        item.lastError = JSON.stringify(status.errors || "WhatsApp delivery failed");
+      await this.repo.save(item);
+      updated += 1;
+    }
+    return updated;
   }
 
   async deliver(id: string, salonId?: string) {
@@ -134,6 +202,19 @@ export class NotificationService implements OnModuleInit, OnModuleDestroy {
         if (!response.ok) throw new Error(`Resend returned ${response.status}`);
         const result = (await response.json()) as { id?: string };
         providerMessageId = result.id || null;
+      } else if (item.channel === "whatsapp") {
+        providerMessageId = item.payload.message
+          ? await this.whatsapp.sendText(
+              item.recipientPhone || "",
+              String(item.payload.message),
+            )
+          : await this.whatsapp.sendAppointmentTemplate(item.recipientPhone || "", [
+            String(item.payload.salonName || "Halo Salon"),
+            String(item.payload.service || "salon service"),
+            String(item.payload.date || ""),
+            String(item.payload.time || ""),
+            String(item.payload.stylist || "your stylist"),
+          ]);
       } else if (webhook) {
         const response = await fetch(webhook, {
           method: "POST",
