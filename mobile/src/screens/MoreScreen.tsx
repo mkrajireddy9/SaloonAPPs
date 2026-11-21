@@ -17,6 +17,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { API_URL, api } from "../api";
 import { useToast } from "../components/ToastProvider";
+import { registerForPushNotifications } from "../push";
 
 type Props = {
   role: "user" | "admin";
@@ -1814,6 +1815,7 @@ function PreferencesView({ initial, role }: { initial: any; role: "user" | "admi
   const [appointmentReminders, setAppointmentReminders] = useState(
     initial.appointmentReminders !== false,
   );
+  const [push, setPush] = useState(initial.push !== false);
   const [history, setHistory] = useState<any[]>([]);
   const [message, setMessage] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
@@ -1832,8 +1834,13 @@ function PreferencesView({ initial, role }: { initial: any; role: "user" | "admi
     try {
       await api("/auth/preferences", {
         method: "PUT",
-        body: JSON.stringify({ email, whatsapp, appointmentReminders }),
+        body: JSON.stringify({ email, whatsapp, appointmentReminders, push }),
       });
+      if (push) {
+        await registerForPushNotifications();
+      } else {
+        await api("/notifications/mobile/unregister", { method: "POST" });
+      }
       setMessage("Preferences saved.");
     } catch (e) {
       setMessage(
@@ -1885,6 +1892,13 @@ function PreferencesView({ initial, role }: { initial: any; role: "user" | "admi
         <View>
           <Text style={styles.cardTextDark}>WhatsApp updates</Text>
           <Text style={styles.preferenceHint}>Appointment messages and salon updates</Text>
+        </View>
+      </Pressable>
+      <Pressable style={styles.preference} onPress={() => setPush(!push)}>
+        <Text style={styles.checkbox}>{push ? "✓" : ""}</Text>
+        <View>
+          <Text style={styles.cardTextDark}>Push notifications</Text>
+          <Text style={styles.preferenceHint}>Updates on this device and browser</Text>
         </View>
       </Pressable>
       <Pressable style={styles.primary} onPress={() => void save()}>

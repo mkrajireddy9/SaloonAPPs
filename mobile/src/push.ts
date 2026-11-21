@@ -15,6 +15,8 @@ Notifications.setNotificationHandler({
 
 export async function registerForPushNotifications() {
   if (Platform.OS === "web") return false;
+  const preferences = await api<{ push?: boolean }>("/auth/preferences");
+  if (preferences.push === false) return false;
   const permissions = await Notifications.getPermissionsAsync();
   let status = permissions.status;
   if (status !== "granted") {

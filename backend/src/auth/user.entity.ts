@@ -41,10 +41,11 @@ export class User {
   @Column({ type: "varchar", nullable: true }) preferredStylist!: string | null;
   @Column({
     type: "jsonb",
-    default: '{"email":true,"appointmentReminders":true}',
+    default: '{"email":true,"push":true,"appointmentReminders":true}',
   })
   notificationPreferences!: {
     email: boolean;
+    push?: boolean;
     whatsapp?: boolean;
     appointmentReminders: boolean;
   };

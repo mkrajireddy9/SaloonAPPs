@@ -118,6 +118,10 @@ export class NotificationPreferencesDto {
   @ApiPropertyOptional({ default: true })
   @IsOptional()
   @IsBoolean()
+  push?: boolean;
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
   email?: boolean;
   @ApiPropertyOptional({ default: true })
   @IsOptional()

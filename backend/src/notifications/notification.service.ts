@@ -112,18 +112,21 @@ export class NotificationService implements OnModuleInit, OnModuleDestroy {
     await Promise.all(records.map((record) => this.deliver(record.id)));
     const admins = await this.users.find({
       where: { salonId: appointment.salonId, role: UserRole.ADMIN, active: true },
-      select: ["id"],
+      select: ["id", "notificationPreferences"],
     });
     const platformAdmins = await this.users.find({
       where: { role: UserRole.PLATFORM_ADMIN, active: true },
-      select: ["id"],
+      select: ["id", "notificationPreferences"],
     });
     const recipientUserIds = [
-      ...(user?.id ? [user.id] : []),
+      ...(user?.id && user.notificationPreferences?.push !== false ? [user.id] : []),
       ...(event === "appointment.created" || event.includes("cancelled") ||
       event.includes("rescheduled") || event.includes("reminder") ||
       event.includes("completed")
-        ? [...admins, ...platformAdmins].map((admin) => admin.id)
+        ? [
+            ...admins.filter((admin) => admin.notificationPreferences?.push !== false),
+            ...platformAdmins.filter((admin) => admin.notificationPreferences?.push !== false),
+          ].map((admin) => admin.id)
         : []),
     ];
     const action = event.replace("appointment.", "");

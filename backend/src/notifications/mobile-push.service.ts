@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { In, Repository } from "typeorm";
 import { UserRole } from "../auth/user.entity";
@@ -29,7 +29,7 @@ export class MobilePushService {
 
   async register(userId: string, salonId: string | null | undefined, dto: RegisterMobilePushDto) {
     if (!/^Expo(nent)?PushToken\[.+\]$/.test(dto.expoPushToken)) {
-      throw new Error("Invalid Expo push token");
+      throw new BadRequestException("Invalid Expo push token");
     }
     let token = await this.tokens.findOne({ where: { expoPushToken: dto.expoPushToken } });
     if (!token) token = this.tokens.create({ expoPushToken: dto.expoPushToken });

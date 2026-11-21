@@ -773,6 +773,7 @@ export class AuthService implements OnModuleInit {
     return (
       user?.notificationPreferences || {
         email: true,
+        push: true,
         whatsapp: true,
         appointmentReminders: true,
       }
@@ -789,10 +790,10 @@ export class AuthService implements OnModuleInit {
       email.toLowerCase().trim() ===
         process.env.PLATFORM_ADMIN_EMAIL?.toLowerCase().trim()
     )
-      return { email: true, whatsapp: true, appointmentReminders: true, ...dto };
+      return { email: true, push: true, whatsapp: true, appointmentReminders: true, ...dto };
     if (!user) throw new UnauthorizedException("User not found");
     user.notificationPreferences = {
-      ...{ email: true, whatsapp: true, appointmentReminders: true },
+      ...{ email: true, push: true, whatsapp: true, appointmentReminders: true },
       ...dto,
     };
     await this.users.save(user);
