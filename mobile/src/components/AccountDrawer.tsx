@@ -69,8 +69,8 @@ export function AccountDrawer({ profile }: Props) {
     }, 0);
   };
   const openLegal = (route: string) => {
+    router.push(route as any);
     setVisible(false);
-    setTimeout(() => router.push(route as any), 0);
   };
   const logout = async () => {
     setVisible(false);
@@ -130,36 +130,14 @@ export function AccountDrawer({ profile }: Props) {
                 <Ionicons name="close" size={24} color="#77817c" />
               </Pressable>
             </View>
-              <View
-              style={{
-                backgroundColor: "#20352d",
-                borderRadius: 16,
-                padding: 12,
-                marginTop: 12,
-                marginBottom: 14,
-              }}
-            >
-              <Text
-                style={{
-                  color: "#a9c9ba",
-                  fontSize: 10,
-                  fontWeight: "800",
-                  letterSpacing: 1.4,
-                }}
-              >
+              <View style={s.memberCard}>
+              <Text style={s.memberEyebrow}>
                 HALO MEMBER
               </Text>
-              <Text
-                style={{
-                  color: "#fff",
-                  fontSize: 18,
-                  fontWeight: "800",
-                  marginTop: 3,
-                }}
-              >
+              <Text style={s.memberTitle}>
                 Your salon space
               </Text>
-              <Text style={{ color: "#c8d2cb", fontSize: 11, marginTop: 3 }}>
+              <Text style={s.memberDescription}>
                 Everything you need for your next visit.
               </Text>
               </View>
@@ -202,9 +180,12 @@ export function AccountDrawer({ profile }: Props) {
                   {legalItems.map((item) => (
                     <Pressable
                       key={item.route}
+                      style={s.legalLink}
                       onPress={() => openLegal(item.route)}
                     >
-                      <Text style={s.footerLink}>{item.label}</Text>
+                      <View style={s.legalIcon}><Ionicons name={item.icon as any} size={16} color="#4c947d" /></View>
+                      <View style={s.legalCopy}><Text style={s.legalTitle}>{item.label}</Text><Text style={s.legalDescription}>{item.description}</Text></View>
+                      <Ionicons name="chevron-forward" size={16} color="#a7afa9" />
                     </Pressable>
                   ))}
                 </View>
@@ -235,14 +216,17 @@ const s = StyleSheet.create({
   modalRoot: { flex: 1, flexDirection: "row" },
   scrim: { flex: 1, backgroundColor: "rgba(32,53,45,0.42)" },
   drawer: {
-    width: "84%",
+    width: "88%",
     height: "100%",
     flexDirection: "column",
-    maxWidth: 360,
-    backgroundColor: "#f7f5f0",
+    maxWidth: 390,
+    backgroundColor: "#fffdfa",
     paddingHorizontal: 20,
     paddingTop: 24,
     paddingBottom: 18,
+    borderTopLeftRadius: 28,
+    borderBottomLeftRadius: 28,
+    overflow: "hidden",
   },
   drawerContent: { paddingBottom: 8 },
   drawerHeader: {
@@ -274,11 +258,15 @@ const s = StyleSheet.create({
     marginBottom: 10,
   },
   item: {
-    minHeight: 52,
+    minHeight: 62,
     flexDirection: "row",
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e4e1d9",
+    backgroundColor: "#fdfbf7",
+    borderWidth: 1,
+    borderColor: "#eee9df",
+    borderRadius: 15,
+    paddingHorizontal: 10,
+    marginBottom: 8,
   },
   icon: {
     width: 32,
@@ -292,16 +280,27 @@ const s = StyleSheet.create({
   copy: { flex: 1 },
   itemTitle: { color: "#20352d", fontSize: 13, fontWeight: "800" },
   itemDescription: { color: "#77817c", fontSize: 10, marginTop: 2 },
+  memberCard: {
+    backgroundColor: "#20352d",
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 14,
+    marginBottom: 18,
+  },
+  memberEyebrow: { color: "#a9c9ba", fontSize: 10, fontWeight: "800", letterSpacing: 1.4 },
+  memberTitle: { color: "#fff", fontSize: 19, fontWeight: "800", marginTop: 5 },
+  memberDescription: { color: "#c8d2cb", fontSize: 11, marginTop: 5 },
   divider: { height: 1, backgroundColor: "#d9d6ce", marginVertical: 18 },
   footer: { marginTop: "auto" },
   footerLinks: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: 18,
-    paddingVertical: 2,
+    gap: 8,
     marginBottom: 10,
   },
+  legalLink: { minHeight: 54, flexDirection: "row", alignItems: "center", backgroundColor: "#fdfbf7", borderWidth: 1, borderColor: "#eee9df", borderRadius: 14, paddingHorizontal: 10 },
+  legalIcon: { width: 30, height: 30, borderRadius: 10, backgroundColor: "#e7f1ed", alignItems: "center", justifyContent: "center", marginRight: 9 },
+  legalCopy: { flex: 1 },
+  legalTitle: { color: "#20352d", fontSize: 12, fontWeight: "800" },
+  legalDescription: { color: "#77817c", fontSize: 10, marginTop: 2 },
   signOutButton: {
     minHeight: 46,
     borderRadius: 10,

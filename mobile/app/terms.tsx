@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Terms() {
@@ -8,18 +9,18 @@ export default function Terms() {
       <ScrollView style={s.screen} contentContainerStyle={s.content}>
         <View style={s.nav}>
           <Pressable style={s.backButton} onPress={() => router.back()}>
-            <Text style={s.back}>‹</Text>
+            <Ionicons name="arrow-back" size={19} color="#20352d" />
           </Pressable>
-          <Text style={s.navLabel}>LEGAL</Text>
+          <Text style={s.navLabel}>HALO LEGAL</Text>
         </View>
         <View style={s.hero}>
-          <Text style={s.eyebrow}>HALO / HOW IT WORKS</Text>
+          <View style={s.heroTop}><View style={s.heroIcon}><Ionicons name="document-text-outline" size={20} color="#dfca73" /></View><Text style={s.eyebrow}>HOW HALO WORKS</Text></View>
           <Text style={s.title}>Terms of use</Text>
           <Text style={s.subtitle}>
             The simple rules that keep every salon visit clear.
           </Text>
         </View>
-        <Text style={s.updated}>LAST UPDATED · 10 NOVEMBER 2026</Text>
+        <View style={s.updatedPill}><Ionicons name="time-outline" size={13} color="#4c947d" /><Text style={s.updated}>Updated 10 November 2026</Text></View>
         <View style={s.card}>
           <Text style={s.cardTitle}>Using Halo</Text>
           <Text style={s.body}>
@@ -29,7 +30,7 @@ export default function Terms() {
           </Text>
         </View>
         <View style={s.card}>
-          <Text style={s.sectionNumber}>01</Text>
+          <View style={s.sectionNumber}><Text style={s.sectionNumberText}>01</Text></View>
           <Text style={s.heading}>Your account</Text>
           <Text style={s.body}>
             Keep your credentials private and provide accurate contact
@@ -46,12 +47,12 @@ export default function Terms() {
 const s = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#f7f5f0" },
   screen: { flex: 1, backgroundColor: "#f7f5f0" },
-  content: { padding: 22, paddingBottom: 44 },
-  nav: { flexDirection: "row", alignItems: "center", marginBottom: 18 },
+  content: { padding: 18, paddingBottom: 44 },
+  nav: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: 14,
     backgroundColor: "#fffdfa",
     borderWidth: 1,
     borderColor: "#e4e1d9",
@@ -59,41 +60,46 @@ const s = StyleSheet.create({
     justifyContent: "center",
     marginRight: 12,
   },
-  back: { color: "#20352d", fontSize: 29, lineHeight: 30, marginTop: -3 },
   navLabel: {
     color: "#77817c",
-    fontSize: 11,
     fontWeight: "800",
-    letterSpacing: 1.8,
+    letterSpacing: 1.4,
+    fontSize: 10,
   },
   hero: {
     backgroundColor: "#20352d",
-    borderRadius: 22,
-    padding: 22,
-    marginBottom: 18,
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 14,
   },
+  heroTop: { flexDirection: "row", alignItems: "center", gap: 9 },
+  heroIcon: { width: 38, height: 38, borderRadius: 13, backgroundColor: "rgba(223,202,115,0.16)", alignItems: "center", justifyContent: "center" },
   eyebrow: {
     color: "#a9c9ba",
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1.5,
   },
-  title: { color: "#fff", fontSize: 31, fontWeight: "800", marginTop: 9 },
+  title: { color: "#fff", fontSize: 30, fontWeight: "800", marginTop: 14 },
   subtitle: { color: "#c8d2cb", fontSize: 14, lineHeight: 21, marginTop: 8 },
+  updatedPill: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", gap: 5, backgroundColor: "#e7f1ed", borderRadius: 14, paddingHorizontal: 10, paddingVertical: 7, marginBottom: 12 },
   updated: {
-    color: "#91b3a3",
+    color: "#4c947d",
     fontSize: 10,
     fontWeight: "800",
-    letterSpacing: 1.2,
-    marginBottom: 10,
   },
   card: {
     backgroundColor: "#fffdfa",
     borderWidth: 1,
     borderColor: "#e4e1d9",
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 18,
     marginBottom: 12,
+    shadowColor: "#20352d",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 1,
   },
   cardTitle: {
     color: "#20352d",
@@ -101,9 +107,10 @@ const s = StyleSheet.create({
     fontWeight: "800",
     marginBottom: 8,
   },
-  sectionNumber: {
+  sectionNumber: { width: 30, height: 30, borderRadius: 10, backgroundColor: "#fff1ed", alignItems: "center", justifyContent: "center", marginBottom: 8 },
+  sectionNumberText: {
     color: "#c55239",
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1.5,
   },

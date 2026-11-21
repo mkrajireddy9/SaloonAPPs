@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { api } from "../../src/api";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 
 type Payment = {
   id?: string;
@@ -117,7 +118,10 @@ export default function Payments() {
             {message}
           </Text>
         ) : null}
-        <Text style={s.sectionTitle}>Payment history</Text>
+        <View style={s.historyHeader}>
+          <View><Text style={s.sectionTitle}>Payment history</Text><Text style={s.historySubtitle}>{payments.length ? `${payments.length} transaction${payments.length === 1 ? "" : "s"}` : "Your completed payments will appear here"}</Text></View>
+          <View style={s.historyIcon}><Ionicons name="receipt-outline" size={20} color="#4c947d" /></View>
+        </View>
         {loading ? (
           <View style={s.center}>
             <ActivityIndicator color="#c55239" />
@@ -125,9 +129,10 @@ export default function Payments() {
         ) : payments.length ? (
           payments.map((item, index) => (
             <View
-              style={s.row}
+              style={s.paymentRow}
               key={item.id || `${item.appointmentId}-${index}`}
             >
+              <View style={s.paymentIcon}><Ionicons name="card-outline" size={19} color="#c55239" /></View>
               <View style={s.rowCopy}>
                 <Text style={s.rowTitle}>
                   {item.description || item.appointmentId || "Salon payment"}
@@ -139,13 +144,13 @@ export default function Payments() {
                 </Text>
               </View>
               <View>
-                <Text style={s.amount}>₹{item.amount || item.total || 0}</Text>
-                <Text style={s.status}>{item.status || "Pending"}</Text>
+                <Text style={s.amount}>₹{Number(item.amount || item.total || 0).toLocaleString("en-IN")}</Text>
+                <Text style={[s.status, String(item.status || "Pending").toLowerCase() === "paid" ? s.statusPaid : s.statusPending]}>{item.status || "Pending"}</Text>
               </View>
             </View>
           ))
         ) : (
-          <Text style={s.muted}>No payment history yet.</Text>
+          <View style={s.emptyHistory}><View style={s.emptyHistoryIcon}><Ionicons name="receipt-outline" size={25} color="#4c947d" /></View><Text style={s.emptyEyebrow}>YOUR PAYMENT SPACE</Text><Text style={s.emptyTitle}>Nothing here yet</Text><Text style={s.emptyText}>Once you pay for a salon appointment, your invoice and payment status will appear here.</Text></View>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -195,10 +200,13 @@ const s = StyleSheet.create({
     color: "#20352d",
     fontSize: 20,
     fontWeight: "800",
-    marginTop: 28,
-    marginBottom: 12,
+    marginTop: 0,
+    marginBottom: 3,
   },
-  row: {
+  historyHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 28, marginBottom: 12 },
+  historySubtitle: { color: "#77817c", fontSize: 11 },
+  historyIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: "#e7f1ed", alignItems: "center", justifyContent: "center" },
+  paymentRow: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fffdfa",
@@ -208,16 +216,23 @@ const s = StyleSheet.create({
     padding: 14,
     marginBottom: 9,
   },
+  paymentIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: "#fff1ed", alignItems: "center", justifyContent: "center", marginRight: 11 },
   rowCopy: { flex: 1 },
   rowTitle: { color: "#20352d", fontWeight: "800" },
   muted: { color: "#77817c", marginTop: 5 },
   amount: { color: "#c55239", fontWeight: "800", textAlign: "right" },
   status: {
-    color: "#4c947d",
     fontSize: 11,
     fontWeight: "700",
     marginTop: 4,
     textAlign: "right",
   },
+  statusPaid: { color: "#26735a" },
+  statusPending: { color: "#93631d" },
+  emptyHistory: { width: "100%", alignSelf: "stretch", alignItems: "center", justifyContent: "center", backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#dfe8e2", borderRadius: 20, paddingHorizontal: 24, paddingVertical: 28 },
+  emptyHistoryIcon: { width: 58, height: 58, borderRadius: 20, backgroundColor: "#e7f1ed", alignItems: "center", justifyContent: "center", marginBottom: 13 },
+  emptyEyebrow: { color: "#4c947d", fontSize: 9, fontWeight: "800", letterSpacing: 1.4 },
+  emptyTitle: { color: "#20352d", fontSize: 17, fontWeight: "800", marginTop: 6, textAlign: "center", width: "100%" },
+  emptyText: { color: "#77817c", fontSize: 12, lineHeight: 18, textAlign: "center", marginTop: 6 },
   center: { alignItems: "center", padding: 28 },
 });

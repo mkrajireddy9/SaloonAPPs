@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, AppState, Image, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, AppState, Image, Linking, Pressable, RefreshControl, ScrollView, ScrollViewInstance, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
@@ -165,8 +165,20 @@ export default function Directory() {
   const activeBanner = banners[activeBannerIndex] || banners[0];
   const { width: windowWidth } = useWindowDimensions();
   const promoWidth = Math.max(280, windowWidth - 28);
+  const bannerCarouselRef = useRef<ScrollViewInstance>(null);
+  const activeBannerIndexRef = useRef(0);
   const serviceCategories = categories.filter((item) => item !== "All").slice(0, 8);
   const hasRefinements = Boolean(search.trim() || category !== "All" || quickFilter !== "all" || radius !== null || rating !== null || price !== "any" || pricedOnly);
+  useEffect(() => {
+    if (banners.length < 2) return;
+    const timer = setInterval(() => {
+      const next = (activeBannerIndexRef.current + 1) % banners.length;
+      activeBannerIndexRef.current = next;
+      setActiveBannerIndex(next);
+      bannerCarouselRef.current?.scrollTo({ x: next * (promoWidth + 10), animated: true });
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [banners.length, promoWidth]);
   const openSalon = (salon: Salon) => {
     const id = String(salon.id || "").trim();
     if (!id) {
@@ -220,13 +232,16 @@ export default function Directory() {
     {filtersOpen ? <FilterPanel radius={radius} setRadius={setRadius} rating={rating} setRating={setRating} price={price} setPrice={setPrice} onClear={clearFilters} onCancel={() => setFiltersOpen(false)} onApply={() => setFiltersOpen(false)} /> : <>
     {!hasRefinements ? <>
       <ScrollView
+        ref={bannerCarouselRef}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={s.bannerCarousel}
         onMomentumScrollEnd={(event) => {
-          const index = Math.round(event.nativeEvent.contentOffset.x / promoWidth);
-          setActiveBannerIndex(Math.max(0, Math.min(index, banners.length - 1)));
+          const index = Math.round(event.nativeEvent.contentOffset.x / (promoWidth + 10));
+          const next = Math.max(0, Math.min(index, banners.length - 1));
+          activeBannerIndexRef.current = next;
+          setActiveBannerIndex(next);
         }}
       >
         {(banners.length ? banners : [undefined]).map((banner, index) => {
@@ -259,7 +274,7 @@ export default function Directory() {
   </ScrollView></SafeAreaView>;
 }
 
-function Section({ title, action, onAction, children }: { title: string; action: string; onAction?: () => void; children: any }) { const isBackAction = action === "Back to home"; return <View style={s.section}><View style={s.sectionHeader}><Text style={s.sectionTitle}>{title}</Text>{onAction ? <Pressable style={isBackAction ? s.backHomeButton : undefined} onPress={onAction}><Ionicons name={isBackAction ? "arrow-back" : "arrow-forward"} size={isBackAction ? 14 : 12} color={isBackAction ? "#20352d" : "#d21c68"} /><Text style={isBackAction ? s.backHomeText : s.sectionAction}>{action}</Text></Pressable> : <Text style={s.resultCount}>{action}</Text>}</View>{children}</View>; }
+function Section({ title, action, onAction, children }: { title: string; action: string; onAction?: () => void; children: any }) { const isBackAction = action === "Back to home"; const isViewAll = action === "View all"; return <View style={s.section}><View style={s.sectionHeader}><Text style={s.sectionTitle}>{title}</Text>{onAction ? <Pressable style={isBackAction ? s.backHomeButton : isViewAll ? s.viewAllButton : undefined} onPress={onAction}><Ionicons name={isBackAction ? "arrow-back" : "arrow-forward"} size={isBackAction || isViewAll ? 14 : 12} color={isBackAction ? "#20352d" : "#c55239"} /><Text style={isBackAction ? s.backHomeText : isViewAll ? s.viewAllText : s.sectionAction}>{action}</Text></Pressable> : <Text style={s.resultCount}>{action}</Text>}</View>{children}</View>; }
 function TrustStrip({ onTopRated, onPrices, pricedOnly, onBooking, onNearby }: { onTopRated: () => void; onPrices: () => void; pricedOnly: boolean; onBooking: () => void; onNearby: () => void }) {
   const items = [
     { icon: "shield-checkmark-outline", label: "Top rated", onPress: onTopRated, active: false },
@@ -363,6 +378,8 @@ const s = {
   sectionAction: { ...baseStyles.sectionAction, color: "#c55239" },
   backHomeButton: { flexDirection: "row" as const, alignItems: "center" as const, gap: 5, backgroundColor: "#e7f1ed", borderWidth: 1, borderColor: "#cfe3da", borderRadius: 16, paddingHorizontal: 11, paddingVertical: 8 },
   backHomeText: { color: "#20352d", fontSize: 11, fontWeight: "900" as const },
+  viewAllButton: { flexDirection: "row" as const, alignItems: "center" as const, gap: 5, backgroundColor: "#fff1ed", borderWidth: 1, borderColor: "#f0d2ca", borderRadius: 16, paddingHorizontal: 11, paddingVertical: 8 },
+  viewAllText: { color: "#c55239", fontSize: 11, fontWeight: "900" as const },
   resultCount: { ...baseStyles.resultCount, color: "#77817c" },
   salonCard: { ...baseStyles.salonCard, flexDirection: "row" as const, backgroundColor: "#fffdfa", borderColor: "#e1ddd4", borderRadius: 16, shadowOpacity: 0, elevation: 0 },
   featuredCard: { ...baseStyles.featuredCard, flexDirection: "column" as const, width: 218 },

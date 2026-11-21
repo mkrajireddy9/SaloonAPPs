@@ -511,6 +511,25 @@ function SectionBanner({ icon, eyebrow, title, description }: { icon: any; eyebr
     </View>
   );
 }
+function MessageToast({ message }: { message?: string }) {
+  const { showToast } = useToast();
+  const lastMessage = useRef("");
+  useEffect(() => {
+    if (!message) {
+      lastMessage.current = "";
+      return;
+    }
+    if (message === lastMessage.current) return;
+    lastMessage.current = message;
+    const type = /could not|unable|error|failed|cannot|required|invalid/i.test(message)
+      ? "error"
+      : /saved|sent|created|submitted|approved|activated|published|completed|cancelled|removed|updated/i.test(message)
+        ? "success"
+        : "warning";
+    showToast({ type, message });
+  }, [message, showToast]);
+  return null;
+}
 
 function AdminRewardsView({ initial }: { initial: any }) {
   const [coupons, setCoupons] = useState<any[]>(initial.coupons || []);
@@ -574,7 +593,7 @@ function AdminRewardsView({ initial }: { initial: any }) {
           <Text style={styles.muted}>{coupon.discountType === "percent" ? `${coupon.discountValue}% off` : `₹${coupon.discountValue} off`} · Used {coupon.usedCount || 0}{coupon.maxUses ? ` / ${coupon.maxUses}` : ""}</Text>
         </View>
       )) : <Text style={styles.muted}>No coupons created yet.</Text>}
-      {message ? <Text style={styles.message}>{message}</Text> : null}
+      <MessageToast message={message} />
     </View>
   );
 }
@@ -784,7 +803,7 @@ function AdminSalonView({ salon }: { salon: any }) {
       <Pressable style={styles.primary} onPress={() => void save()}>
         <Text style={styles.primaryText}>Save salon details</Text>
       </Pressable>
-      {message ? <Text style={styles.message}>{message}</Text> : null}
+      <MessageToast message={message} />
     </View>
   );
 }
@@ -1279,7 +1298,7 @@ function AdminAppointmentsView({ initial }: { initial: any[] }) {
           <Text style={styles.muted}>New booking requests will appear here for quick confirmation.</Text>
         </View>
       )}
-      {message ? <Text style={styles.message}>{message}</Text> : null}
+      <MessageToast message={message} />
     </View>
   );
 }
@@ -1389,7 +1408,7 @@ function AdminCustomersView({ initial }: { initial: any[] }) {
       ) : (
         <Text style={styles.muted}>No customers found.</Text>
       )}
-      {message ? <Text style={styles.message}>{message}</Text> : null}
+      <MessageToast message={message} />
     </View>
   );
 }
@@ -1602,7 +1621,7 @@ function AdminConsultationsView({ initial }: { initial: any[] }) {
       ) : (
         <View style={styles.emptyCard}><View style={styles.emptyIcon}><Ionicons name="chatbubbles-outline" size={24} color="#c55239" /></View><Text style={styles.cardTextDark}>No consultations yet</Text><Text style={styles.muted}>Start one above when a guest is ready for a style conversation.</Text></View>
       )}
-      {message ? <Text style={styles.message}>{message}</Text> : null}
+      <MessageToast message={message} />
     </View>
   );
 }
@@ -1904,7 +1923,7 @@ function PreferencesView({ initial, role }: { initial: any; role: "user" | "admi
       <Pressable style={styles.primary} onPress={() => void save()}>
         <Text style={styles.primaryText}>Save preferences</Text>
       </Pressable>
-      {message ? <Text style={styles.message}>{message}</Text> : null}
+      <MessageToast message={message} />
       <Text style={styles.subheading}>Recent notifications</Text>
       {role === "admin" ? (
         <View style={styles.manualNotificationCard}>
@@ -2070,7 +2089,7 @@ function BookingView({ salons }: { salons: any[] }) {
               <Text style={styles.primaryText}>Request appointment</Text>
             )}
           </Pressable>
-          {message ? <Text style={styles.message}>{message}</Text> : null}
+          <MessageToast message={message} />
         </>
       )}
     </View>
@@ -2122,7 +2141,7 @@ function PaymentView({ payments }: { payments: Payment[] }) {
       <Pressable style={styles.primary} onPress={() => void createIntent()}>
         <Text style={styles.primaryText}>Start payment</Text>
       </Pressable>
-      {message ? <Text style={styles.message}>{message}</Text> : null}
+      <MessageToast message={message} />
       <List
         title="Payment history"
         items={safePayments.map(
@@ -2155,7 +2174,7 @@ function AdminReviewsView({ initial }: { initial: any[] }) {
         <View style={styles.row} key={item.id}>
           <Text style={styles.cardTextDark}>{item.guestName || "Guest"} · {"★".repeat(Number(item.rating || 0))}</Text>
           <Text style={styles.muted}>{item.comment}</Text>
-          <Text style={styles.cardText}>{item.status || "Pending"}</Text>
+          <View style={styles.reviewPendingBadge}><Text style={styles.reviewPendingText}>{item.status === "Pending" ? "Review pending" : item.status}</Text></View>
           {item.status === "Pending" ? (
             <View style={styles.actionRow}>
               <Pressable onPress={() => void update(item.id, "Published")}><Text style={styles.actionText}>Publish</Text></Pressable>
@@ -2164,24 +2183,29 @@ function AdminReviewsView({ initial }: { initial: any[] }) {
           ) : null}
         </View>
       )) : <Text style={styles.muted}>No reviews yet.</Text>}
-      {message ? <Text style={styles.message}>{message}</Text> : null}
+      <MessageToast message={message} />
     </View>
   );
 }
 function ReviewView() {
+  const { showToast } = useToast();
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [appointments, setAppointments] = useState<any[]>([]);
   const [appointmentId, setAppointmentId] = useState("");
-  const [message, setMessage] = useState("");
   useEffect(() => {
     api<any[]>("/appointments")
       .then((items) => setAppointments(Array.isArray(items) ? items : []))
       .catch(() => setAppointments([]));
   }, []);
+  const completedAppointments = appointments.filter((item) => {
+    const status = String(item.status || "").toLowerCase();
+    if (status === "cancelled" || status === "rejected") return false;
+    return status === "completed" || (typeof item.date === "string" && item.date < new Date().toISOString().slice(0, 10));
+  });
   async function submit() {
     if (!appointmentId) {
-      setMessage("Choose the visit you want to rate.");
+      showToast({ type: "warning", message: "Choose a completed visit to rate." });
       return;
     }
     try {
@@ -2189,53 +2213,53 @@ function ReviewView() {
         method: "POST",
         body: JSON.stringify({ rating, comment, appointmentId }),
       });
-      setMessage("Review submitted for salon approval.");
+      showToast({ type: "success", message: "Review submitted for salon approval." });
       setComment("");
+      setAppointmentId("");
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Could not submit review.");
+      showToast({ type: "error", message: e instanceof Error ? e.message : "Could not submit review." });
     }
   }
   return (
     <View>
       <SectionBanner icon="star-outline" eyebrow="GUEST FEEDBACK" title="Share your experience" description="A few stars help your salon keep improving." />
-      <Text style={styles.fieldLabel}>Your rating</Text>
+      <View style={styles.reviewFormCard}>
+      <View style={styles.reviewRatingHeader}>
+        <View><Text style={styles.reviewSectionLabel}>YOUR RATING</Text><Text style={styles.reviewPrompt}>How was your visit?</Text></View>
+        <View style={styles.ratingPill}><Text style={styles.ratingPillText}>{rating}/5</Text></View>
+      </View>
       <View style={styles.starPicker}>
         {[1, 2, 3, 4, 5].map((value) => (
-          <Pressable key={value} onPress={() => setRating(value)} accessibilityLabel={`${value} stars`}>
+          <Pressable key={value} style={[styles.starButton, value <= rating && styles.starButtonSelected]} onPress={() => setRating(value)} accessibilityLabel={`${value} stars`}>
             <Text style={[styles.star, value <= rating && styles.starSelected]}>★</Text>
           </Pressable>
         ))}
       </View>
-      <Text style={styles.muted}>{rating} out of 5</Text>
-      <Text style={styles.fieldLabel}>Choose a visit</Text>
-      {appointments.length ? (
-        <View style={styles.choiceRow}>
-          {appointments.map((item) => (
+      <View style={styles.reviewDivider} />
+      <View style={styles.reviewVisitHeader}><View><Text style={styles.reviewSectionLabel}>CHOOSE A VISIT</Text><Text style={styles.reviewPrompt}>Which visit would you like to review?</Text></View><Ionicons name="calendar-outline" size={20} color="#4c947d" /></View>
+      {completedAppointments.length ? (
+        <View style={styles.reviewChoiceList}>
+          {completedAppointments.map((item) => (
             <Pressable
               key={item.id}
-              style={[styles.choice, appointmentId === item.id && styles.choiceActive]}
+              style={[styles.reviewChoice, appointmentId === item.id && styles.reviewChoiceActive]}
               onPress={() => setAppointmentId(item.id)}
             >
-              <Text style={styles.cardTextDark}>{item.service || "Salon visit"}</Text>
-              <Text style={styles.muted}>{item.date} · {item.status}</Text>
+              <View style={styles.reviewChoiceIcon}><Ionicons name="checkmark-circle-outline" size={19} color={appointmentId === item.id ? "#26735a" : "#4c947d"} /></View>
+              <View style={styles.reviewChoiceCopy}><Text style={styles.cardTextDark}>{item.service || "Salon visit"}</Text><Text style={styles.muted}>{item.date} · Visit completed</Text></View>
+              {appointmentId === item.id ? <Ionicons name="checkmark-circle" size={20} color="#26735a" /> : <Ionicons name="chevron-forward" size={17} color="#a7afa9" />}
             </Pressable>
           ))}
         </View>
       ) : (
-        <Text style={styles.muted}>Book a visit before sharing a rating.</Text>
+        <View style={styles.reviewEmpty}><Ionicons name="sparkles-outline" size={20} color="#4c947d" /><Text style={styles.reviewEmptyText}>Complete a salon visit before sharing a rating.</Text></View>
       )}
-      <TextInput
-        value={comment}
-        onChangeText={setComment}
-        placeholder="Tell us about your visit"
-        style={[styles.input, styles.multiline]}
-        multiline
-        placeholderTextColor="#9aa19c"
-      />
-      <Pressable style={styles.primary} onPress={() => void submit()}>
+      <Text style={styles.reviewSectionLabel}>YOUR FEEDBACK</Text>
+      <TextInput value={comment} onChangeText={setComment} placeholder="Tell us about your visit" style={[styles.input, styles.reviewComment]} multiline placeholderTextColor="#9aa19c" />
+      <Pressable disabled={!completedAppointments.length || !appointmentId} style={[styles.primary, styles.reviewSubmit, (!completedAppointments.length || !appointmentId) && styles.primaryDisabled]} onPress={() => void submit()}>
         <Text style={styles.primaryText}>Submit review</Text>
       </Pressable>
-      {message ? <Text style={styles.message}>{message}</Text> : null}
+      </View>
     </View>
   );
 }
@@ -2338,7 +2362,7 @@ function MembershipAdminView({ initial }: { initial: any[] }) {
         <TextInput value={sessions} onChangeText={setSessions} placeholder="Enter session count" keyboardType="numeric" style={[styles.input, styles.halfInput]} />
       </View>
       <Pressable style={styles.primary} onPress={() => void createPlan()}><Text style={styles.primaryText}>Create membership plan</Text></Pressable>
-      {message ? <Text style={styles.message}>{message}</Text> : null}
+      <MessageToast message={message} />
       <Text style={styles.subheading}>Add membership after payment</Text>
       <Text style={styles.muted}>Use the email from the user account. The membership will appear in that user’s More screen.</Text>
       <TextInput value={memberEmail} onChangeText={setMemberEmail} placeholder="Enter member email address" keyboardType="email-address" autoCapitalize="none" style={styles.input} />
@@ -2441,7 +2465,7 @@ function PassportView({ passport }: { passport: Passport }) {
       <Pressable style={styles.primary} onPress={() => void save()}>
         <Text style={styles.primaryText}>Save hair passport</Text>
       </Pressable>
-      {message ? <Text style={styles.message}>{message}</Text> : null}
+      <MessageToast message={message} />
     </View>
   );
 }
@@ -2704,9 +2728,31 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   fieldLabel: { color: "#20352d", fontWeight: "700", fontSize: 12, marginBottom: 6 },
-  starPicker: { flexDirection: "row", gap: 8, marginBottom: 2 },
-  star: { color: "#d9d6ce", fontSize: 32 },
+  reviewFormCard: { backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 20, padding: 16, marginTop: 4 },
+  reviewRatingHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  reviewVisitHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 11 },
+  reviewSectionLabel: { color: "#4c947d", fontSize: 10, fontWeight: "800", letterSpacing: 1.2, marginBottom: 7 },
+  reviewPrompt: { color: "#20352d", fontSize: 16, fontWeight: "800" },
+  ratingPill: { backgroundColor: "#fff1ed", borderRadius: 14, paddingHorizontal: 11, paddingVertical: 7 },
+  ratingPillText: { color: "#c55239", fontSize: 12, fontWeight: "900" },
+  starPicker: { flexDirection: "row", justifyContent: "center", gap: 9, marginTop: 15, marginBottom: 2 },
+  starButton: { width: 42, height: 42, borderRadius: 13, backgroundColor: "#f7f5f0", alignItems: "center", justifyContent: "center" },
+  starButtonSelected: { backgroundColor: "#fff1d6" },
+  star: { color: "#d9d6ce", fontSize: 32, transform: [{ translateY: -5 }] },
   starSelected: { color: "#dfb83f" },
+  reviewDivider: { height: 1, backgroundColor: "#eeeae3", marginVertical: 18 },
+  reviewComment: { minHeight: 92, textAlignVertical: "top", marginTop: 2 },
+  reviewSubmit: { marginTop: 14 },
+  primaryDisabled: { opacity: 0.45 },
+  reviewChoiceList: { gap: 9, marginBottom: 4 },
+  reviewChoice: { minHeight: 64, flexDirection: "row", alignItems: "center", backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 15, paddingHorizontal: 11, paddingVertical: 9 },
+  reviewChoiceActive: { backgroundColor: "#e7f1ed", borderColor: "#9fc8b7" },
+  reviewChoiceIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: "#edf5f1", alignItems: "center", justifyContent: "center", marginRight: 10 },
+  reviewChoiceCopy: { flex: 1, minWidth: 0 },
+  reviewEmpty: { flexDirection: "row", alignItems: "center", gap: 9, backgroundColor: "#edf5f1", borderRadius: 14, padding: 12, marginBottom: 4 },
+  reviewEmptyText: { flex: 1, color: "#60736a", fontSize: 12, lineHeight: 17 },
+  reviewPendingBadge: { alignSelf: "flex-start", backgroundColor: "#fff1d6", borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5, marginTop: 7 },
+  reviewPendingText: { color: "#93631d", fontSize: 10, fontWeight: "800" },
   input: {
     height: 48,
     borderWidth: 1,
