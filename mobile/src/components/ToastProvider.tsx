@@ -22,7 +22,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const showToast = useCallback((toast: Omit<Toast, "id">) => {
     const id = Date.now() + Math.random();
     setToasts((current) => [...current.filter((item) => item.message !== toast.message), { ...toast, id }].slice(-3));
-    setTimeout(() => dismissToast(id), 3800);
+    setTimeout(() => dismissToast(id), 5000);
   }, [dismissToast]);
   const value = useMemo(() => ({ showToast, dismissToast }), [showToast, dismissToast]);
   return (

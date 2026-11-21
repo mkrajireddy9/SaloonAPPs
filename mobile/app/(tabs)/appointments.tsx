@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "../../src/api";
+import { useToast } from "../../src/components/ToastProvider";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 type Appointment = {
@@ -38,6 +39,8 @@ type Salon = {
   branches?: Branch[];
 };
 type Selector = "salon" | "branch" | "service" | "stylist" | null;
+type BookingField = "salon" | "branch" | "service" | "stylist" | "date" | "time" | "phone";
+type AppointmentFilter = "all" | "upcoming" | "completed" | "rejected";
 function normalizeSalon(raw: any): Salon {
   const services = Array.isArray(raw.services) && raw.services.length
     ? raw.services
@@ -52,17 +55,6 @@ function normalizeSalon(raw: any): Salon {
     : [{ id: "main", name: raw.name || "Main branch", location: raw.location, services, stylists }];
   return { ...raw, services, stylists, branches };
 }
-function dateChoices(selected: string) {
-  return Array.from({ length: 7 }, (_, index) => {
-    const value = new Date(Date.now() + (index + 1) * 86400000);
-    return {
-      value: value.toISOString().slice(0, 10),
-      day: value.toLocaleDateString("en-IN", { weekday: "short" }),
-      number: value.getDate().toString(),
-      selected: selected === value.toISOString().slice(0, 10),
-    };
-  });
-}
 function calendarDays(month: Date) {
   const first = new Date(month.getFullYear(), month.getMonth(), 1);
   const mondayOffset = (first.getDay() + 6) % 7;
@@ -73,6 +65,35 @@ function calendarDays(month: Date) {
 function dateValue(value: Date) {
   return value.toISOString().slice(0, 10);
 }
+function isUpcomingAppointment(item: Appointment) {
+  if (!item.date) return true;
+  const appointmentDate = new Date(`${item.date}T00:00:00`);
+  if (Number.isNaN(appointmentDate.getTime())) return true;
+
+  const today = new Date();
+  const appointmentDay = new Date(
+    appointmentDate.getFullYear(),
+    appointmentDate.getMonth(),
+    appointmentDate.getDate(),
+  );
+  const todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  if (appointmentDay.getTime() !== todayDay.getTime()) {
+    return appointmentDay > todayDay;
+  }
+
+  const match = item.time?.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return true;
+  let hours = Number(match[1]) % 12;
+  if (match[3].toUpperCase() === "PM") hours += 12;
+  const appointmentMinutes = hours * 60 + Number(match[2]);
+  return appointmentMinutes >= today.getHours() * 60 + today.getMinutes();
+}
+function appointmentGroup(item: Appointment): Exclude<AppointmentFilter, "all"> {
+  const status = item.status.trim().toLowerCase();
+  if (status === "cancelled" || status === "rejected") return "rejected";
+  if (status === "completed" || !isUpcomingAppointment(item)) return "completed";
+  return "upcoming";
+}
 function AppointmentCard({
   item,
   onChanged,
@@ -80,44 +101,44 @@ function AppointmentCard({
   item: Appointment;
   onChanged: () => void;
 }) {
+  const { showToast } = useToast();
   const [date, setDate] = useState(item.date);
   const [time, setTime] = useState(item.time);
-  const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const status = item.status.trim().toLowerCase();
+  const group = appointmentGroup(item);
+  const canEdit = group === "upcoming";
   const update = async (path: string, body?: object) => {
     setBusy(true);
-    setMessage("");
     try {
       await api(`/appointments/${item.id}/${path}`, {
         method: "PATCH",
         ...(body ? { body: JSON.stringify(body) } : {}),
       });
-      setMessage(path === "cancel" ? "Cancelled" : "Rescheduled");
+      showToast({ type: "success", message: path === "cancel" ? "Appointment cancelled." : "Appointment rescheduled." });
       onChanged();
     } catch (e) {
-      setMessage(
-        e instanceof Error ? e.message : "Unable to update appointment.",
-      );
+      showToast({ type: "error", message: e instanceof Error ? e.message : "Unable to update appointment." });
     } finally {
       setBusy(false);
     }
   };
   return (
-    <View style={s.card}>
+    <View style={[s.card, !canEdit && s.readOnlyCard]}>
       <View style={s.appointmentTop}>
         <View style={s.appointmentIcon}><Ionicons name="calendar-outline" size={21} color="#c55239" /></View>
         <View style={s.appointmentIdentity}>
           <Text style={s.cardTitle} numberOfLines={1}>{item.service}</Text>
           <Text style={s.muted}>Salon appointment</Text>
         </View>
-        <View style={s.statusBadge}><Text style={s.statusBadgeText}>{item.status}</Text></View>
+        <View style={[s.statusBadge, !canEdit && s.readOnlyStatusBadge]}><Text style={[s.statusBadgeText, !canEdit && s.readOnlyStatusText]}>{item.status}</Text></View>
       </View>
       <View style={s.appointmentDetails}>
         <View style={s.detailItem}><Ionicons name="calendar-clear-outline" size={15} color="#4c947d" /><Text style={s.detailText}>{item.date}</Text></View>
         <View style={s.detailItem}><Ionicons name="time-outline" size={15} color="#4c947d" /><Text style={s.detailText}>{item.time}</Text></View>
         <View style={s.detailItem}><Ionicons name="person-outline" size={15} color="#4c947d" /><Text style={s.detailText}>{item.stylist || "Stylist to be confirmed"}</Text></View>
       </View>
-      {item.status !== "Cancelled" ? (
+      {canEdit ? (
         <>
           <View style={s.row}>
             <TextInput
@@ -145,22 +166,16 @@ function AppointmentCard({
             </Pressable>
           </View>
         </>
-      ) : null}
-      {message ? (
-        <Text
-          style={
-            message === "Cancelled" || message === "Rescheduled"
-              ? s.success
-              : s.error
-          }
-        >
-          {message}
+      ) : (
+        <Text style={s.readOnlyText}>
+          {status === "cancelled" ? "Cancelled appointment" : "Past appointment · View only"}
         </Text>
-      ) : null}
+      )}
     </View>
   );
 }
 export default function Appointments() {
+  const { showToast } = useToast();
   const { salonId, booking, hairstyle, service: requestedService } = useLocalSearchParams<{
     salonId?: string;
     booking?: string;
@@ -170,6 +185,7 @@ export default function Appointments() {
   const [items, setItems] = useState<Appointment[]>([]);
   const [salons, setSalons] = useState<Salon[]>([]);
   const [bookingOpen, setBookingOpen] = useState(false);
+  const [appointmentFilter, setAppointmentFilter] = useState<AppointmentFilter>("all");
   const [selectedSalon, setSelectedSalon] = useState<Salon | null>(null);
   const [openSelector, setOpenSelector] = useState<Selector>(null);
   const [branchId, setBranchId] = useState("");
@@ -189,7 +205,7 @@ export default function Appointments() {
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [bookingBusy, setBookingBusy] = useState(false);
-  const [bookingMessage, setBookingMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<BookingField, boolean>>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const load = async () => {
@@ -198,7 +214,9 @@ export default function Appointments() {
       setItems(await api<Appointment[]>("/appointments"));
       setError("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to load appointments.");
+      const message = e instanceof Error ? e.message : "Unable to load appointments.";
+      setError(message);
+      showToast({ type: "error", message: "Unable to load appointments. Please try again." });
     } finally {
       setLoading(false);
     }
@@ -242,7 +260,7 @@ export default function Appointments() {
       })
       .catch(() => setSalons([]));
     api<{ phone?: string }>("/customers/me")
-      .then((profile) => setPhone(profile.phone || ""))
+      .then((profile) => setPhone((profile.phone || "").replace(/\D/g, "").slice(-10)))
       .catch(() => undefined);
   }, []);
   useEffect(() => {
@@ -265,6 +283,9 @@ export default function Appointments() {
     if (hairstyle) setNotes(`AI hairstyle request: ${hairstyle}`);
   }, [hairstyle]);
   const service = selectedServices.join(", ");
+  const filteredItems = appointmentFilter === "all"
+    ? items
+    : items.filter((item) => appointmentGroup(item) === appointmentFilter);
   useEffect(() => {
     if (!selectedSalon || !service || !stylist || !date) return;
     api<string[]>(
@@ -280,18 +301,24 @@ export default function Appointments() {
       });
   }, [selectedSalon, branchId, service, stylist, date]);
   const submitBooking = async () => {
-    if (!selectedSalon || !branchId || !service || !stylist || !date || !time) {
-      setBookingMessage("Choose a salon, service, stylist, date, and time.");
+    const phoneDigits = phone.replace(/\D/g, "");
+    if (!selectedSalon || !branchId || !service || !stylist || !date || !time || !/^[6-9]\d{9}$/.test(phoneDigits)) {
+      setFieldErrors({
+        salon: !selectedSalon,
+        branch: !branchId,
+        service: !service,
+        stylist: !stylist,
+        date: !date,
+        time: !time,
+        phone: !/^[6-9]\d{9}$/.test(phoneDigits),
+      });
+      if (!/^[6-9]\d{9}$/.test(phoneDigits)) setPhoneError("Enter a valid 10-digit mobile number.");
+      showToast({ type: "warning", message: "Please complete the highlighted fields." });
       return;
     }
-    const normalizedPhone = phone.trim();
-    if (normalizedPhone && !/^\+?[0-9 ()-]{8,20}$/.test(normalizedPhone)) {
-      setPhoneError("Enter a valid mobile number.");
-      return;
-    }
+    setFieldErrors({});
     setPhoneError("");
     setBookingBusy(true);
-    setBookingMessage("");
     try {
       await api("/appointments", {
         method: "POST",
@@ -303,16 +330,26 @@ export default function Appointments() {
           date,
           time,
           notes,
-          guestPhone: normalizedPhone,
+          guestPhone: `+91${phoneDigits}`,
         }),
       });
-      setBookingMessage("Appointment request sent to the salon.");
+      showToast({ type: "success", message: "Appointment request sent to the salon." });
       setNotes("");
+      setSelectedSalon(null);
+      setBranchId("");
+      setSelectedServices([]);
+      setStylist("");
+      setPhone("");
+      setFieldErrors({});
+      setDate("");
+      setMonth(new Date());
+      setTime("");
+      setSlots([]);
+      setOpenSelector(null);
+      setBookingOpen(false);
       await load();
     } catch (e) {
-      setBookingMessage(
-        e instanceof Error ? e.message : "Unable to request appointment.",
-      );
+      showToast({ type: "error", message: e instanceof Error ? e.message : "Unable to request appointment." });
     } finally {
       setBookingBusy(false);
     }
@@ -342,6 +379,16 @@ export default function Appointments() {
             <Text style={s.topBookText}>{bookingOpen ? "Back" : "Book"}</Text>
           </Pressable>
         </View>
+        {!bookingOpen ? (
+          <View style={s.contextCard}>
+            <Text style={s.contextEyebrow}>YOUR STUDIO, REMEMBERED</Text>
+            <Text style={s.contextTitle}>Every visit starts with context.</Text>
+            <Text style={s.muted}>
+              Your notes, preferences, and favourite styles help the salon make
+              the next conversation feel familiar.
+            </Text>
+          </View>
+        ) : null}
         {bookingOpen ? (
           <View style={s.bookingCard}>
             <View style={s.bookingHeader}>
@@ -352,31 +399,31 @@ export default function Appointments() {
               <View style={s.bookingHeaderIcon}><Ionicons name="calendar-outline" size={22} color="#c55239" /></View>
             </View>
             <Text style={s.label}>Salon</Text>
-            <Pressable style={s.selectField} onPress={() => setOpenSelector(openSelector === "salon" ? null : "salon")}>
+            <Pressable style={[s.selectField, fieldErrors.salon && s.fieldError]} onPress={() => setOpenSelector(openSelector === "salon" ? null : "salon")}>
               <Text style={s.choiceText}>{selectedSalon?.name || "Choose a salon"}</Text>
               <Ionicons name={openSelector === "salon" ? "chevron-up" : "chevron-down"} size={17} color="#c55239" />
             </Pressable>
             {openSelector === "salon" ? <View style={s.selectMenu}>{salons.map((salon) => <Pressable key={salon.id} style={[s.selectOption, selectedSalon?.id === salon.id && s.selected]} onPress={() => { setSelectedSalon(salon); setBranchId(salon.branches?.[0]?.id || "main"); setSelectedServices(salon.services[0] ? [salon.services[0]] : []); setStylist(salon.stylists[0] || ""); setOpenSelector(null); }}><Text style={s.choiceText}>{salon.name}</Text>{salon.location ? <Text style={s.muted}>{salon.location}</Text> : null}</Pressable>)}</View> : null}
             <Text style={s.label}>Branch</Text>
-            <Pressable style={s.selectField} onPress={() => setOpenSelector(openSelector === "branch" ? null : "branch")}>
+            <Pressable style={[s.selectField, fieldErrors.branch && s.fieldError]} onPress={() => setOpenSelector(openSelector === "branch" ? null : "branch")}>
               <View style={s.selectCopy}><Text style={s.choiceText}>{selectedSalon?.branches?.find((item) => item.id === branchId)?.name || "Choose a branch"}</Text><Text style={s.muted}>{selectedSalon?.branches?.find((item) => item.id === branchId)?.location || "Select a salon branch"}</Text></View>
               <Ionicons name={openSelector === "branch" ? "chevron-up" : "chevron-down"} size={17} color="#c55239" />
             </Pressable>
             {openSelector === "branch" ? <View style={s.selectMenu}>{(selectedSalon?.branches || []).map((item) => <Pressable key={item.id} style={[s.selectOption, branchId === item.id && s.selected]} onPress={() => { setBranchId(item.id); setOpenSelector(null); }}><Text style={s.choiceText}>{item.name}</Text><Text style={s.muted}>{item.location}</Text></Pressable>)}</View> : null}
             <Text style={s.label}>Service</Text>
-            <Pressable style={s.selectField} onPress={() => setOpenSelector(openSelector === "service" ? null : "service")}>
+            <Pressable style={[s.selectField, fieldErrors.service && s.fieldError]} onPress={() => setOpenSelector(openSelector === "service" ? null : "service")}>
               <Text style={s.choiceText}>{selectedServices.join(", ") || "Choose a service"}</Text>
               <Ionicons name={openSelector === "service" ? "chevron-up" : "chevron-down"} size={17} color="#c55239" />
             </Pressable>
             {openSelector === "service" ? <View style={s.selectMenu}>{(selectedSalon?.services || []).map((item) => <Pressable key={item} style={[s.selectOption, selectedServices.includes(item) && s.selected]} onPress={() => { setSelectedServices([item]); setOpenSelector(null); }}><Text style={s.choiceText}>{item}</Text></Pressable>)}</View> : null}
             <Text style={s.label}>Preferred stylist</Text>
-            <Pressable style={s.selectField} onPress={() => setOpenSelector(openSelector === "stylist" ? null : "stylist")}>
+            <Pressable style={[s.selectField, fieldErrors.stylist && s.fieldError]} onPress={() => setOpenSelector(openSelector === "stylist" ? null : "stylist")}>
               <Text style={s.choiceText}>{stylist || "Choose a stylist"}</Text>
               <Ionicons name={openSelector === "stylist" ? "chevron-up" : "chevron-down"} size={17} color="#c55239" />
             </Pressable>
             {openSelector === "stylist" ? <View style={s.selectMenu}>{(selectedSalon?.stylists || []).map((item) => <Pressable key={item} style={[s.selectOption, stylist === item && s.selected]} onPress={() => { setStylist(item); setOpenSelector(null); }}><Text style={s.choiceText}>{item}</Text></Pressable>)}</View> : null}
             <Text style={s.label}>Select date</Text>
-            <View style={s.calendarPanel}>
+            <View style={[s.calendarPanel, fieldErrors.date && s.fieldError]}>
               <View style={s.calendarHeader}>
                 <Pressable
                   style={s.monthButton}
@@ -416,21 +463,8 @@ export default function Appointments() {
                 })}
               </View>
             </View>
-            <View style={s.dateChoices}>
-              {dateChoices(date).map((item) => (
-                <Pressable
-                  key={item.value}
-                  style={[s.dateChoice, item.selected && s.selected]}
-                  onPress={() => setDate(item.value)}
-                >
-                  <Text style={[s.dateDay, item.selected && s.selectedDateText]}>{item.day}</Text>
-                  <Text style={[s.dateNumber, item.selected && s.selectedDateText]}>{item.number}</Text>
-                </Pressable>
-              ))}
-            </View>
-        <TextInput value={date} onChangeText={setDate} style={s.input} placeholder="Enter date (YYYY-MM-DD)" />
             <Text style={s.label}>Available slots</Text>
-            <View style={s.timeChoices}>
+            <View style={[s.timeChoices, fieldErrors.time && s.fieldError]}>
               {slots.map((item) => (
                 <Pressable key={item} style={[s.timeChoice, time === item && s.selected]} onPress={() => setTime(item)}>
                   <Text style={s.choiceText}>{item}</Text>
@@ -438,16 +472,18 @@ export default function Appointments() {
               ))}
               {date && !slots.length ? <Text style={s.muted}>No slots available for this date.</Text> : null}
             </View>
-            <Text style={s.label}>Mobile number</Text>
+            <Text style={s.label}>Mobile number (10 digits)</Text>
             <TextInput
               value={phone}
               onChangeText={(value) => {
                 setPhone(value);
                 setPhoneError("");
+                setFieldErrors((current) => ({ ...current, phone: false }));
               }}
-              style={[s.input, phoneError ? s.inputError : null]}
-              placeholder="Enter guest mobile number"
+              style={[s.input, (phoneError || fieldErrors.phone) ? s.inputError : null]}
+              placeholder="Enter 10-digit mobile number"
               keyboardType="phone-pad"
+              maxLength={10}
             />
             {phoneError ? <Text style={s.error}>{phoneError}</Text> : null}
             <Text style={s.label}>Notes for the salon</Text>
@@ -455,29 +491,35 @@ export default function Appointments() {
             <Pressable disabled={bookingBusy} style={s.primary} onPress={() => void submitBooking()}>
               {bookingBusy ? <ActivityIndicator color="#fff" /> : <><Text style={s.primaryText}>Confirm booking</Text><Ionicons name="arrow-forward" size={17} color="#fff" /></>}
             </Pressable>
-            {bookingMessage ? <Text style={bookingMessage.includes("sent") ? s.success : s.error}>{bookingMessage}</Text> : null}
           </View>
         ) : null}
-        {error ? <Text style={s.error}>{error}</Text> : null}
-        <View style={s.contextCard}>
-          <Text style={s.contextEyebrow}>YOUR STUDIO, REMEMBERED</Text>
-          <Text style={s.contextTitle}>Every visit starts with context.</Text>
-          <Text style={s.muted}>
-            Your notes, preferences, and favourite styles help the salon make
-            the next conversation feel familiar.
-          </Text>
-        </View>
-        {items.map((item) => (
+        {!bookingOpen ? (
+          <View style={s.appointmentFilters}>
+            {(["all", "upcoming", "completed", "rejected"] as AppointmentFilter[]).map((filter) => {
+              const label = filter === "all" ? "All" : filter === "rejected" ? "Rejected" : filter[0].toUpperCase() + filter.slice(1);
+              return (
+                <Pressable
+                  key={filter}
+                  style={[s.appointmentFilter, appointmentFilter === filter && s.appointmentFilterActive]}
+                  onPress={() => setAppointmentFilter(filter)}
+                >
+                  <Text style={[s.appointmentFilterText, appointmentFilter === filter && s.appointmentFilterTextActive]}>{label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
+        {!bookingOpen ? filteredItems.map((item) => (
           <AppointmentCard
             item={item}
             key={item.id}
             onChanged={() => void load()}
           />
-        ))}
-        {!loading && !error && !items.length ? (
+        )) : null}
+        {!bookingOpen && !loading && !error && !filteredItems.length ? (
           <View style={s.empty}>
-            <Text style={s.cardTitle}>No appointments yet</Text>
-            <Text style={s.muted}>Your next good hair day can start here.</Text>
+            <Text style={s.cardTitle}>{appointmentFilter === "all" ? "No appointments yet" : `No ${appointmentFilter} appointments`}</Text>
+            <Text style={s.muted}>{appointmentFilter === "all" ? "Your next good hair day can start here." : "Try another appointment filter."}</Text>
           </View>
         ) : null}
       </ScrollView>
@@ -517,6 +559,12 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 1,
   },
+  readOnlyCard: {
+    backgroundColor: "#eeece7",
+    borderColor: "#d8d5ce",
+    shadowOpacity: 0,
+    elevation: 0,
+  },
   cardTitle: { color: "#20352d", fontSize: 16, fontWeight: "800" },
   muted: { color: "#77817c", marginTop: 5, lineHeight: 17 },
   status: { color: "#4c947d", fontWeight: "700", marginTop: 8 },
@@ -525,6 +573,13 @@ const s = StyleSheet.create({
   appointmentIdentity: { flex: 1, minWidth: 0 },
   statusBadge: { backgroundColor: "#e7f1ed", borderRadius: 14, paddingHorizontal: 9, paddingVertical: 6, marginLeft: 8 },
   statusBadgeText: { color: "#26735a", fontSize: 10, fontWeight: "800" },
+  readOnlyStatusBadge: { backgroundColor: "#d9d7d1" },
+  readOnlyStatusText: { color: "#73756f" },
+  appointmentFilters: { flexDirection: "row", gap: 8, marginTop: 18, marginBottom: 2 },
+  appointmentFilter: { borderWidth: 1, borderColor: "#d9d6ce", borderRadius: 16, paddingHorizontal: 13, paddingVertical: 8, backgroundColor: "#fffdfa" },
+  appointmentFilterActive: { backgroundColor: "#20352d", borderColor: "#20352d" },
+  appointmentFilterText: { color: "#60736a", fontSize: 11, fontWeight: "800" },
+  appointmentFilterTextActive: { color: "#fffdfa" },
   appointmentDetails: { flexDirection: "row", flexWrap: "wrap", borderTopWidth: 1, borderTopColor: "#eeeae3", marginTop: 14, paddingTop: 12 },
   detailItem: { flexDirection: "row", alignItems: "center", marginRight: 14, marginBottom: 3 },
   detailText: { color: "#60736a", fontSize: 11, fontWeight: "700", marginLeft: 5 },
@@ -601,6 +656,7 @@ const s = StyleSheet.create({
   },
   choices: { gap: 8 },
   timeChoices: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  fieldError: { borderColor: "#c55239", borderWidth: 1, backgroundColor: "#fff4ef" },
   timeChoice: {
     width: "31%",
     minWidth: 0,
@@ -634,7 +690,6 @@ const s = StyleSheet.create({
     color: "#20352d",
   },
   inputError: { borderColor: "#c55239" },
-  dateChoices: { flexDirection: "row", justifyContent: "space-between", marginBottom: 9 },
   calendarPanel: { borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 16, padding: 11, backgroundColor: "#fffdfa", marginBottom: 10 },
   calendarHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
   monthButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#f7f5f0", alignItems: "center", justifyContent: "center" },
@@ -649,21 +704,6 @@ const s = StyleSheet.create({
   selectedDayText: { color: "#fffdfa" },
   outsideDay: { opacity: 0.3 },
   outsideDayText: { color: "#77817c" },
-  dateChoice: {
-    flex: 1,
-    minWidth: 0,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#e1ddd4",
-    borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 3,
-    marginRight: 6,
-    backgroundColor: "#fffdfa",
-  },
-  dateDay: { color: "#77817c", fontSize: 10, fontWeight: "700" },
-  dateNumber: { color: "#20352d", fontSize: 15, fontWeight: "800", marginTop: 3 },
-  selectedDateText: { color: "#c55239" },
   multiline: { minHeight: 90, textAlignVertical: "top" },
   row: { flexDirection: "row", gap: 10, marginTop: 12, alignItems: "center" },
   smallInput: {
@@ -673,6 +713,12 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 7,
     padding: 9,
+  },
+  readOnlyText: {
+    color: "#8a918d",
+    fontSize: 13,
+    marginTop: 12,
+    fontStyle: "italic",
   },
   action: { color: "#c55239", fontWeight: "700", marginRight: 16 },
   success: { color: "#4c947d", marginTop: 10 },
