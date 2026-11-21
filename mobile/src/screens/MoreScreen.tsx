@@ -1820,10 +1820,14 @@ function PreferencesView({ initial, role }: { initial: any; role: "user" | "admi
   const [manualMessage, setManualMessage] = useState("");
   const [sending, setSending] = useState(false);
   useEffect(() => {
-    api<any>("/notifications")
+    api<any[]>("/notifications/user")
       .then((result) => setHistory(Array.isArray(result) ? result : []))
       .catch(() => setHistory([]));
   }, []);
+  async function markNotificationRead(id: string) {
+    await api(`/notifications/user/${id}/read`, { method: "PATCH" }).catch(() => undefined);
+    setHistory((current) => current.map((item) => item.id === id ? { ...item, isRead: true } : item));
+  }
   async function save() {
     try {
       await api("/auth/preferences", {
@@ -1915,23 +1919,24 @@ function PreferencesView({ initial, role }: { initial: any; role: "user" | "admi
       ) : null}
       {history.length ? (
         history.map((item: any, index: number) => (
-          <View
+          <Pressable
             style={styles.infoRow}
             key={`${item.id || item.createdAt || index}`}
+            onPress={() => item.id && void markNotificationRead(item.id)}
           >
             <View style={styles.infoRowCopy}>
               <Text style={styles.cardTextDark}>
-                {item.type || "Notification"}
+                {item.title || item.notificationType || item.type || "Notification"}
               </Text>
               <Text style={styles.muted}>
-                {item.status || "Sent"}
+                {item.message || item.status || "Sent"}
                 {item.createdAt
                   ? ` · ${new Date(item.createdAt).toLocaleDateString()}`
                   : ""}
               </Text>
             </View>
-            <Ionicons name="notifications-outline" size={18} color="#91b3a3" />
-          </View>
+            <Ionicons name={item.isRead ? "notifications-outline" : "ellipse"} size={18} color="#91b3a3" />
+          </Pressable>
         ))
       ) : (
         <Text style={styles.muted}>No notifications yet.</Text>

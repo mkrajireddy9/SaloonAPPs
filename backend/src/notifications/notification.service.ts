@@ -7,13 +7,15 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import { User } from "../auth/user.entity";
+import { User, UserRole } from "../auth/user.entity";
 import { Appointment } from "../appointments/appointment.entity";
 import { Notification, NotificationChannel } from "./notification.entity";
 import { Salon } from "../salon/salon.entity";
 import { WhatsAppService } from "./whatsapp.service";
 import { SendWhatsAppDto } from "./whatsapp.dto";
 import { BadRequestException } from "@nestjs/common";
+import { MobilePushService } from "./mobile-push.service";
+import { PushService } from "./push.service";
 
 @Injectable()
 export class NotificationService implements OnModuleInit, OnModuleDestroy {
@@ -24,6 +26,8 @@ export class NotificationService implements OnModuleInit, OnModuleDestroy {
     @InjectRepository(User) private readonly users: Repository<User>,
     @InjectRepository(Salon) private readonly salons: Repository<Salon>,
     private readonly whatsapp: WhatsAppService,
+    private readonly mobilePush: MobilePushService,
+    private readonly webPush: PushService,
   ) {}
 
   private reminderTimer?: NodeJS.Timeout;
@@ -38,10 +42,9 @@ export class NotificationService implements OnModuleInit, OnModuleDestroy {
   }
 
   async queueForAppointment(appointment: Appointment, event: string) {
-    if (!appointment.guestEmail && !appointment.guestPhone) return [];
-    const user = await this.users.findOne({
-      where: { email: appointment.guestEmail },
-    });
+    const user = appointment.guestEmail
+      ? await this.users.findOne({ where: { email: appointment.guestEmail } })
+      : null;
     const recipientPhone = appointment.guestPhone || user?.phone || null;
     const salon = await this.salons.findOne({
       where: { id: appointment.salonId },
@@ -53,7 +56,7 @@ export class NotificationService implements OnModuleInit, OnModuleDestroy {
       appointmentReminders: true,
     };
     if (
-      event === "appointment.reminder" &&
+      event.startsWith("appointment.reminder") &&
       (preferences as { appointmentReminders?: boolean })
         .appointmentReminders === false
     )
@@ -61,7 +64,7 @@ export class NotificationService implements OnModuleInit, OnModuleDestroy {
     const channels = (["email", "whatsapp"] as NotificationChannel[]).filter(
       (channel) =>
         channel === "email"
-          ? preferences.email
+          ? Boolean(appointment.guestEmail && preferences.email)
           : recipientPhone &&
             preferences.whatsapp !== false &&
             this.whatsapp.isConfigured(),
@@ -107,6 +110,44 @@ export class NotificationService implements OnModuleInit, OnModuleDestroy {
       }),
     );
     await Promise.all(records.map((record) => this.deliver(record.id)));
+    const admins = await this.users.find({
+      where: { salonId: appointment.salonId, role: UserRole.ADMIN, active: true },
+      select: ["id"],
+    });
+    const platformAdmins = await this.users.find({
+      where: { role: UserRole.PLATFORM_ADMIN, active: true },
+      select: ["id"],
+    });
+    const recipientUserIds = [
+      ...(user?.id ? [user.id] : []),
+      ...(event === "appointment.created" || event.includes("cancelled") ||
+      event.includes("rescheduled") || event.includes("reminder") ||
+      event.includes("completed")
+        ? [...admins, ...platformAdmins].map((admin) => admin.id)
+        : []),
+    ];
+    const action = event.replace("appointment.", "");
+    void this.mobilePush
+      .notifyUsers({
+        recipientUserIds,
+        salonId: appointment.salonId,
+        notificationType: event,
+        title: action.startsWith("reminder") ? "Appointment reminder" : "Appointment update",
+        message: `${appointment.service || "Your salon appointment"} is ${appointment.status.toLowerCase()}${appointment.date ? ` on ${appointment.date}` : ""}${appointment.time ? ` at ${appointment.time}` : ""}.`,
+        relatedEntityId: appointment.id,
+        payload: { url: "/(tabs)/appointments", appointmentId: appointment.id, event },
+      })
+      .catch((error) => this.logger.warn(`Mobile push failed: ${error instanceof Error ? error.message : "unknown error"}`));
+    void Promise.all(
+      recipientUserIds.map((recipientUserId) =>
+        this.webPush.send(
+          recipientUserId,
+          action.startsWith("reminder") ? "Appointment reminder" : "Appointment update",
+          `${appointment.service || "Your salon appointment"} is ${appointment.status.toLowerCase()}.`,
+          "/appointments",
+        ),
+      ),
+    ).catch((error) => this.logger.warn(`Web push failed: ${error instanceof Error ? error.message : "unknown error"}`));
     return records;
   }
 
@@ -247,15 +288,41 @@ export class NotificationService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async queueUpcomingReminders() {
-    if (process.env.EMAIL_REMINDERS_ENABLED === "false") return;
-    const date = new Date();
-    const tomorrow = new Date(date.getTime() + 24 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 10);
+    const now = new Date();
+    const timezone = process.env.SALON_TIMEZONE || "Asia/Kolkata";
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).formatToParts(now);
+    const value = (type: string) => Number(parts.find((part) => part.type === type)?.value || 0);
+    const currentMinutes = value("hour") * 60 + value("minute");
+    const today = `${value("year")}-${String(value("month")).padStart(2, "0")}-${String(value("day")).padStart(2, "0")}`;
+    const tomorrowDate = new Date(`${today}T12:00:00Z`);
+    tomorrowDate.setUTCDate(tomorrowDate.getUTCDate() + 1);
+    const tomorrow = tomorrowDate.toISOString().slice(0, 10);
     const appointments = await this.users.manager
       .getRepository(Appointment)
-      .find({ where: { date: tomorrow, status: "Confirmed" } });
-    for (const appointment of appointments)
-      await this.queueForAppointment(appointment, "appointment.reminder");
+      .find({ where: [{ date: today, status: "Confirmed" }, { date: tomorrow, status: "Confirmed" }] });
+    for (const appointment of appointments) {
+      const match = String(appointment.time || "").match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+      if (!match) continue;
+      let hour = Number(match[1]);
+      const minute = Number(match[2]);
+      if (match[3]?.toUpperCase() === "PM" && hour < 12) hour += 12;
+      if (match[3]?.toUpperCase() === "AM" && hour === 12) hour = 0;
+      const appointmentMinutes = hour * 60 + minute;
+      const minutesUntil = appointment.date === today
+        ? appointmentMinutes - currentMinutes
+        : appointmentMinutes - currentMinutes + 24 * 60;
+      if (Math.abs(minutesUntil - 60) <= 5)
+        await this.queueForAppointment(appointment, "appointment.reminder1h");
+      if (Math.abs(minutesUntil - 24 * 60) <= 5)
+        await this.queueForAppointment(appointment, "appointment.reminder24h");
+    }
   }
 }

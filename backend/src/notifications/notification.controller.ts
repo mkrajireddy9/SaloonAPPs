@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   BadRequestException,
@@ -17,6 +18,8 @@ import { NotificationService } from "./notification.service";
 import { PushService } from "./push.service";
 import { PushSubscriptionDto } from "./push-subscription.dto";
 import { SendWhatsAppDto } from "./whatsapp.dto";
+import { MobilePushService } from "./mobile-push.service";
+import { RegisterMobilePushDto } from "./mobile-push.dto";
 
 @Controller("notifications")
 @ApiTags("notifications")
@@ -26,6 +29,7 @@ export class NotificationController {
   constructor(
     private readonly service: NotificationService,
     private readonly push: PushService,
+    private readonly mobilePush: MobilePushService,
   ) {}
   @Post("whatsapp/send")
   @UseGuards(RolesGuard)
@@ -73,6 +77,39 @@ export class NotificationController {
       isAdminRole(request.user.role),
       request.user.salonId,
     );
+  }
+  @Post("mobile/register")
+  @ApiOperation({ summary: "Register this mobile device for push notifications" })
+  registerMobile(
+    @Body() dto: RegisterMobilePushDto,
+    @Req() request: { user: { sub: string; salonId?: string } },
+  ) {
+    return this.mobilePush.register(request.user.sub, request.user.salonId, dto);
+  }
+  @Post("mobile/unregister")
+  @ApiOperation({ summary: "Disable push notifications for this user" })
+  unregisterMobile(
+    @Body() body: { expoPushToken?: string },
+    @Req() request: { user: { sub: string } },
+  ) {
+    return this.mobilePush.unregister(request.user.sub, body?.expoPushToken);
+  }
+  @Get("user")
+  @ApiOperation({ summary: "List in-app notifications for the authenticated user" })
+  userNotifications(@Req() request: { user: { sub: string; role: UserRole; salonId?: string } }) {
+    return this.mobilePush.listForUser(request.user.sub, request.user.role, request.user.salonId);
+  }
+  @Get("user/unread-count")
+  unreadCount(@Req() request: { user: { sub: string } }) {
+    return this.mobilePush.unreadCount(request.user.sub).then((count) => ({ count }));
+  }
+  @Patch("user/:id/read")
+  markRead(@Param("id") id: string, @Req() request: { user: { sub: string } }) {
+    return this.mobilePush.markRead(request.user.sub, id);
+  }
+  @Post("user/read-all")
+  markAllRead(@Req() request: { user: { sub: string } }) {
+    return this.mobilePush.markAllRead(request.user.sub);
   }
   @Post(":id/retry")
   @UseGuards(RolesGuard)

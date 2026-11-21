@@ -91,6 +91,13 @@ export async function api<T>(
 }
 
 export async function signOut() {
+  const token = await SecureStore.getItemAsync("halo-access-token");
+  if (token) {
+    await fetch(`${API_URL}/notifications/mobile/unregister`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}` },
+    }).catch(() => undefined);
+  }
   await SecureStore.deleteItemAsync("halo-access-token");
   await SecureStore.deleteItemAsync("halo-refresh-token");
   await SecureStore.deleteItemAsync("halo-user-location");

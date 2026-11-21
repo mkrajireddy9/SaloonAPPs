@@ -85,6 +85,9 @@ import { Rewards2120000000000 } from "./database/migrations/2120000000000-Reward
 import { ReferralSalonScope2130000000000 } from "./database/migrations/2130000000000-ReferralSalonScope";
 import { SalonReferralReward2140000000000 } from "./database/migrations/2140000000000-SalonReferralReward";
 import { AppointmentCoupon2150000000000 } from "./database/migrations/2150000000000-AppointmentCoupon";
+import { MobilePushNotifications2160000000000 } from "./database/migrations/2160000000000-MobilePushNotifications";
+import { DevicePushToken } from "./notifications/device-push-token.entity";
+import { UserNotification } from "./notifications/user-notification.entity";
 
 @Module({
   imports: [
@@ -151,6 +154,8 @@ import { AppointmentCoupon2150000000000 } from "./database/migrations/2150000000
         Payment,
         Notification,
         PushSubscription,
+        DevicePushToken,
+        UserNotification,
         MediaAsset,
         AuditLog,
         Banner,
@@ -209,6 +214,7 @@ import { AppointmentCoupon2150000000000 } from "./database/migrations/2150000000
         ReferralSalonScope2130000000000,
         SalonReferralReward2140000000000,
         AppointmentCoupon2150000000000,
+        MobilePushNotifications2160000000000,
       ],
       migrationsRun: true,
       synchronize: false,

@@ -1,0 +1,29 @@
+{
+    "project_info": {
+      "project_number": "1088183206509",
+      "project_id": "halo-saloon",
+      "storage_bucket": "halo-saloon.firebasestorage.app"
+    },
+    "client": [
+      {
+        "client_info": {
+          "mobilesdk_app_id": "1:1088183206509:android:7de123e31d51bfccc6b564",
+          "android_client_info": {
+            "package_name": "com.halosalon.mobile"
+          }
+        },
+        "oauth_client": [],
+        "api_key": [
+          {
+            "current_key": "AIzaSyAhBuhxlLPDemL7sOwKsOj0kzUsZItCjCA"
+          }
+        ],
+        "services": {
+          "appinvite_service": {
+            "other_platform_oauth_client": []
+          }
+        }
+      }
+    ],
+    "configuration_version": "1"
+  }

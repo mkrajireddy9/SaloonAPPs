@@ -5,6 +5,10 @@ dist/
 .DS_Store
 *.log
 *.tsbuildinfo
+# Private Firebase/EAS credentials. Never commit service-account keys or local EAS credentials.
+**/*firebase-adminsdk*.json
+**/service-account*.json
+**/credentials.json
 .next/
 frontend/.next/
 frontend/.next-production/
