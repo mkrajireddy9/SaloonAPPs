@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -7,7 +7,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -47,7 +46,6 @@ type Salon = {
   distanceKm?: number | null;
 };
 type Review = { id: string; guestName?: string; rating: number; comment?: string; createdAt?: string };
-type Coupon = { id: string; code: string; discountType: "percent" | "fixed"; discountValue: number; maxUses?: number | null; usedCount?: number };
 type WishlistEntry = { salonId: string };
 type Tab = "services" | "reviews" | "about";
 
@@ -73,45 +71,14 @@ const currentOpeningStatus = (salon: Salon) => {
 
 export default function SalonDetails() {
   const { id, hairstyle, distanceKm } = useLocalSearchParams<{ id: string; hairstyle?: string; distanceKm?: string | string[] }>();
-  const scrollRef = useRef<any>(null);
   const [salon, setSalon] = useState<Salon | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [wishlisted, setWishlisted] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("services");
-  const [bookingOffset, setBookingOffset] = useState(0);
-  const [serviceCategory, setServiceCategory] = useState("");
-  const [service, setService] = useState("");
-  const [stylist, setStylist] = useState("");
-  const [branchId, setBranchId] = useState("");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [notes, setNotes] = useState("");
-  const [slots, setSlots] = useState<string[]>([]);
-  const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [coupons, setCoupons] = useState<Coupon[]>([]);
-  const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
-  const [branchOpen, setBranchOpen] = useState(false);
-  const [categoryOpen, setCategoryOpen] = useState(false);
-  const [serviceOpen, setServiceOpen] = useState(false);
-  const [stylistOpen, setStylistOpen] = useState(false);
-
-  const branch = useMemo(
-    () => salon?.branches?.find((item) => item.id === branchId) || salon?.branches?.[0],
-    [salon, branchId],
-  );
   const details = useMemo(() => (salon ? activeDetails(salon) : []), [salon]);
-  const serviceCategories = useMemo(() => {
-    const categories = details.map((item) => item.category || "General");
-    return Array.from(new Set(categories.length ? categories : ["General"]));
-  }, [details]);
-  const categoryServices = useMemo(() => {
-    if (!salon) return [];
-    if (!details.length) return salon.services;
-    return details.filter((item) => (item.category || "General") === serviceCategory).map((item) => item.name);
-  }, [salon, details, serviceCategory]);
   const products = useMemo(() => (salon?.products || []).filter((item) => item.active !== false), [salon]);
   const averageRating = useMemo(() => {
     if (!reviews.length) return null;
@@ -140,42 +107,26 @@ export default function SalonDetails() {
     api<Salon>(`/salon/${id}`)
       .then((result) => {
         setSalon(result);
-        const firstDetail = activeDetails(result)[0];
-        setServiceCategory(firstDetail?.category || "General");
-        setService(firstDetail?.name || result.services?.[0] || "");
-        setStylist(result.stylists?.[0] || "");
-        setBranchId(result.branches?.[0]?.id || "");
-        if (hairstyle) setNotes(`AI hairstyle request: ${hairstyle}`);
       })
       .catch((e) => setMessage(e instanceof Error ? e.message : "Unable to load this salon."))
       .finally(() => setLoading(false));
     api<Review[]>(`/reviews?salonId=${encodeURIComponent(id)}`).then(setReviews).catch(() => setReviews([]));
-    api<Coupon[]>(`/rewards/coupons/available?salonId=${encodeURIComponent(id)}`)
-      .then((result) => setCoupons(Array.isArray(result) ? result : []))
-      .catch(() => setCoupons([]));
     api<WishlistEntry[]>("/wishlist")
       .then((items) => setWishlisted(items.some((item) => item.salonId === id)))
       .catch(() => setWishlisted(false));
   }, [id, hairstyle]);
 
-  useEffect(() => {
-    if (!salon || !date || !service || !branch?.id) return;
-    api<string[]>(
-      `/appointments/slots?date=${encodeURIComponent(date)}&salonId=${encodeURIComponent(salon.id)}&branchId=${encodeURIComponent(branch.id)}&stylist=${encodeURIComponent(stylist)}&service=${encodeURIComponent(service)}`,
-    )
-      .then((result) => {
-        setSlots(result);
-        setTime(result[0] || "");
-      })
-      .catch(() => {
-        setSlots([]);
-        setTime("");
-      });
-  }, [salon, date, service, stylist, branch]);
-
-  const scrollToBooking = () => {
-    setMessage("");
-    scrollRef.current?.scrollTo({ y: Math.max(bookingOffset - 12, 0), animated: true });
+  const openBooking = (serviceName?: string) => {
+    if (!salon) return;
+    router.push({
+      pathname: "/(tabs)/appointments",
+      params: {
+        salonId: salon.id,
+        booking: "1",
+        ...(serviceName ? { service: serviceName } : {}),
+        ...(hairstyle ? { hairstyle } : {}),
+      },
+    });
   };
   const toggleWishlist = async () => {
     if (!id) return;
@@ -188,36 +139,6 @@ export default function SalonDetails() {
       setMessage(e instanceof Error ? e.message : "Unable to update your wishlist.");
     }
   };
-  const submit = async () => {
-    if (!salon || !date || !time || !service || !branch?.id) return setMessage("Choose a branch, service, date, and time.");
-    setBusy(true);
-    setMessage("");
-    try {
-      await api("/appointments", {
-        method: "POST",
-        body: JSON.stringify({
-          salonId: salon.id,
-          service,
-          branchId: branch.id,
-          date,
-          time,
-          stylist,
-          notes,
-          ...(selectedCoupon ? { couponCode: selectedCoupon.code } : {}),
-        }),
-      });
-      setDate("");
-      setTime("");
-      setNotes("");
-      setSlots([]);
-      setSelectedCoupon(null);
-      setMessage("Appointment request sent.");
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Unable to request appointment.");
-    } finally {
-      setBusy(false);
-    }
-  };
 
   if (loading) {
     return <SafeAreaView style={s.safeArea}><View style={s.center}><ActivityIndicator color="#c55239" /><Text style={s.muted}>Loading salon...</Text></View></SafeAreaView>;
@@ -228,7 +149,7 @@ export default function SalonDetails() {
 
   return (
     <SafeAreaView style={s.safeArea}>
-      <ScrollView ref={scrollRef} style={s.screen} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={s.screen} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
         <View style={s.hero}>
           {heroSource ? <Image source={heroSource} style={s.heroImage} /> : <View style={s.heroPlaceholder}><Ionicons name="sparkles-outline" size={42} color="#dfca73" /><Text style={s.heroPlaceholderText}>Halo salon</Text></View>}
           <View style={s.heroShade} />
@@ -242,7 +163,7 @@ export default function SalonDetails() {
           <View style={s.profileTitleRow}><View style={s.salonMark}><Text style={s.salonMarkText}>{salon.name.charAt(0).toUpperCase()}</Text></View><View style={s.profileCopy}><Text style={s.title} numberOfLines={2}>{salon.name}</Text><Text style={s.location}><Ionicons name="location-outline" size={14} color="#4c947d" /> {salon.location || "Location not set"}</Text></View></View>
           <View style={s.profileMeta}><View style={s.metaItem}><Ionicons name="star" size={16} color="#dfca73" /><Text style={s.metaStrong}>{averageRating != null ? averageRating.toFixed(1) : "—"}</Text><Text style={s.metaMuted}>{reviews.length ? `(${reviews.length})` : "No reviews"}</Text></View>{parsedDistance != null ? <View style={s.metaItem}><Ionicons name="location-outline" size={15} color="#4c947d" /><Text style={s.metaMuted}>{parsedDistance.toFixed(1)} km away</Text></View> : null}{openStatus !== null ? <View style={[s.openPill, openStatus ? s.open : s.closed]}><Text style={[s.openText, openStatus ? s.openText : s.closedText]}>{openStatus ? "Open now" : "Closed now"}</Text></View> : null}</View>
           {currentOffer ? <View style={s.offerPill}><Ionicons name="pricetag-outline" size={15} color="#c55239" /><Text style={s.offerPillText}>{currentOffer}</Text></View> : null}
-          <Pressable style={s.bookTopButton} onPress={scrollToBooking}><Text style={s.bookTopText}>Book appointment</Text><Ionicons name="arrow-forward" size={18} color="#fff" /></Pressable>
+          <Pressable style={s.bookTopButton} onPress={() => openBooking()}><Text style={s.bookTopText}>Book appointment</Text><Ionicons name="arrow-forward" size={18} color="#fff" /></Pressable>
         </View>
 
         <View style={s.tabs}>{([['services', 'Services'], ['reviews', `Reviews${reviews.length ? ` (${reviews.length})` : ''}`], ['about', 'About']] as [Tab, string][]).map(([value, label]) => <Pressable key={value} style={[s.tab, activeTab === value && s.tabActive]} onPress={() => setActiveTab(value)}><Text style={[s.tabText, activeTab === value && s.tabTextActive]}>{label}</Text></Pressable>)}</View>
@@ -250,7 +171,7 @@ export default function SalonDetails() {
         {activeTab === "services" ? (
           <View style={s.sectionCard}>
             <View style={s.sectionHeading}><View><Text style={s.sectionEyebrow}>WHAT THIS SALON OFFERS</Text><Text style={s.sectionTitle}>Popular services</Text></View><Ionicons name="sparkles-outline" size={22} color="#c55239" /></View>
-            {details.length ? details.map((item, index) => <ServiceRow key={`${item.name}-${index}`} item={item} onBook={() => { setServiceCategory(item.category || "General"); setService(item.name); scrollToBooking(); }} />) : salon.services.length ? salon.services.map((item) => <View style={s.simpleService} key={item}><View style={s.serviceIcon}><Ionicons name="cut-outline" size={18} color="#4c947d" /></View><Text style={s.serviceName}>{item}</Text><Text style={s.priceMuted}>Price on request</Text></View>) : <Text style={s.muted}>This salon has not published its services yet.</Text>}
+            {details.length ? details.map((item, index) => <ServiceRow key={`${item.name}-${index}`} item={item} onBook={() => openBooking(item.name)} />) : salon.services.length ? salon.services.map((item) => <View style={s.simpleService} key={item}><View style={s.serviceIcon}><Ionicons name="cut-outline" size={18} color="#4c947d" /></View><Text style={s.serviceName}>{item}</Text><Text style={s.priceMuted}>Price on request</Text></View>) : <Text style={s.muted}>This salon has not published its services yet.</Text>}
             {products.length ? <><Text style={[s.sectionEyebrow, s.subsectionEyebrow]}>PRODUCTS USED</Text>{products.map((item, index) => <View style={s.productRow} key={`${item.name}-${index}`}><View style={s.productIcon}><Ionicons name="leaf-outline" size={18} color="#4c947d" /></View><View style={s.productCopy}><Text style={s.serviceName}>{item.name}</Text>{item.description ? <Text style={s.muted}>{item.description}</Text> : null}</View></View>)}</> : null}
           </View>
         ) : null}
@@ -259,28 +180,6 @@ export default function SalonDetails() {
 
         {activeTab === "about" ? <View style={s.sectionCard}><Text style={s.sectionEyebrow}>THE SALON</Text><Text style={s.sectionTitle}>About {salon.name}</Text><InfoRow icon="location-outline" label={salon.location || "Location not set"} /><InfoRow icon="time-outline" label={salon.openingHours ? `${salon.openingHours.open} – ${salon.openingHours.close}` : "Opening hours not published"} /><InfoRow icon="people-outline" label={salon.stylists.length ? `${salon.stylists.length} stylist${salon.stylists.length === 1 ? "" : "s"} available` : "Stylist details not published"} />{salon.branches?.length ? <><Text style={[s.sectionEyebrow, s.subsectionEyebrow]}>BRANCHES</Text>{salon.branches.map((item) => <View style={s.branchRow} key={item.id}><Ionicons name="storefront-outline" size={18} color="#4c947d" /><View style={s.productCopy}><Text style={s.serviceName}>{item.name}</Text><Text style={s.muted}>{item.location}</Text></View></View>)}</> : null}</View> : null}
 
-        <View style={s.bookingCard} onLayout={(event) => setBookingOffset(event.nativeEvent.layout.y)}>
-          <View style={s.bookingHeading}><View><Text style={s.sectionEyebrow}>MAKE IT YOURS</Text><Text style={s.sectionTitle}>Book your visit</Text><Text style={s.muted}>Choose a service, time, and stylist.</Text></View><View style={s.bookingIcon}><Ionicons name="calendar-outline" size={22} color="#fff" /></View></View>
-          <Text style={s.label}>Branch</Text>
-          <Pressable style={s.dropdown} onPress={() => { setBranchOpen((open) => !open); setCategoryOpen(false); setServiceOpen(false); setStylistOpen(false); }}><View style={{ flex: 1 }}><Text style={s.choiceText}>{branch?.name || "Select a branch"}</Text>{branch?.location ? <Text style={s.muted}>{branch.location}</Text> : null}</View><Ionicons name={branchOpen ? "chevron-up" : "chevron-down"} size={17} color="#c55239" /></Pressable>
-          {branchOpen ? <View style={s.dropdownMenu}>{(salon.branches || []).map((item) => <Pressable key={item.id} style={s.dropdownOption} onPress={() => { setBranchId(item.id); setBranchOpen(false); }}><Text style={s.choiceText}>{item.name}</Text><Text style={s.muted}>{item.location}</Text></Pressable>)}</View> : null}
-          <Text style={s.label}>Service category</Text>
-          <Pressable style={s.dropdown} onPress={() => { setCategoryOpen((open) => !open); setBranchOpen(false); setServiceOpen(false); setStylistOpen(false); }}><Text style={s.choiceText}>{serviceCategory || "Select a category"}</Text><Ionicons name={categoryOpen ? "chevron-up" : "chevron-down"} size={17} color="#c55239" /></Pressable>
-          {categoryOpen ? <View style={s.dropdownMenu}>{serviceCategories.map((item) => <Pressable key={item} style={s.dropdownOption} onPress={() => { const nextServices = details.filter((detail) => (detail.category || "General") === item).map((detail) => detail.name); setServiceCategory(item); setService(nextServices[0] || salon.services[0] || ""); setCategoryOpen(false); }}><Text style={s.choiceText}>{item}</Text></Pressable>)}</View> : null}
-          <Text style={s.label}>Service</Text>
-          <Pressable style={s.dropdown} onPress={() => { setServiceOpen((open) => !open); setBranchOpen(false); setCategoryOpen(false); setStylistOpen(false); }}><Text style={s.choiceText}>{service || "Select a service"}</Text><Ionicons name={serviceOpen ? "chevron-up" : "chevron-down"} size={17} color="#c55239" /></Pressable>
-          {serviceOpen ? <View style={s.dropdownMenu}>{categoryServices.map((item) => <Pressable key={item} style={s.dropdownOption} onPress={() => { setService(item); setServiceOpen(false); }}><Text style={s.choiceText}>{item}</Text></Pressable>)}</View> : null}
-          <Text style={s.label}>Preferred stylist</Text>
-          <Pressable style={s.dropdown} onPress={() => { setStylistOpen((open) => !open); setBranchOpen(false); setServiceOpen(false); setCategoryOpen(false); }}><Text style={s.choiceText}>{stylist || "Select a stylist"}</Text><Ionicons name={stylistOpen ? "chevron-up" : "chevron-down"} size={17} color="#c55239" /></Pressable>
-          {stylistOpen ? <View style={s.dropdownMenu}>{salon.stylists.map((item) => <Pressable key={item} style={s.dropdownOption} onPress={() => { setStylist(item); setStylistOpen(false); }}><Text style={s.choiceText}>{item}</Text></Pressable>)}</View> : null}
-          <Text style={s.label}>Date</Text><TextInput value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" placeholderTextColor="#9ba39e" style={s.input} />
-          <Text style={s.label}>Available time</Text><View style={s.timeChoices}>{slots.map((item) => <Pressable key={item} style={[s.timeChoice, time === item && s.selected]} onPress={() => setTime(item)}><Text style={s.choiceText}>{item}</Text></Pressable>)}{date && !slots.length ? <Text style={s.muted}>No slots available for this date.</Text> : null}</View>
-          <Text style={s.label}>Notes</Text><TextInput value={notes} onChangeText={setNotes} placeholder="Tell us about your hair goals or preferences" placeholderTextColor="#9ba39e" multiline style={[s.input, s.multiline]} />
-          {coupons.length ? <><Text style={s.label}>Available offers</Text><View style={s.couponChoices}><Pressable style={[s.couponChoice, !selectedCoupon && s.selected]} onPress={() => setSelectedCoupon(null)}><Text style={s.choiceText}>No coupon</Text></Pressable>{coupons.map((coupon) => <Pressable key={coupon.id} style={[s.couponChoice, selectedCoupon?.id === coupon.id && s.selected]} onPress={() => setSelectedCoupon(coupon)}><View style={s.couponCopy}><Text style={s.choiceText}>{coupon.code}</Text><Text style={s.muted}>{coupon.discountType === "percent" ? `${coupon.discountValue}% off` : `₹${coupon.discountValue} off`}</Text></View>{selectedCoupon?.id === coupon.id ? <Text style={s.couponApplied}>Selected</Text> : null}</Pressable>)}</View></> : null}
-          {selectedCoupon ? <Text style={s.couponNote}>Coupon {selectedCoupon.code} will be checked again when payment is created.</Text> : null}
-          <Pressable disabled={busy} style={s.primary} onPress={() => void submit()}>{busy ? <ActivityIndicator color="#fff" /> : <><Text style={s.primaryText}>Request appointment</Text><Ionicons name="arrow-forward" size={18} color="#fff" /></>}</Pressable>
-          {message ? <Text style={message.includes("sent") ? s.success : s.error}>{message}</Text> : null}
-        </View>
       </ScrollView>
     </SafeAreaView>
   );

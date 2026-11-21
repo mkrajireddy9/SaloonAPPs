@@ -145,7 +145,6 @@ export default function Directory() {
   }, [salons, search, category, quickFilter, radius, rating, price, pricedOnly]);
   const featured = [...filteredSalons].sort((a, b) => (b.ratingAverage ?? -1) - (a.ratingAverage ?? -1) || (b.ratingCount ?? 0) - (a.ratingCount ?? 0)).slice(0, 5);
   const nearby = [...filteredSalons].sort((a, b) => (a.distanceKm ?? Number.MAX_SAFE_INTEGER) - (b.distanceKm ?? Number.MAX_SAFE_INTEGER));
-  const topRated = filteredSalons.filter((salon) => (salon.ratingAverage ?? 0) >= 4).slice(0, 5);
   const offers = filteredSalons.filter((salon) => Boolean(salonOffer(salon))).slice(0, 5);
   const heroSalon = featured[0] || salons[0];
   const heroImage = heroSalon ? salonImage(heroSalon) : null;
@@ -155,7 +154,16 @@ export default function Directory() {
   const bannerSource = bannerUri ? { uri: bannerUri, ...(bannerUri.startsWith(API_URL) && accessToken ? { headers: { authorization: "Bearer " + accessToken } } : {}) } : undefined;
   const serviceCategories = categories.filter((item) => item !== "All").slice(0, 8);
   const hasRefinements = Boolean(search.trim() || category !== "All" || quickFilter !== "all" || radius !== null || rating !== null || price !== "any" || pricedOnly);
-  const openSalon = (salon: Salon) => router.push({ pathname: "/salon/[id]", params: { id: salon.id, hairstyle, ...(salon.distanceKm != null ? { distanceKm: String(salon.distanceKm) } : {}) } });
+  const openSalon = (salon: Salon) => {
+    router.push({
+      pathname: "/(tabs)/salon/[id]",
+      params: {
+        id: salon.id,
+        ...(hairstyle ? { hairstyle } : {}),
+        ...(salon.distanceKm != null ? { distanceKm: String(salon.distanceKm) } : {}),
+      },
+    });
+  };
   const openBooking = () => router.push({ pathname: "/(tabs)/appointments", params: { booking: "1" } });
   const openBanner = () => {
     if (activeBanner?.actionUrl?.startsWith("http")) {
@@ -190,28 +198,31 @@ export default function Directory() {
       </View>
       <AccountDrawer profile={profile} />
     </View>
-    <View style={s.searchBox}><Ionicons name="search-outline" size={21} color="#77817c" /><TextInput value={search} onChangeText={setSearch} placeholder="Search salons or services..." placeholderTextColor="#9ba39e" style={s.searchInput} returnKeyType="search" />{search ? <Pressable onPress={() => setSearch("")}><Ionicons name="close-circle" size={19} color="#77817c" /></Pressable> : null}<Pressable style={s.filterButton} onPress={() => setFiltersOpen((value) => !value)} accessibilityLabel="Open salon filters"><Ionicons name="options-outline" size={21} color="#4c947d" /></Pressable></View>
-    <Pressable style={s.promoBanner} onPress={openBanner}>
-      {bannerSource ? <Image source={bannerSource} style={s.promoImage} /> : null}
-      <View style={s.promoOverlay} />
-      <View style={s.promoContent}>
-        <Text style={s.promoEyebrow}>HALO SALON</Text>
-        <Text style={s.promoTitle}>{activeBanner?.title || (heroSalon ? "Your next salon moment starts here" : "Find your next salon")}</Text>
-        <Text style={s.promoMessage} numberOfLines={2}>{activeBanner?.message || (heroSalon ? "Discover services, prices, and trusted salons near you." : "Explore salons and book a service that fits your style.")}</Text>
-        <View style={s.promoActions}><View style={s.promoPrimary}><Ionicons name="sparkles-outline" size={15} color="#fff" /><Text style={s.promoPrimaryText}>{activeBanner?.actionLabel || "Explore salons"}</Text></View><View style={s.promoSecondary}><Ionicons name="calendar-outline" size={15} color="#fff" /><Text style={s.promoSecondaryText}>Book a visit</Text></View></View>
-      </View>
-    </Pressable>
-    {banners.length > 1 ? <View style={s.bannerDots}>{banners.slice(0, 3).map((banner, index) => <View key={banner.id} style={[s.bannerDot, index === 0 && s.bannerDotActive]} />)}</View> : null}
+    <View style={s.searchBox}><Ionicons name="search-outline" size={21} color="#77817c" /><TextInput value={search} onChangeText={setSearch} placeholder="Search salons or services..." placeholderTextColor="#9ba39e" style={s.searchInput} returnKeyType="search" />{search ? <Pressable onPress={() => setSearch("")}><Ionicons name="close-circle" size={19} color="#77817c" /></Pressable> : null}<Pressable style={[s.filterButton, hasRefinements && s.filterButtonActive]} onPress={() => setFiltersOpen((value) => !value)} accessibilityLabel="Open salon filters"><Ionicons name="options-outline" size={21} color={hasRefinements ? "#20352d" : "#77817c"} />{hasRefinements ? <View style={s.filterDot} /> : null}</Pressable></View>
+    {filtersOpen ? <FilterPanel radius={radius} setRadius={setRadius} rating={rating} setRating={setRating} price={price} setPrice={setPrice} onClear={clearFilters} onCancel={() => setFiltersOpen(false)} onApply={() => setFiltersOpen(false)} /> : <>
+    {!hasRefinements ? <>
+      <Pressable style={s.promoBanner} onPress={openBanner}>
+        {bannerSource ? <Image source={bannerSource} style={s.promoImage} /> : null}
+        <View style={s.promoOverlay} />
+        <View style={s.promoContent}>
+          <Text style={s.promoEyebrow}>HALO SALON</Text>
+          <Text style={s.promoTitle}>{activeBanner?.title || (heroSalon ? "Your next salon moment starts here" : "Find your next salon")}</Text>
+          <Text style={s.promoMessage} numberOfLines={2}>{activeBanner?.message || (heroSalon ? "Discover services, prices, and trusted salons near you." : "Explore salons and book a service that fits your style.")}</Text>
+          <View style={s.promoActions}><View style={s.promoPrimary}><Ionicons name="sparkles-outline" size={15} color="#fff" /><Text style={s.promoPrimaryText}>{activeBanner?.actionLabel || "Explore salons"}</Text></View><View style={s.promoSecondary}><Ionicons name="calendar-outline" size={15} color="#fff" /><Text style={s.promoSecondaryText}>Book a visit</Text></View></View>
+        </View>
+      </Pressable>
+      {banners.length > 1 ? <View style={s.bannerDots}>{banners.slice(0, 3).map((banner, index) => <View key={banner.id} style={[s.bannerDot, index === 0 && s.bannerDotActive]} />)}</View> : null}
+    </> : null}
     {!hasRefinements ? <TrustStrip onTopRated={() => setQuickFilter("top-rated")} onPrices={() => setPricedOnly((value) => !value)} pricedOnly={pricedOnly} onBooking={openBooking} onNearby={() => setQuickFilter("nearby")} /> : null}
-    {serviceCategories.length ? <Section title="Popular services" action={serviceCategories.length + " available"}><View style={s.serviceGrid}>{serviceCategories.map((item) => <Pressable key={item} style={s.serviceCard} onPress={() => setCategory(item)}><View style={s.serviceIcon}><Ionicons name={categoryIcon(item)} size={23} color="#4c947d" /></View><Text style={s.serviceLabel} numberOfLines={2}>{item}</Text></Pressable>)}</View></Section> : null}
-    {filtersOpen ? <FilterPanel radius={radius} setRadius={setRadius} rating={rating} setRating={setRating} price={price} setPrice={setPrice} onClear={clearFilters} /> : null}{error ? <Text style={s.error}>{error}</Text> : null}
+    {!hasRefinements && serviceCategories.length ? <Section title="Popular services" action={serviceCategories.length + " available"}><View style={s.serviceGrid}>{serviceCategories.map((item) => <Pressable key={item} style={s.serviceCard} onPress={() => setCategory(item)}><View style={s.serviceIcon}><Ionicons name={categoryIcon(item)} size={23} color="#4c947d" /></View><Text style={s.serviceLabel} numberOfLines={2}>{item}</Text></Pressable>)}</View></Section> : null}
+    {error ? <Text style={s.error}>{error}</Text> : null}
     {!hasRefinements && wishlistSalons.length > 0 ? <Section title="Your wishlist" action={`${wishlistSalons.length} saved`}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.cardRow}>{wishlistSalons.map((salon) => <SalonCard key={salon.id} salon={salon} accessToken={accessToken} variant="featured" isWishlisted={wishlistIds.includes(salon.id)} onToggleWishlist={() => void toggleWishlist(salon)} onPress={() => openSalon(salon)} />)}</ScrollView></Section> : null}
     {!hasRefinements && featured.length > 0 ? <Section title="Recommended for you" action="View all" onAction={() => setQuickFilter("top-rated")}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.cardRow}>{featured.map((salon) => <SalonCard key={salon.id} salon={salon} accessToken={accessToken} variant="featured" isWishlisted={wishlistIds.includes(salon.id)} onToggleWishlist={() => void toggleWishlist(salon)} onPress={() => openSalon(salon)} />)}</ScrollView></Section> : null}
     {!hasRefinements && nearby.length > 0 ? <Section title="Popular salons nearby" action="View all" onAction={() => setQuickFilter("nearby")}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.cardRow}>{nearby.slice(0, 5).map((salon) => <SalonCard key={salon.id} salon={salon} accessToken={accessToken} variant="featured" isWishlisted={wishlistIds.includes(salon.id)} onToggleWishlist={() => void toggleWishlist(salon)} onPress={() => openSalon(salon)} />)}</ScrollView></Section> : null}
     {!hasRefinements && offers.length > 0 ? <Section title="Special packages & offers" action="View all" onAction={() => setQuickFilter("offers")}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.cardRow}>{offers.map((salon) => <SalonCard key={salon.id} salon={salon} accessToken={accessToken} variant="featured" isWishlisted={wishlistIds.includes(salon.id)} onToggleWishlist={() => void toggleWishlist(salon)} onPress={() => openSalon(salon)} />)}</ScrollView></Section> : null}
-    {hasRefinements && topRated.length > 0 ? <Section title="Top rated matches" action={topRated.length + " found"}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.cardRow}>{topRated.map((salon) => <SalonCard key={salon.id} salon={salon} accessToken={accessToken} variant="featured" isWishlisted={wishlistIds.includes(salon.id)} onToggleWishlist={() => void toggleWishlist(salon)} onPress={() => openSalon(salon)} />)}</ScrollView></Section> : null}
-    {hasRefinements ? <Section title="Search results" action={filteredSalons.length + " found"}>{nearby.map((salon) => <SalonCard key={salon.id} salon={salon} accessToken={accessToken} isWishlisted={wishlistIds.includes(salon.id)} onToggleWishlist={() => void toggleWishlist(salon)} onPress={() => openSalon(salon)} />)}</Section> : null}
+    {hasRefinements ? <Section title="Filtered salons" action={filteredSalons.length + " found"}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.cardRow}>{nearby.map((salon) => <SalonCard key={salon.id} salon={salon} accessToken={accessToken} variant="featured" isWishlisted={wishlistIds.includes(salon.id)} onToggleWishlist={() => void toggleWishlist(salon)} onPress={() => openSalon(salon)} />)}</ScrollView></Section> : null}
     {!loading && !filteredSalons.length ? <View style={s.empty}><Ionicons name="search-outline" size={28} color="#4c947d" /><Text style={s.emptyTitle}>No salons match your search</Text><Text style={s.emptyText}>Try another service, category, or filter.</Text><Pressable style={s.clearButton} onPress={clearFilters}><Text style={s.clearText}>Clear filters</Text></Pressable></View> : null}{loading && !salons.length ? <View style={s.loader}><ActivityIndicator color="#c55239" /><Text style={s.emptyText}>Finding salons near you...</Text></View> : null}
+    </>}
   </ScrollView></SafeAreaView>;
 }
 
@@ -225,7 +236,7 @@ function TrustStrip({ onTopRated, onPrices, pricedOnly, onBooking, onNearby }: {
   ];
   return <View style={s.trustStrip}>{items.map((item) => <Pressable key={item.label} style={[s.trustItem, item.active && s.trustItemActive]} onPress={item.onPress} accessibilityRole="button"><Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={21} color={item.active ? "#c55239" : "#4c947d"} /><Text style={[s.trustLabel, item.active && s.trustLabelActive]}>{item.label}</Text></Pressable>)}</View>;
 }
-function FilterPanel({ radius, setRadius, rating, setRating, price, setPrice, onClear }: { radius: number | null; setRadius: (value: number | null) => void; rating: number | null; setRating: (value: number | null) => void; price: PriceFilter; setPrice: (value: PriceFilter) => void; onClear: () => void }) { return <View style={s.filterPanel}><View style={s.filterHeader}><Text style={s.filterTitle}>Filters</Text><Pressable onPress={onClear}><Text style={s.sectionAction}>Reset</Text></Pressable></View><Text style={s.filterLabel}>Distance</Text><OptionRow options={[[null, "Any"], [1, "< 1 km"], [5, "1–5 km"], [10, "5–10 km"]]} value={radius} onChange={setRadius} /><Text style={s.filterLabel}>Rating</Text><OptionRow options={[[null, "Any"], [4, "4.0+"], [4.5, "4.5+"], [4.7, "4.7+"]]} value={rating} onChange={setRating} /><Text style={s.filterLabel}>Price from</Text><View style={s.optionRow}>{([['any', 'Any'], ['under-1000', 'Under ₹1k'], ['1000-2000', '₹1k–₹2k'], ['2000-plus', '₹2k+']] as [PriceFilter, string][]).map(([value, label]) => <Pressable key={value} style={[s.option, price === value && s.optionActive]} onPress={() => setPrice(value)}><Text style={[s.optionText, price === value && s.optionTextActive]}>{label}</Text></Pressable>)}</View></View>; }
+function FilterPanel({ radius, setRadius, rating, setRating, price, setPrice, onClear, onCancel, onApply }: { radius: number | null; setRadius: (value: number | null) => void; rating: number | null; setRating: (value: number | null) => void; price: PriceFilter; setPrice: (value: PriceFilter) => void; onClear: () => void; onCancel: () => void; onApply: () => void }) { return <View style={s.filterPanel}><View style={s.filterHeader}><Text style={s.filterTitle}>Filters</Text><View style={s.filterActions}><Pressable onPress={onCancel}><Text style={s.filterCancel}>Cancel</Text></Pressable><Pressable onPress={onClear}><Text style={s.sectionAction}>Reset</Text></Pressable></View></View><Text style={s.filterLabel}>Distance</Text><OptionRow options={[[null, "Any"], [1, "< 1 km"], [5, "1–5 km"], [10, "5–10 km"]]} value={radius} onChange={setRadius} /><Text style={s.filterLabel}>Rating</Text><OptionRow options={[[null, "Any"], [4, "4.0+"], [4.5, "4.5+"], [4.7, "4.7+"]]} value={rating} onChange={setRating} /><Text style={s.filterLabel}>Price from</Text><View style={s.optionRow}>{([['any', 'Any'], ['under-1000', 'Under ₹1k'], ['1000-2000', '₹1k–₹2k'], ['2000-plus', '₹2k+']] as [PriceFilter, string][]).map(([value, label]) => <Pressable key={value} style={[s.option, price === value && s.optionActive]} onPress={() => setPrice(value)}><Text style={[s.optionText, price === value && s.optionTextActive]}>{label}</Text></Pressable>)}</View><Pressable style={s.applyButton} onPress={onApply}><Text style={s.applyButtonText}>Apply filters</Text></Pressable></View>; }
 function OptionRow({ options, value, onChange }: { options: [number | null, string][]; value: number | null; onChange: (value: number | null) => void }) { return <View style={s.optionRow}>{options.map(([option, label]) => <Pressable key={label} style={[s.option, value === option && s.optionActive]} onPress={() => onChange(option)}><Text style={[s.optionText, value === option && s.optionTextActive]}>{label}</Text></Pressable>)}</View>; }
 function SalonCard({ salon, accessToken, onPress, onToggleWishlist, isWishlisted = false, variant = "list" }: { salon: Salon; accessToken: string | null; onPress: () => void; onToggleWishlist?: () => void; isWishlisted?: boolean; variant?: "featured" | "list" }) {
   const [imageFailed, setImageFailed] = useState(false);
@@ -248,7 +259,7 @@ function SalonCard({ salon, accessToken, onPress, onToggleWishlist, isWishlisted
         <View style={s.ratingRow}>{ratingView}</View>
         <View style={s.metaRow}><Ionicons name="location-outline" size={15} color="#4c947d" /><Text style={s.metaText}>{salon.distanceKm != null ? `${salon.distanceKm.toFixed(1)} km` : salon.location || "Location not set"}</Text>{openView}</View>
         <Text style={s.services} numberOfLines={1}>{(details.length ? details.map((item) => item.name) : salon.services).slice(0, 3).join(", ") || "Services coming soon"}</Text>
-        <View style={s.bottomRow}>{priceView}<View style={s.bookButton}><Text style={s.bookText}>View salon</Text></View></View>
+        <View style={s.bottomRow}>{priceView}<Pressable style={s.bookButton} onPress={(event) => { event.stopPropagation(); onPress(); }} accessibilityRole="button" accessibilityLabel={`View ${salon.name}`}><Text style={s.bookText}>View salon</Text></Pressable></View>
       </View>
     </Pressable>
   );
@@ -269,6 +280,8 @@ const s = {
   searchBox: { ...baseStyles.searchBox, backgroundColor: "#fffdfa", borderRadius: 16, shadowColor: "#20352d", shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
   searchInput: { ...baseStyles.searchInput, color: "#20352d" },
   filterButton: { ...baseStyles.filterButton, borderLeftColor: "#e1ddd4" },
+  filterButtonActive: { position: "relative" as const, backgroundColor: "#e7f1ed", borderRadius: 12, paddingVertical: 7, paddingRight: 8 },
+  filterDot: { position: "absolute" as const, top: 2, right: 3, width: 7, height: 7, borderRadius: 4, backgroundColor: "#d94841", borderWidth: 1, borderColor: "#fffdfa" },
   promoBanner: { height: 190, borderRadius: 18, overflow: "hidden" as const, backgroundColor: "#20352d", marginTop: 16, position: "relative" as const },
   promoImage: { position: "absolute" as const, right: 0, top: 0, bottom: 0, width: "55%" as const, opacity: 0.72 },
   promoOverlay: { position: "absolute" as const, top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(32,53,45,0.56)" },
@@ -297,6 +310,10 @@ const s = {
   categoryText: { ...baseStyles.categoryText, color: "#aaa8b4" },
   categoryTextActive: { ...baseStyles.categoryTextActive, color: "#d8b15e" },
   filterPanel: { ...baseStyles.filterPanel, backgroundColor: "#fffdfa", borderColor: "#e1ddd4" },
+  filterActions: { flexDirection: "row" as const, alignItems: "center" as const, gap: 18 },
+  filterCancel: { color: "#77817c", fontSize: 12, fontWeight: "800" as const },
+  applyButton: { alignItems: "center" as const, justifyContent: "center" as const, backgroundColor: "#c55239", borderRadius: 14, minHeight: 48, marginTop: 24 },
+  applyButtonText: { color: "#fffdfa", fontSize: 13, fontWeight: "900" as const },
   filterTitle: { ...baseStyles.filterTitle, color: "#20352d" },
   filterLabel: { ...baseStyles.filterLabel, color: "#20352d" },
   option: { ...baseStyles.option, borderColor: "#d9d6ce" },

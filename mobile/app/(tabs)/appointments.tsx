@@ -160,10 +160,11 @@ function AppointmentCard({
   );
 }
 export default function Appointments() {
-  const { salonId, booking, hairstyle } = useLocalSearchParams<{
+  const { salonId, booking, hairstyle, service: requestedService } = useLocalSearchParams<{
     salonId?: string;
     booking?: string;
     hairstyle?: string;
+    service?: string;
   }>();
   const [items, setItems] = useState<Appointment[]>([]);
   const [salons, setSalons] = useState<Salon[]>([]);
@@ -227,7 +228,13 @@ export default function Appointments() {
         if (first) {
           setSelectedSalon(first);
           setBranchId(first.branches?.[0]?.id || "main");
-          setSelectedServices(first.services[0] ? [first.services[0]] : []);
+          setSelectedServices(
+            requestedService && first.services.includes(requestedService)
+              ? [requestedService]
+              : first.services[0]
+                ? [first.services[0]]
+                : [],
+          );
           setStylist(first.stylists[0] || "");
         }
       })
@@ -242,10 +249,16 @@ export default function Appointments() {
     if (!target) return;
     setSelectedSalon(target);
     setBranchId(target.branches?.[0]?.id || "main");
-    setSelectedServices(target.services[0] ? [target.services[0]] : []);
+    setSelectedServices(
+      requestedService && target.services.includes(requestedService)
+        ? [requestedService]
+        : target.services[0]
+          ? [target.services[0]]
+          : [],
+    );
     setStylist(target.stylists[0] || "");
     if (booking === "1") setBookingOpen(true);
-  }, [salonId, booking, salons]);
+  }, [salonId, booking, salons, requestedService]);
   useEffect(() => {
     if (hairstyle) setNotes(`AI hairstyle request: ${hairstyle}`);
   }, [hairstyle]);
