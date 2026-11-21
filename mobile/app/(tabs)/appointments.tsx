@@ -37,6 +37,7 @@ type Salon = {
   stylists: string[];
   branches?: Branch[];
 };
+type Selector = "salon" | "branch" | "service" | "stylist" | null;
 function normalizeSalon(raw: any): Salon {
   const services = Array.isArray(raw.services) && raw.services.length
     ? raw.services
@@ -170,6 +171,7 @@ export default function Appointments() {
   const [salons, setSalons] = useState<Salon[]>([]);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [selectedSalon, setSelectedSalon] = useState<Salon | null>(null);
+  const [openSelector, setOpenSelector] = useState<Selector>(null);
   const [branchId, setBranchId] = useState("");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [stylist, setStylist] = useState("");
@@ -349,70 +351,30 @@ export default function Appointments() {
               </View>
               <View style={s.bookingHeaderIcon}><Ionicons name="calendar-outline" size={22} color="#c55239" /></View>
             </View>
-            <View style={s.providerCard}>
-              <View style={s.providerAvatar}><Ionicons name="sparkles-outline" size={21} color="#4c947d" /></View>
-              <View style={s.providerCopy}><Text style={s.providerName}>{selectedSalon?.name || "Choose a salon"}</Text><Text style={s.providerMeta}>{selectedSalon?.location || "Salon location"} · Salon services</Text></View>
-            </View>
             <Text style={s.label}>Salon</Text>
-            <View style={s.choices}>
-              {salons.map((salon) => (
-                <Pressable
-                  key={salon.id}
-                  style={[s.choice, selectedSalon?.id === salon.id && s.selected]}
-                  onPress={() => {
-                    setSelectedSalon(salon);
-                    setBranchId(salon.branches?.[0]?.id || "main");
-                    setSelectedServices(salon.services[0] ? [salon.services[0]] : []);
-                    setStylist(salon.stylists[0] || "");
-                  }}
-                >
-                  <Text style={s.choiceText}>{salon.name}</Text>
-                </Pressable>
-              ))}
-            </View>
+            <Pressable style={s.selectField} onPress={() => setOpenSelector(openSelector === "salon" ? null : "salon")}>
+              <Text style={s.choiceText}>{selectedSalon?.name || "Choose a salon"}</Text>
+              <Ionicons name={openSelector === "salon" ? "chevron-up" : "chevron-down"} size={17} color="#c55239" />
+            </Pressable>
+            {openSelector === "salon" ? <View style={s.selectMenu}>{salons.map((salon) => <Pressable key={salon.id} style={[s.selectOption, selectedSalon?.id === salon.id && s.selected]} onPress={() => { setSelectedSalon(salon); setBranchId(salon.branches?.[0]?.id || "main"); setSelectedServices(salon.services[0] ? [salon.services[0]] : []); setStylist(salon.stylists[0] || ""); setOpenSelector(null); }}><Text style={s.choiceText}>{salon.name}</Text>{salon.location ? <Text style={s.muted}>{salon.location}</Text> : null}</Pressable>)}</View> : null}
             <Text style={s.label}>Branch</Text>
-            <View style={s.choices}>
-              {(selectedSalon?.branches || []).map((item) => (
-                <Pressable
-                  key={item.id}
-                  style={[s.choice, branchId === item.id && s.selected]}
-                  onPress={() => setBranchId(item.id)}
-                >
-                  <Text style={s.choiceText}>{item.name}</Text>
-                  <Text style={s.muted}>{item.location}</Text>
-                </Pressable>
-              ))}
-            </View>
+            <Pressable style={s.selectField} onPress={() => setOpenSelector(openSelector === "branch" ? null : "branch")}>
+              <View style={s.selectCopy}><Text style={s.choiceText}>{selectedSalon?.branches?.find((item) => item.id === branchId)?.name || "Choose a branch"}</Text><Text style={s.muted}>{selectedSalon?.branches?.find((item) => item.id === branchId)?.location || "Select a salon branch"}</Text></View>
+              <Ionicons name={openSelector === "branch" ? "chevron-up" : "chevron-down"} size={17} color="#c55239" />
+            </Pressable>
+            {openSelector === "branch" ? <View style={s.selectMenu}>{(selectedSalon?.branches || []).map((item) => <Pressable key={item.id} style={[s.selectOption, branchId === item.id && s.selected]} onPress={() => { setBranchId(item.id); setOpenSelector(null); }}><Text style={s.choiceText}>{item.name}</Text><Text style={s.muted}>{item.location}</Text></Pressable>)}</View> : null}
             <Text style={s.label}>Service</Text>
-            <View style={s.choices}>
-              {(selectedSalon?.services || []).map((item) => (
-                <Pressable
-                  key={item}
-                  style={[s.choice, selectedServices.includes(item) && s.selected]}
-                  onPress={() =>
-                    setSelectedServices((current) =>
-                      current.includes(item)
-                        ? current.filter((value) => value !== item)
-                        : [...current, item],
-                    )
-                  }
-                >
-                  <Text style={s.choiceText}>{item}</Text>
-                </Pressable>
-              ))}
-            </View>
+            <Pressable style={s.selectField} onPress={() => setOpenSelector(openSelector === "service" ? null : "service")}>
+              <Text style={s.choiceText}>{selectedServices.join(", ") || "Choose a service"}</Text>
+              <Ionicons name={openSelector === "service" ? "chevron-up" : "chevron-down"} size={17} color="#c55239" />
+            </Pressable>
+            {openSelector === "service" ? <View style={s.selectMenu}>{(selectedSalon?.services || []).map((item) => <Pressable key={item} style={[s.selectOption, selectedServices.includes(item) && s.selected]} onPress={() => { setSelectedServices([item]); setOpenSelector(null); }}><Text style={s.choiceText}>{item}</Text></Pressable>)}</View> : null}
             <Text style={s.label}>Preferred stylist</Text>
-            <View style={s.choices}>
-              {(selectedSalon?.stylists || []).map((item) => (
-                <Pressable
-                  key={item}
-                  style={[s.choice, stylist === item && s.selected]}
-                  onPress={() => setStylist(item)}
-                >
-                  <Text style={s.choiceText}>{item}</Text>
-                </Pressable>
-              ))}
-            </View>
+            <Pressable style={s.selectField} onPress={() => setOpenSelector(openSelector === "stylist" ? null : "stylist")}>
+              <Text style={s.choiceText}>{stylist || "Choose a stylist"}</Text>
+              <Ionicons name={openSelector === "stylist" ? "chevron-up" : "chevron-down"} size={17} color="#c55239" />
+            </Pressable>
+            {openSelector === "stylist" ? <View style={s.selectMenu}>{(selectedSalon?.stylists || []).map((item) => <Pressable key={item} style={[s.selectOption, stylist === item && s.selected]} onPress={() => { setStylist(item); setOpenSelector(null); }}><Text style={s.choiceText}>{item}</Text></Pressable>)}</View> : null}
             <Text style={s.label}>Select date</Text>
             <View style={s.calendarPanel}>
               <View style={s.calendarHeader}>
@@ -657,6 +619,10 @@ const s = StyleSheet.create({
     borderRadius: 13,
     padding: 12,
   },
+  selectField: { minHeight: 50, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#fffdfa", borderColor: "#d9d6ce", borderWidth: 1, borderRadius: 12, paddingHorizontal: 13 },
+  selectCopy: { flex: 1 },
+  selectMenu: { backgroundColor: "#fffdfa", borderColor: "#d9d6ce", borderWidth: 1, borderRadius: 12, marginTop: 6, overflow: "hidden" },
+  selectOption: { paddingHorizontal: 13, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#eeeae2" },
   selected: { borderColor: "#c55239", backgroundColor: "#fff4ef" },
   choiceText: { color: "#20352d", fontWeight: "700" },
   input: {
