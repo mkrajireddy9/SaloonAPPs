@@ -36,6 +36,14 @@ The default test password for generated accounts is `HaloTest@2026`. Set
 `SEED_PASSWORD` before seeding if you want another password. Do not reuse it in
 production.
 
+The seeded salon, service, product, stylist, and banner records include public
+demo image URLs so the web and mobile discovery/detail cards render images.
+They are external demo assets, not uploaded to Render storage. Replace the
+image constants in the script with your Cloudinary URLs for a fully controlled
+staging environment. AI history records remain metadata-only because the
+private `/media/:id` endpoint requires an authenticated stored asset; upload a
+real image through the application before testing private AI media flows.
+
 ## 3. Render staging
 
 Use Render's **external** PostgreSQL connection URL when running from your

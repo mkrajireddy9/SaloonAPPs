@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, AppState, Image, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, AppState, Image, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
@@ -22,14 +22,16 @@ const categoryIcon = (category: string): keyof typeof Ionicons.glyphMap => {
   if (/colour|color/.test(value)) return "color-fill-outline";
   return "cut-outline";
 };
-const serviceCategory = (service: string) => {
-  const value = service.toLowerCase();
+const serviceCategory = (service: unknown) => {
+  const value = typeof service === "string" ? service.toLowerCase() : "";
   if (/colour|color|highlight|balayage|gloss/.test(value)) return "Hair Colour";
   if (/spa|massage|facial|skin|wax|thread/.test(value)) return "Wellness";
   if (/nail|manicure|pedicure/.test(value)) return "Nails";
   return "Hair Care";
 };
-const activeDetails = (salon: Salon) => (salon.serviceDetails || []).filter((item) => item.active !== false);
+const salonServices = (salon: Salon) => Array.isArray(salon?.services) ? salon.services.filter((item): item is string => typeof item === "string") : [];
+const salonBranches = (salon: Salon) => Array.isArray(salon?.branches) ? salon.branches.filter((item): item is NonNullable<Salon["branches"]>[number] => Boolean(item && typeof item === "object")) : [];
+const activeDetails = (salon: Salon) => (Array.isArray(salon?.serviceDetails) ? salon.serviceDetails : []).filter((item) => item && typeof item === "object" && item.active !== false);
 const salonPrice = (salon: Salon) => {
   const prices = activeDetails(salon).map((item) => Number(item.discountPrice ?? item.price)).filter((price) => Number.isFinite(price) && price > 0);
   return prices.length ? Math.min(...prices) : null;
@@ -45,8 +47,14 @@ const salonOffer = (salon: Salon) => {
 };
 const salonImage = (salon: Salon) => {
   const image = activeDetails(salon).find((item) => item.imageUrl)?.imageUrl;
-  return image && (/^https?:\/\//i.test(image) || image.startsWith("/media/")) ? image : null;
+  return typeof image === "string" && (/^https?:\/\//i.test(image) || image.startsWith("/media/")) ? image : null;
 };
+const isSalon = (value: unknown): value is Salon => {
+  if (!value || typeof value !== "object") return false;
+  const salon = value as Partial<Salon>;
+  return typeof salon.id === "string" && typeof salon.name === "string";
+};
+const uniqueSalons = (items: Salon[]) => Array.from(new Map(items.filter(isSalon).map((salon) => [salon.id, salon])).values());
 const distanceBetween = (from: { latitude: number; longitude: number }, to: { latitude?: number; longitude?: number }) => {
   if (!Number.isFinite(to.latitude) || !Number.isFinite(to.longitude)) return null;
   const radians = (value: number) => (value * Math.PI) / 180;
@@ -58,17 +66,21 @@ const distanceBetween = (from: { latitude: number; longitude: number }, to: { la
 const carryDistance = (salon: Salon, location: { latitude: number; longitude: number } | null) => {
   if (!location) return salon;
   if (typeof salon.distanceKm === "number" && Number.isFinite(salon.distanceKm)) return salon;
-  const distances = (salon.branches || []).map((branch) => branch.distanceKm ?? distanceBetween(location, branch)).filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  const distances = salonBranches(salon).map((branch) => branch.distanceKm ?? distanceBetween(location, branch)).filter((value): value is number => typeof value === "number" && Number.isFinite(value));
   return { ...salon, distanceKm: distances.length ? Math.min(...distances) : null };
 };
 function isOpenNow(salon: Salon) {
   const today = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(new Date());
-  if (salon.closedDays?.includes(today)) return false;
-  if (!salon.openingHours) return null;
-  const toMinutes = (value: string) => { const [hour, minute] = value.split(":").map(Number); return hour * 60 + minute; };
+  if (Array.isArray(salon.closedDays) && salon.closedDays.includes(today)) return false;
+  const openingHours = salon.openingHours;
+  if (!openingHours || typeof openingHours.open !== "string" || typeof openingHours.close !== "string") return null;
+  const toMinutes = (value: string) => { const [hour, minute] = value.split(":").map(Number); return Number.isFinite(hour) && Number.isFinite(minute) ? hour * 60 + minute : null; };
+  const opening = toMinutes(openingHours.open);
+  const closing = toMinutes(openingHours.close);
+  if (opening === null || closing === null) return null;
   const now = new Date();
   const current = now.getHours() * 60 + now.getMinutes();
-  return current >= toMinutes(salon.openingHours.open) && current <= toMinutes(salon.openingHours.close);
+  return current >= opening && current <= closing;
 }
 
 export default function Directory() {
@@ -87,6 +99,7 @@ export default function Directory() {
   const [price, setPrice] = useState<PriceFilter>("any");
   const [pricedOnly, setPricedOnly] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [activeBannerIndex, setActiveBannerIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const load = async () => {
@@ -107,9 +120,9 @@ export default function Directory() {
         api<Salon[]>(`/salon/directory${query}`),
         api<WishlistEntry[]>(`/wishlist${wishlistQuery}`).catch(() => [] as WishlistEntry[]),
       ]);
-      setSalons(directory.map((salon) => carryDistance(salon, location)));
-      setWishlistIds(wishlist.map((item) => item.salonId));
-      setWishlistSalons(wishlist.map((item) => item.salon).filter(Boolean).map((salon) => carryDistance(salon, location)));
+      setSalons(uniqueSalons(directory.map((salon) => carryDistance(salon, location))));
+      setWishlistIds(wishlist.filter((item) => item && typeof item.salonId === "string").map((item) => item.salonId));
+      setWishlistSalons(uniqueSalons(wishlist.map((item) => item?.salon).filter(isSalon).map((salon) => carryDistance(salon, location))));
       setError("");
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to load salons."); }
     finally { setLoading(false); }
@@ -124,17 +137,18 @@ export default function Directory() {
   }, []);
   useEffect(() => { const subscription = AppState.addEventListener("change", (state) => { if (state === "active") void load(); }); return () => subscription.remove(); }, []);
   const categories = useMemo(() => {
-    const values = salons.flatMap((salon) => { const details = activeDetails(salon); return details.length ? details.map((item) => item.category || serviceCategory(item.name)) : salon.services.map(serviceCategory); });
+    const values = salons.flatMap((salon) => { const details = activeDetails(salon); return details.length ? details.map((item) => item.category || serviceCategory(item.name)) : salonServices(salon).map(serviceCategory); });
     return ["All", ...Array.from(new Set(values))];
   }, [salons]);
   const filteredSalons = useMemo(() => {
     const query = search.trim().toLowerCase();
     return salons.filter((salon) => {
       const details = activeDetails(salon);
-      const values = [salon.name, salon.location, ...salon.services, ...details.map((item) => item.name), ...(salon.branches || []).map((branch) => branch.location || "")];
+      const services = salonServices(salon);
+      const values = [salon.name, salon.location, ...services, ...details.map((item) => item.name), ...salonBranches(salon).map((branch) => branch.location || "")].filter((value): value is string => typeof value === "string");
       const priceValue = salonPrice(salon);
-      const matchesSearch = !query || values.some((value) => value?.toLowerCase().includes(query));
-      const matchesCategory = category === "All" || details.some((item) => (item.category || serviceCategory(item.name)) === category) || salon.services.some((item) => serviceCategory(item) === category);
+      const matchesSearch = !query || values.some((value) => value.toLowerCase().includes(query));
+      const matchesCategory = category === "All" || details.some((item) => (item.category || serviceCategory(item.name)) === category) || services.some((item) => serviceCategory(item) === category);
       const matchesRadius = radius === null || (typeof salon.distanceKm === "number" && salon.distanceKm <= radius);
       const matchesRating = rating === null || (salon.ratingAverage ?? 0) >= rating;
       const matchesPrice = price === "any" || (price === "under-1000" && priceValue !== null && priceValue < 1000) || (price === "1000-2000" && priceValue !== null && priceValue >= 1000 && priceValue <= 2000) || (price === "2000-plus" && priceValue !== null && priceValue > 2000);
@@ -148,18 +162,22 @@ export default function Directory() {
   const offers = filteredSalons.filter((salon) => Boolean(salonOffer(salon))).slice(0, 5);
   const heroSalon = featured[0] || salons[0];
   const heroImage = heroSalon ? salonImage(heroSalon) : null;
-  const activeBanner = banners[0];
-  const bannerImage = activeBanner?.imageUrl || heroImage;
-  const bannerUri = bannerImage ? (bannerImage.startsWith("/") ? API_URL + bannerImage : bannerImage) : null;
-  const bannerSource = bannerUri ? { uri: bannerUri, ...(bannerUri.startsWith(API_URL) && accessToken ? { headers: { authorization: "Bearer " + accessToken } } : {}) } : undefined;
+  const activeBanner = banners[activeBannerIndex] || banners[0];
+  const { width: windowWidth } = useWindowDimensions();
+  const promoWidth = Math.max(280, windowWidth - 28);
   const serviceCategories = categories.filter((item) => item !== "All").slice(0, 8);
   const hasRefinements = Boolean(search.trim() || category !== "All" || quickFilter !== "all" || radius !== null || rating !== null || price !== "any" || pricedOnly);
   const openSalon = (salon: Salon) => {
+    const id = String(salon.id || "").trim();
+    if (!id) {
+      setError("This salon is missing an ID. Please refresh and try again.");
+      return;
+    }
     router.push({
-      pathname: "/(tabs)/salon/[id]",
+      pathname: "/salon-details/[id]" as never,
       params: {
-        id: salon.id,
-        ...(hairstyle ? { hairstyle } : {}),
+        id,
+        ...(hairstyle ? { hairstyle: String(hairstyle) } : {}),
         ...(salon.distanceKm != null ? { distanceKm: String(salon.distanceKm) } : {}),
       },
     });
@@ -201,20 +219,35 @@ export default function Directory() {
     <View style={s.searchBox}><Ionicons name="search-outline" size={21} color="#77817c" /><TextInput value={search} onChangeText={setSearch} placeholder="Search salons or services..." placeholderTextColor="#9ba39e" style={s.searchInput} returnKeyType="search" />{search ? <Pressable onPress={() => setSearch("")}><Ionicons name="close-circle" size={19} color="#77817c" /></Pressable> : null}<Pressable style={[s.filterButton, hasRefinements && s.filterButtonActive]} onPress={() => setFiltersOpen((value) => !value)} accessibilityLabel="Open salon filters"><Ionicons name="options-outline" size={21} color={hasRefinements ? "#20352d" : "#77817c"} />{hasRefinements ? <View style={s.filterDot} /> : null}</Pressable></View>
     {filtersOpen ? <FilterPanel radius={radius} setRadius={setRadius} rating={rating} setRating={setRating} price={price} setPrice={setPrice} onClear={clearFilters} onCancel={() => setFiltersOpen(false)} onApply={() => setFiltersOpen(false)} /> : <>
     {!hasRefinements ? <>
-      <Pressable style={s.promoBanner} onPress={openBanner}>
-        {bannerSource ? <Image source={bannerSource} style={s.promoImage} /> : null}
-        <View style={s.promoOverlay} />
-        <View style={s.promoContent}>
-          <Text style={s.promoEyebrow}>HALO SALON</Text>
-          <Text style={s.promoTitle}>{activeBanner?.title || (heroSalon ? "Your next salon moment starts here" : "Find your next salon")}</Text>
-          <Text style={s.promoMessage} numberOfLines={2}>{activeBanner?.message || (heroSalon ? "Discover services, prices, and trusted salons near you." : "Explore salons and book a service that fits your style.")}</Text>
-          <View style={s.promoActions}><View style={s.promoPrimary}><Ionicons name="sparkles-outline" size={15} color="#fff" /><Text style={s.promoPrimaryText}>{activeBanner?.actionLabel || "Explore salons"}</Text></View><View style={s.promoSecondary}><Ionicons name="calendar-outline" size={15} color="#fff" /><Text style={s.promoSecondaryText}>Book a visit</Text></View></View>
-        </View>
-      </Pressable>
-      {banners.length > 1 ? <View style={s.bannerDots}>{banners.slice(0, 3).map((banner, index) => <View key={banner.id} style={[s.bannerDot, index === 0 && s.bannerDotActive]} />)}</View> : null}
+      <ScrollView
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={s.bannerCarousel}
+        onMomentumScrollEnd={(event) => {
+          const index = Math.round(event.nativeEvent.contentOffset.x / promoWidth);
+          setActiveBannerIndex(Math.max(0, Math.min(index, banners.length - 1)));
+        }}
+      >
+        {(banners.length ? banners : [undefined]).map((banner, index) => {
+          const bannerImage = banner?.imageUrl || heroImage;
+          const bannerUri = bannerImage ? (bannerImage.startsWith("/") ? API_URL + bannerImage : bannerImage) : null;
+          const bannerSource = bannerUri ? { uri: bannerUri, ...(bannerUri.startsWith(API_URL) && accessToken ? { headers: { authorization: "Bearer " + accessToken } } : {}) } : undefined;
+          return <Pressable key={banner?.id || `fallback-banner-${index}`} style={[s.promoBanner, { width: promoWidth }]} onPress={openBanner}>
+            {bannerSource ? <Image source={bannerSource} style={s.promoImage} /> : null}
+            <View style={s.promoOverlay} />
+            <View style={s.promoContent}>
+              <Text style={s.promoEyebrow}>HALO SALON</Text>
+              <Text style={s.promoTitle}>{banner?.title || (heroSalon ? "Your next salon moment starts here" : "Find your next salon")}</Text>
+              <Text style={s.promoMessage} numberOfLines={2}>{banner?.message || (heroSalon ? "Discover services, prices, and trusted salons near you." : "Explore salons and book a service that fits your style.")}</Text>
+            </View>
+          </Pressable>;
+        })}
+      </ScrollView>
+      {banners.length > 1 ? <View style={s.bannerDots}>{banners.map((banner, index) => <View key={banner.id} style={[s.bannerDot, index === activeBannerIndex && s.bannerDotActive]} />)}</View> : null}
     </> : null}
     {!hasRefinements ? <TrustStrip onTopRated={() => setQuickFilter("top-rated")} onPrices={() => setPricedOnly((value) => !value)} pricedOnly={pricedOnly} onBooking={openBooking} onNearby={() => setQuickFilter("nearby")} /> : null}
-    {!hasRefinements && serviceCategories.length ? <Section title="Popular services" action={serviceCategories.length + " available"}><View style={s.serviceGrid}>{serviceCategories.map((item) => <Pressable key={item} style={s.serviceCard} onPress={() => setCategory(item)}><View style={s.serviceIcon}><Ionicons name={categoryIcon(item)} size={23} color="#4c947d" /></View><Text style={s.serviceLabel} numberOfLines={2}>{item}</Text></Pressable>)}</View></Section> : null}
+    {!hasRefinements && serviceCategories.length ? <Section title="Popular services" action={serviceCategories.length + " available"}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.serviceCarousel}>{serviceCategories.map((item) => <Pressable key={item} style={s.serviceCard} onPress={() => setCategory(item)}><View style={s.serviceIcon}><Ionicons name={categoryIcon(item)} size={23} color="#4c947d" /></View><Text style={s.serviceLabel} numberOfLines={2}>{item}</Text></Pressable>)}</ScrollView></Section> : null}
     {error ? <Text style={s.error}>{error}</Text> : null}
     {!hasRefinements && wishlistSalons.length > 0 ? <Section title="Your wishlist" action={`${wishlistSalons.length} saved`}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.cardRow}>{wishlistSalons.map((salon) => <SalonCard key={salon.id} salon={salon} accessToken={accessToken} variant="featured" isWishlisted={wishlistIds.includes(salon.id)} onToggleWishlist={() => void toggleWishlist(salon)} onPress={() => openSalon(salon)} />)}</ScrollView></Section> : null}
     {!hasRefinements && featured.length > 0 ? <Section title="Recommended for you" action="View all" onAction={() => setQuickFilter("top-rated")}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.cardRow}>{featured.map((salon) => <SalonCard key={salon.id} salon={salon} accessToken={accessToken} variant="featured" isWishlisted={wishlistIds.includes(salon.id)} onToggleWishlist={() => void toggleWishlist(salon)} onPress={() => openSalon(salon)} />)}</ScrollView></Section> : null}
@@ -248,7 +281,10 @@ function SalonCard({ salon, accessToken, onPress, onToggleWishlist, isWishlisted
   const imageUri = image ? (image.startsWith("/") ? `${API_URL}${image}` : image) : null;
   const imageSource = imageUri ? { uri: imageUri, headers: imageUri.startsWith(API_URL) && accessToken ? { authorization: `Bearer ${accessToken}` } : undefined } : undefined;
   const imageView = imageSource && !imageFailed ? <Image source={imageSource} style={s.salonImage} onError={() => setImageFailed(true)} /> : <View style={s.imagePlaceholder}><Ionicons name="sparkles-outline" size={30} color="#4c947d" /><Text style={s.placeholderText}>Halo salon</Text></View>;
-  const ratingView = salon.ratingAverage != null ? <><Ionicons name="star" size={15} color="#dfca73" /><Text style={s.rating}>{salon.ratingAverage.toFixed(1)}</Text><Text style={s.reviewCount}>({salon.ratingCount || 0})</Text></> : <Text style={s.reviewCount}>Not rated yet</Text>;
+  const ratingValue = Number(salon.ratingAverage);
+  const hasRating = Number.isFinite(ratingValue);
+  const distanceValue = Number(salon.distanceKm);
+  const ratingView = hasRating ? <><Ionicons name="star" size={15} color="#dfca73" /><Text style={s.rating}>{ratingValue.toFixed(1)}</Text><Text style={s.reviewCount}>({Number(salon.ratingCount) || 0})</Text></> : <Text style={s.reviewCount}>Not rated yet</Text>;
   const openView = isOpen === null ? null : <Text style={[s.openPill, isOpen ? s.open : s.closed]}>{isOpen ? "Open now" : "Closed"}</Text>;
   const priceView = price != null ? <View style={s.priceBlock}><Text style={s.priceLabel}>Starting at</Text><Text style={s.price}>₹{price.toLocaleString("en-IN")}</Text></View> : <View style={s.priceBlock}><Text style={s.priceLabel}>Pricing</Text><Text style={s.priceMuted}>On request</Text></View>;
   return (
@@ -257,8 +293,8 @@ function SalonCard({ salon, accessToken, onPress, onToggleWishlist, isWishlisted
       <View style={[s.cardBody, variant === "list" && s.listCardBody]}>
         <View style={s.cardTitleRow}><Text style={s.salonName} numberOfLines={1}>{salon.name}</Text>{onToggleWishlist ? <Pressable style={s.favoriteButton} onPress={onToggleWishlist} accessibilityRole="button" accessibilityLabel={isWishlisted ? `Remove ${salon.name} from wishlist` : `Save ${salon.name} to wishlist`}><Ionicons name={isWishlisted ? "heart" : "heart-outline"} size={21} color="#c55239" /></Pressable> : null}</View>
         <View style={s.ratingRow}>{ratingView}</View>
-        <View style={s.metaRow}><Ionicons name="location-outline" size={15} color="#4c947d" /><Text style={s.metaText}>{salon.distanceKm != null ? `${salon.distanceKm.toFixed(1)} km` : salon.location || "Location not set"}</Text>{openView}</View>
-        <Text style={s.services} numberOfLines={1}>{(details.length ? details.map((item) => item.name) : salon.services).slice(0, 3).join(", ") || "Services coming soon"}</Text>
+        <View style={s.metaRow}><Ionicons name="location-outline" size={15} color="#4c947d" /><Text style={s.metaText}>{Number.isFinite(distanceValue) ? `${distanceValue.toFixed(1)} km` : salon.location || "Location not set"}</Text>{openView}</View>
+        <Text style={s.services} numberOfLines={1}>{(details.length ? details.map((item) => item.name) : salonServices(salon)).slice(0, 3).join(", ") || "Services coming soon"}</Text>
         <View style={s.bottomRow}>{priceView}<Pressable style={s.bookButton} onPress={(event) => { event.stopPropagation(); onPress(); }} accessibilityRole="button" accessibilityLabel={`View ${salon.name}`}><Text style={s.bookText}>View salon</Text></Pressable></View>
       </View>
     </Pressable>
@@ -295,14 +331,16 @@ const s = {
   promoSecondary: { flexDirection: "row" as const, alignItems: "center" as const, gap: 5, borderWidth: 1, borderColor: "rgba(255,255,255,0.62)", borderRadius: 18, paddingHorizontal: 10, paddingVertical: 7 },
   promoSecondaryText: { color: "#fff", fontSize: 10, fontWeight: "800" as const },
   bannerDots: { flexDirection: "row" as const, justifyContent: "center" as const, gap: 5, marginTop: 8 },
+  bannerCarousel: { gap: 10 },
   bannerDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#d9d6ce" },
   bannerDotActive: { backgroundColor: "#4c947d", width: 16 },
   quickChip: { ...baseStyles.quickChip, borderColor: "#45465a", backgroundColor: "#2d2e3d" },
   quickChipActive: { ...baseStyles.quickChipActive, backgroundColor: "#d8b15e", borderColor: "#d8b15e" },
   quickText: { ...baseStyles.quickText, color: "#f8f2e7" },
   quickTextActive: { ...baseStyles.quickTextActive, color: "#1f2026" },
-  serviceGrid: { flexDirection: "row" as const, flexWrap: "wrap" as const, justifyContent: "space-between" as const, gap: 9 },
-  serviceCard: { width: "22%" as const, minHeight: 86, alignItems: "center" as const, justifyContent: "center" as const, backgroundColor: "#fffdfa", borderRadius: 15, borderWidth: 1, borderColor: "#ebe7df", paddingHorizontal: 4, paddingVertical: 9 },
+  serviceGrid: { flexDirection: "row" as const, gap: 9 },
+  serviceCarousel: { flexDirection: "row" as const, gap: 10, paddingRight: 18 },
+  serviceCard: { width: 92, minHeight: 86, alignItems: "center" as const, justifyContent: "center" as const, backgroundColor: "#fffdfa", borderRadius: 15, borderWidth: 1, borderColor: "#ebe7df", paddingHorizontal: 4, paddingVertical: 9 },
   serviceIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: "#e7f1ed", alignItems: "center" as const, justifyContent: "center" as const },
   serviceLabel: { color: "#20352d", fontSize: 10, fontWeight: "800" as const, textAlign: "center" as const, marginTop: 6 },
   categoryIcon: { ...baseStyles.categoryIcon, backgroundColor: "#303142" },

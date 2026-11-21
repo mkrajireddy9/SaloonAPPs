@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -48,6 +49,7 @@ type Salon = {
 type Review = { id: string; guestName?: string; rating: number; comment?: string; createdAt?: string };
 type WishlistEntry = { salonId: string };
 type Tab = "services" | "reviews" | "about";
+type ServiceSort = "recommended" | "price-low" | "price-high" | "duration";
 
 const toMediaUrl = (value?: string) => {
   if (!value) return null;
@@ -55,6 +57,7 @@ const toMediaUrl = (value?: string) => {
 };
 
 const activeDetails = (salon: Salon) => (salon.serviceDetails || []).filter((item) => item.active !== false);
+const serviceCategories = (items: ServiceDetail[]) => ["All", ...Array.from(new Set(items.map((item) => item.category).filter((item): item is string => Boolean(item))))];
 
 const currentOpeningStatus = (salon: Salon) => {
   if (!salon.openingHours) return null;
@@ -78,7 +81,23 @@ export default function SalonDetails() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [serviceQuery, setServiceQuery] = useState("");
+  const [serviceCategoryFilter, setServiceCategoryFilter] = useState("All");
+  const [serviceSort, setServiceSort] = useState<ServiceSort>("recommended");
   const details = useMemo(() => (salon ? activeDetails(salon) : []), [salon]);
+  const categories = useMemo(() => serviceCategories(details), [details]);
+  const filteredDetails = useMemo(() => {
+    const query = serviceQuery.trim().toLowerCase();
+    return [...details]
+      .filter((item) => serviceCategoryFilter === "All" || item.category === serviceCategoryFilter)
+      .filter((item) => !query || `${item.name} ${item.category || ""}`.toLowerCase().includes(query))
+      .sort((a, b) => {
+        if (serviceSort === "price-low") return Number(a.discountPrice ?? a.price ?? Number.MAX_SAFE_INTEGER) - Number(b.discountPrice ?? b.price ?? Number.MAX_SAFE_INTEGER);
+        if (serviceSort === "price-high") return Number(b.discountPrice ?? b.price ?? 0) - Number(a.discountPrice ?? a.price ?? 0);
+        if (serviceSort === "duration") return Number(a.durationMinutes ?? Number.MAX_SAFE_INTEGER) - Number(b.durationMinutes ?? Number.MAX_SAFE_INTEGER);
+        return 0;
+      });
+  }, [details, serviceCategoryFilter, serviceQuery, serviceSort]);
   const products = useMemo(() => (salon?.products || []).filter((item) => item.active !== false), [salon]);
   const averageRating = useMemo(() => {
     if (!reviews.length) return null;
@@ -171,7 +190,13 @@ export default function SalonDetails() {
         {activeTab === "services" ? (
           <View style={s.sectionCard}>
             <View style={s.sectionHeading}><View><Text style={s.sectionEyebrow}>WHAT THIS SALON OFFERS</Text><Text style={s.sectionTitle}>Popular services</Text></View><Ionicons name="sparkles-outline" size={22} color="#c55239" /></View>
-            {details.length ? details.map((item, index) => <ServiceRow key={`${item.name}-${index}`} item={item} onBook={() => openBooking(item.name)} />) : salon.services.length ? salon.services.map((item) => <View style={s.simpleService} key={item}><View style={s.serviceIcon}><Ionicons name="cut-outline" size={18} color="#4c947d" /></View><Text style={s.serviceName}>{item}</Text><Text style={s.priceMuted}>Price on request</Text></View>) : <Text style={s.muted}>This salon has not published its services yet.</Text>}
+            {details.length ? <>
+              <View style={s.serviceSearch}><Ionicons name="search-outline" size={18} color="#77817c" /><TextInput value={serviceQuery} onChangeText={setServiceQuery} placeholder="Search services..." placeholderTextColor="#9aa39e" style={s.serviceSearchInput} /></View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.serviceFilters}>{categories.map((category) => <Pressable key={category} style={[s.serviceFilter, serviceCategoryFilter === category && s.serviceFilterActive]} onPress={() => setServiceCategoryFilter(category)}><Text style={[s.serviceFilterText, serviceCategoryFilter === category && s.serviceFilterTextActive]}>{category}</Text></Pressable>)}</ScrollView>
+              <View style={s.serviceSortHeader}><Text style={s.filterCaption}>Sort services</Text><Text style={s.filterHint}>{filteredDetails.length} available</Text></View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.serviceSorts}>{([['recommended', 'Recommended'], ['price-low', 'Price: low'], ['price-high', 'Price: high'], ['duration', 'Shortest']] as [ServiceSort, string][]).map(([value, label]) => <Pressable key={value} style={[s.serviceSort, serviceSort === value && s.serviceSortActive]} onPress={() => setServiceSort(value)}><Text style={[s.serviceSortText, serviceSort === value && s.serviceSortTextActive]}>{label}</Text></Pressable>)}</ScrollView>
+              {filteredDetails.length ? filteredDetails.map((item, index) => <ServiceRow key={`${item.name}-${index}`} item={item} accessToken={accessToken} onBook={() => openBooking(item.name)} />) : <Text style={s.muted}>No services match your search.</Text>}
+            </> : salon.services?.length ? salon.services.map((item) => <View style={s.simpleService} key={item}><View style={s.serviceIcon}><Ionicons name="cut-outline" size={18} color="#4c947d" /></View><Text style={s.serviceName}>{item}</Text><Text style={s.priceMuted}>Price on request</Text></View>) : <Text style={s.muted}>This salon has not published its services yet.</Text>}
             {products.length ? <><Text style={[s.sectionEyebrow, s.subsectionEyebrow]}>PRODUCTS USED</Text>{products.map((item, index) => <View style={s.productRow} key={`${item.name}-${index}`}><View style={s.productIcon}><Ionicons name="leaf-outline" size={18} color="#4c947d" /></View><View style={s.productCopy}><Text style={s.serviceName}>{item.name}</Text>{item.description ? <Text style={s.muted}>{item.description}</Text> : null}</View></View>)}</> : null}
           </View>
         ) : null}
@@ -185,9 +210,11 @@ export default function SalonDetails() {
   );
 }
 
-function ServiceRow({ item, onBook }: { item: ServiceDetail; onBook: () => void }) {
+function ServiceRow({ item, accessToken, onBook }: { item: ServiceDetail; accessToken: string | null; onBook: () => void }) {
   const price = item.discountPrice ?? item.price;
-  return <Pressable style={s.serviceRow} onPress={onBook}><View style={s.serviceIcon}><Ionicons name="cut-outline" size={18} color="#4c947d" /></View><View style={s.serviceCopy}><Text style={s.serviceName}>{item.name}</Text><Text style={s.muted}>{item.durationMinutes || 60} minutes{item.category ? ` · ${item.category}` : ""}</Text>{item.offerText ? <Text style={s.offerText}>{item.offerText}</Text> : null}</View><View style={s.servicePrice}><Text style={s.price}>{price != null ? `₹${price.toLocaleString("en-IN")}` : "On request"}</Text><Ionicons name="chevron-forward" size={16} color="#c55239" /></View></Pressable>;
+  const imageUri = toMediaUrl(item.imageUrl);
+  const imageSource = imageUri ? { uri: imageUri, ...(imageUri.startsWith(API_URL) && accessToken ? { headers: { authorization: `Bearer ${accessToken}` } } : {}) } : undefined;
+  return <Pressable style={s.serviceRow} onPress={onBook}>{imageSource ? <Image source={imageSource} style={s.serviceImage} /> : <View style={s.serviceIcon}><Ionicons name="cut-outline" size={18} color="#4c947d" /></View>}<View style={s.serviceCopy}><Text style={s.serviceName}>{item.name}</Text><Text style={s.muted}>{item.durationMinutes || 60} minutes{item.category ? ` · ${item.category}` : ""}</Text>{item.offerText ? <Text style={s.offerText}>{item.offerText}</Text> : null}</View><View style={s.servicePrice}><Text style={s.price}>{price != null ? `₹${price.toLocaleString("en-IN")}` : "On request"}</Text><View style={s.serviceArrow}><Ionicons name="arrow-forward" size={14} color="#fffdfa" /></View></View></Pressable>;
 }
 
 function InfoRow({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: string }) {
@@ -238,11 +265,28 @@ const s = StyleSheet.create({
   sectionTitle: { color: "#20352d", fontSize: 19, fontWeight: "800", marginTop: 4 },
   subsectionEyebrow: { marginTop: 18, marginBottom: 6 },
   serviceRow: { flexDirection: "row", alignItems: "center", paddingVertical: 12, borderTopWidth: 1, borderTopColor: "#eeeae2" },
+  serviceSearch: { flexDirection: "row", alignItems: "center", minHeight: 46, backgroundColor: "#f7f5f0", borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 13, paddingHorizontal: 12, marginBottom: 10 },
+  serviceSearchInput: { flex: 1, color: "#20352d", fontSize: 12, paddingHorizontal: 8 },
+  serviceFilters: { gap: 8, paddingBottom: 9 },
+  serviceFilter: { borderWidth: 1, borderColor: "#d9d6ce", borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#fffdfa" },
+  serviceFilterActive: { backgroundColor: "#20352d", borderColor: "#20352d" },
+  serviceFilterText: { color: "#58665f", fontSize: 10, fontWeight: "800" },
+  serviceFilterTextActive: { color: "#fffdfa" },
+  serviceSortHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 3, marginBottom: 7 },
+  filterCaption: { color: "#20352d", fontSize: 11, fontWeight: "900" },
+  filterHint: { color: "#91b3a3", fontSize: 10, fontWeight: "700" },
+  serviceSorts: { gap: 8, paddingBottom: 12 },
+  serviceSort: { borderWidth: 1, borderColor: "#d9e7df", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 15, backgroundColor: "#f3f8f5" },
+  serviceSortActive: { backgroundColor: "#fff1eb", borderColor: "#e8b7a9" },
+  serviceSortText: { color: "#4c947d", fontSize: 10, fontWeight: "800" },
+  serviceSortTextActive: { color: "#c55239" },
+  serviceImage: { width: 48, height: 48, borderRadius: 13, backgroundColor: "#edf6f1", marginRight: 10 },
   serviceIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: "#edf6f1", alignItems: "center", justifyContent: "center", marginRight: 10 },
   serviceCopy: { flex: 1 },
   serviceName: { color: "#20352d", fontSize: 13, fontWeight: "800" },
   muted: { color: "#77817c", fontSize: 11, lineHeight: 17, marginTop: 4 },
   servicePrice: { alignItems: "flex-end", gap: 4, marginLeft: 8 },
+  serviceArrow: { width: 27, height: 27, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: "#c55239" },
   price: { color: "#c55239", fontSize: 13, fontWeight: "900" },
   priceMuted: { color: "#77817c", fontSize: 10 },
   offerText: { color: "#c55239", fontSize: 10, fontWeight: "800", marginTop: 4 },
