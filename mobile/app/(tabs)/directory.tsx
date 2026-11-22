@@ -172,7 +172,6 @@ export default function Directory() {
   const nearby = [...filteredSalons].sort((a, b) => (a.distanceKm ?? Number.MAX_SAFE_INTEGER) - (b.distanceKm ?? Number.MAX_SAFE_INTEGER));
   const offers = filteredSalons.filter((salon) => Boolean(salonOffer(salon))).slice(0, 5);
   const heroSalon = featured[0] || salons[0];
-  const heroImage = heroSalon ? salonImage(heroSalon) : null;
   const activeBanner = banners[activeBannerIndex] || banners[0];
   const { width: windowWidth } = useWindowDimensions();
   const promoWidth = Math.max(280, windowWidth - 28);
@@ -278,11 +277,13 @@ export default function Directory() {
         }}
       >
         {(banners.length ? banners : [undefined]).map((banner, index) => {
-          const bannerImage = banner?.imageUrl || heroImage;
+          // Do not reuse service/product imagery as a banner fallback.
+          // A banner should use only its own uploaded image.
+          const bannerImage = banner?.imageUrl || null;
           const bannerUri = bannerImage ? (bannerImage.startsWith("/") ? API_URL + bannerImage : bannerImage) : null;
           const bannerSource = bannerUri ? { uri: bannerUri, ...(bannerUri.startsWith(API_URL) && accessToken ? { headers: { authorization: "Bearer " + accessToken } } : {}) } : undefined;
           return <Pressable key={banner?.id || `fallback-banner-${index}`} style={[s.promoBanner, { width: promoWidth }]} onPress={openBanner}>
-            {bannerSource ? <Image source={bannerSource} style={s.promoImage} /> : null}
+            {bannerSource ? <Image source={bannerSource} style={s.promoImage} resizeMode="cover" /> : null}
             <View style={s.promoOverlay} />
             <View style={s.promoContent}>
               <Text style={s.promoEyebrow}>HALO SALON</Text>
@@ -413,9 +414,9 @@ const s = {
   mapEmptyTitle: { color: "#20352d", fontSize: 15, fontWeight: "900" as const, marginTop: 10 },
   mapEmptyText: { color: "#77817c", fontSize: 11, lineHeight: 17, textAlign: "center" as const, marginTop: 5 },
   promoBanner: { height: 190, borderRadius: 18, overflow: "hidden" as const, backgroundColor: "#20352d", marginTop: 16, position: "relative" as const },
-  promoImage: { position: "absolute" as const, right: 0, top: 0, bottom: 0, width: "55%" as const, opacity: 0.72 },
-  promoOverlay: { position: "absolute" as const, top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(32,53,45,0.56)" },
-  promoContent: { flex: 1, padding: 16, width: "72%" as const, justifyContent: "center" as const },
+  promoImage: { position: "absolute" as const, top: 0, right: 0, bottom: 0, left: 0, width: "100%" as const, height: "100%" as const },
+  promoOverlay: { position: "absolute" as const, top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(15,31,26,0.46)" },
+  promoContent: { position: "absolute" as const, left: 14, right: 14, bottom: 14, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 14, backgroundColor: "rgba(20,38,32,0.78)" },
   promoEyebrow: { color: "#dfca73", fontSize: 9, fontWeight: "900" as const, letterSpacing: 1.2 },
   promoTitle: { color: "#fffdfa", fontSize: 21, lineHeight: 25, fontWeight: "900" as const, marginTop: 5 },
   promoMessage: { color: "#e7f1ed", fontSize: 11, lineHeight: 16, marginTop: 7 },

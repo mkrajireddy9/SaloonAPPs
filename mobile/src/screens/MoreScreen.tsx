@@ -579,17 +579,8 @@ function AdminRewardsView({ initial }: { initial: any }) {
   return (
     <View>
       <SectionBanner icon="gift-outline" eyebrow="REWARDS" title="Coupons and referrals" description="Change offers from the admin app. Customer checkout reads these settings live." />
-      <Text style={styles.formSectionTitle}>Referral reward</Text>
-      <TextInput value={reward} onChangeText={setReward} keyboardType="numeric" placeholder="Enter reward amount in INR" style={styles.input} placeholderTextColor="#9aa19c" />
-      <Pressable style={styles.primary} onPress={() => void saveReward()}><Text style={styles.primaryText}>Save referral reward</Text></Pressable>
-      <Text style={styles.formSectionTitle}>Add coupon</Text>
-      <TextInput value={code} onChangeText={setCode} autoCapitalize="characters" placeholder="Enter coupon code" style={styles.input} placeholderTextColor="#9aa19c" />
-      <View style={styles.twoInputs}>
-        <TextInput value={discountValue} onChangeText={setDiscountValue} keyboardType="numeric" placeholder={discountType === "percent" ? "Discount %" : "Discount ₹"} style={[styles.input, styles.halfInput]} placeholderTextColor="#9aa19c" />
-        <Pressable style={[styles.input, styles.halfInput, { justifyContent: "center" }]} onPress={() => setDiscountType((value) => value === "percent" ? "fixed" : "percent")}><Text style={styles.cardTextDark}>{discountType === "percent" ? "Percentage" : "Fixed amount"}</Text></Pressable>
-      </View>
-      <TextInput value={maxUses} onChangeText={setMaxUses} keyboardType="numeric" placeholder="Maximum uses (optional)" style={styles.input} placeholderTextColor="#9aa19c" />
-      <Pressable style={styles.secondary} onPress={() => void addCoupon()}><Text style={styles.actionText}>Add coupon</Text></Pressable>
+      <View style={styles.rewardCard}><View style={styles.rewardCardTop}><View><Text style={styles.rewardEyebrow}>REFERRAL PROGRAM</Text><Text style={styles.rewardTitle}>Reward loyal guests</Text><Text style={styles.rewardHint}>Set the amount customers receive when they refer a friend.</Text></View><Text style={styles.rewardCurrency}>₹</Text></View><View style={styles.rewardInputRow}><View style={styles.rewardInputWrap}><Text style={styles.rewardInputPrefix}>₹</Text><TextInput value={reward} onChangeText={setReward} keyboardType="numeric" placeholder="100" style={styles.rewardInput} placeholderTextColor="#9aa19c" /></View><Pressable style={styles.rewardSaveButton} onPress={() => void saveReward()}><Text style={styles.rewardSaveText}>Save reward</Text></Pressable></View></View>
+      <View style={styles.couponEditorCard}><View style={styles.couponEditorHeader}><View><Text style={styles.formSectionLabel}>CUSTOMER OFFERS</Text><Text style={styles.couponEditorTitle}>Create a coupon</Text></View><Text style={styles.couponHint}>Optional</Text></View><Text style={styles.couponFieldLabel}>COUPON CODE</Text><TextInput value={code} onChangeText={setCode} autoCapitalize="characters" placeholder="e.g. HALO10" style={styles.input} placeholderTextColor="#9aa19c" /><View style={styles.twoInputs}><View style={styles.couponDiscountInput}><Text style={styles.couponFieldLabel}>{discountType === "percent" ? "DISCOUNT %" : "DISCOUNT ₹"}</Text><TextInput value={discountValue} onChangeText={setDiscountValue} keyboardType="numeric" placeholder={discountType === "percent" ? "10" : "100"} style={styles.input} placeholderTextColor="#9aa19c" /></View><View style={styles.couponDiscountInput}><Text style={styles.couponFieldLabel}>TYPE</Text><Pressable style={[styles.input, styles.couponTypeButton]} onPress={() => setDiscountType((value) => value === "percent" ? "fixed" : "percent")}><Text style={styles.cardTextDark}>{discountType === "percent" ? "Percentage" : "Fixed amount"}</Text></Pressable></View></View><Text style={styles.couponFieldLabel}>USAGE LIMIT</Text><TextInput value={maxUses} onChangeText={setMaxUses} keyboardType="numeric" placeholder="Unlimited" style={styles.input} placeholderTextColor="#9aa19c" /><Pressable style={styles.secondary} onPress={() => void addCoupon()}><Text style={styles.actionText}>Add coupon</Text></Pressable></View>
       <Text style={styles.formSectionTitle}>Existing coupons</Text>
       {coupons.length ? coupons.map((coupon) => (
         <View style={styles.branchCard} key={coupon.id}>
@@ -725,40 +716,53 @@ function AdminSalonView({ salon }: { salon: any }) {
       <TextInput value={services} onChangeText={setServices} placeholder="Enter services separated by commas" style={styles.input} placeholderTextColor="#9aa19c" />
       <TextInput value={stylists} onChangeText={setStylists} placeholder="Enter stylist names separated by commas" style={styles.input} placeholderTextColor="#9aa19c" />
       <TextInput value={closedDays} onChangeText={setClosedDays} placeholder="Enter closed days, e.g. Sunday" style={styles.input} placeholderTextColor="#9aa19c" />
-      <Text style={styles.subheading}>Stylist profiles and schedules</Text>
+      <View style={styles.stylistSectionHeader}>
+        <View>
+          <Text style={styles.formSectionLabel}>TEAM MANAGEMENT</Text>
+          <Text style={styles.stylistSectionTitle}>Stylist profiles</Text>
+        </View>
+        <Text style={styles.stylistSectionCount}>{stylists.split(",").map((value: string) => value.trim()).filter(Boolean).length} team member{stylists.split(",").map((value: string) => value.trim()).filter(Boolean).length === 1 ? "" : "s"}</Text>
+      </View>
       {stylists.split(",").map((value: string) => value.trim()).filter(Boolean).map((stylist: string) => {
         const profile = stylistProfiles[stylist] || { bio: "", imageUrl: "" };
         const schedule = stylistSchedules[stylist] || { workingDays: [], leaveDates: [] };
         return (
-          <View style={styles.branchCard} key={stylist}>
-            <Text style={styles.cardTextDark}>{stylist}</Text>
+          <View style={styles.stylistProfileCard} key={stylist}>
+            <View style={styles.stylistProfileHeader}>
+              <View style={styles.stylistAvatar}><Text style={styles.stylistAvatarText}>{stylist.charAt(0).toUpperCase()}</Text></View>
+              <View style={styles.stylistProfileCopy}><Text style={styles.stylistName}>{stylist}</Text><Text style={styles.stylistMeta}>{schedule.workingDays?.length ? `${schedule.workingDays.length} working day${schedule.workingDays.length === 1 ? "" : "s"}` : "Availability not set"}</Text></View>
+              <View style={styles.stylistStatusPill}><View style={styles.activeDot} /><Text style={styles.stylistStatusText}>Active</Text></View>
+            </View>
+            <Text style={styles.stylistFieldLabel}>PROFILE</Text>
             <TextInput
               value={profile.bio || ""}
               onChangeText={(value) => setStylistProfiles((current: any) => ({ ...current, [stylist]: { ...profile, bio: value } }))}
-              placeholder="Enter stylist bio"
-              style={styles.input}
+              placeholder="Add a short introduction"
+              style={styles.stylistInput}
               placeholderTextColor="#9aa19c"
             />
             <TextInput
               value={profile.imageUrl || ""}
               onChangeText={(value) => setStylistProfiles((current: any) => ({ ...current, [stylist]: { ...profile, imageUrl: value } }))}
-              placeholder="Enter profile image URL"
-              style={styles.input}
+              placeholder="Profile image URL (optional)"
+              style={styles.stylistInput}
               placeholderTextColor="#9aa19c"
               autoCapitalize="none"
             />
+            <View style={styles.scheduleDivider} />
+            <View style={styles.scheduleHeader}><Text style={styles.stylistFieldLabel}>SCHEDULE</Text><Text style={styles.scheduleHint}>Used for bookings</Text></View>
             <TextInput
               value={(schedule.workingDays || []).join(", ")}
               onChangeText={(value) => setStylistSchedules((current: any) => ({ ...current, [stylist]: { ...schedule, workingDays: value.split(",").map((day: string) => day.trim()).filter(Boolean) } }))}
-              placeholder="Enter working days, e.g. Monday, Tuesday"
-              style={styles.input}
+              placeholder="Working days, e.g. Monday, Tuesday"
+              style={styles.stylistInput}
               placeholderTextColor="#9aa19c"
             />
             <TextInput
               value={(schedule.leaveDates || []).join(", ")}
               onChangeText={(value) => setStylistSchedules((current: any) => ({ ...current, [stylist]: { ...schedule, leaveDates: value.split(",").map((day: string) => day.trim()).filter(Boolean) } }))}
-              placeholder="Enter leave dates, e.g. 2026-11-20"
-              style={styles.input}
+              placeholder="Leave dates, e.g. 2026-11-20"
+              style={[styles.stylistInput, { marginBottom: 0 }]}
               placeholderTextColor="#9aa19c"
             />
           </View>
@@ -1086,6 +1090,9 @@ function AdminMediaView({ salon }: { salon: any }) {
   const currentImage = kind === "service"
     ? services.find((item: any) => item.name === name)?.imageUrl
     : profiles[name]?.imageUrl;
+  const currentImages = kind === "service"
+    ? (services.find((item: any) => item.name === name)?.imageUrls || (currentImage ? [currentImage] : []))
+    : (profiles[name]?.imageUrls || (currentImage ? [currentImage] : []));
   const changeKind = (next: "service" | "stylist" | "salon") => {
     setKind(next);
     if (next !== "salon") setName(next === "service" ? (salon.services || [])[0] || "" : (salon.stylists || [])[0] || "");
@@ -1108,34 +1115,67 @@ function AdminMediaView({ salon }: { salon: any }) {
       mediaTypes: ["images"],
       quality: 0.85,
       allowsEditing: true,
+      allowsMultipleSelection: true,
+      selectionLimit: 10,
     });
-    if (result.canceled || !result.assets[0]) return;
+    if (result.canceled || !result.assets.length) return;
     setBusy(true);
     setMessage("");
     try {
-      const asset = result.assets[0];
-      const normalized = await ImageManipulator.manipulateAsync(asset.uri, [], { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG });
-      const form = new FormData();
-      form.append("file", {
-        uri: normalized.uri,
-        name: `${(name || salon.name || "salon").replace(/\s+/g, "-")}.jpg`,
-        type: "image/jpeg",
-      } as any);
-      form.append("consentGiven", "true");
-      const uploaded = await api<any>("/media/upload", { method: "POST", body: form });
-      const imageUrl = `${API_URL}${uploaded.url}`;
       if (kind === "salon") {
-        const nextGallery = [...galleryImages, imageUrl];
+        const uploadedImages: { url: string; preview: string }[] = [];
+        for (const asset of result.assets) {
+          const maxDimension = Math.max(asset.width || 0, asset.height || 0);
+          const actions = maxDimension > 2400
+            ? [{ resize: maxDimension === asset.width ? { width: 2400 } : { height: 2400 } }]
+            : [];
+          const normalized = await ImageManipulator.manipulateAsync(asset.uri, actions, {
+            compress: 0.82,
+            format: ImageManipulator.SaveFormat.JPEG,
+            base64: false,
+          });
+          const fileResponse = await fetch(normalized.uri);
+          const imageBlob = await fileResponse.blob();
+          const filename = `${(salon.name || "salon").replace(/\s+/g, "-")}-${Date.now()}-${uploadedImages.length}.jpg`;
+          const form = new FormData();
+          form.append("file", imageBlob as any, filename);
+          form.append("consentGiven", "true");
+          const uploaded = await api<any>("/media/upload", { method: "POST", body: form });
+          uploadedImages.push({ url: `${API_URL}${uploaded.url}`, preview: normalized.uri });
+        }
+        const nextGallery = [...galleryImages, ...uploadedImages.map((item) => item.url)];
         await api("/salon/gallery", { method: "PUT", body: JSON.stringify({ galleryImages: nextGallery }) });
         setGalleryImages(nextGallery);
-        setGalleryPreviews((current) => ({ ...current, [imageUrl]: normalized.uri }));
-        setMessage("Salon image added.");
+        setGalleryPreviews((current) => ({ ...current, ...Object.fromEntries(uploadedImages.map((item) => [item.url, item.preview])) }));
+        setMessage(`${uploadedImages.length} salon image${uploadedImages.length === 1 ? "" : "s"} added.`);
         return;
       }
-      const nextServiceDetails = services.map((item: any) => item.name === name ? { ...item, imageUrl } : item);
+      const uploadedImages: { url: string; preview: string }[] = [];
+      for (const asset of result.assets) {
+        const maxDimension = Math.max(asset.width || 0, asset.height || 0);
+        const actions = maxDimension > 2400
+          ? [{ resize: maxDimension === asset.width ? { width: 2400 } : { height: 2400 } }]
+          : [];
+        const normalized = await ImageManipulator.manipulateAsync(asset.uri, actions, {
+          compress: 0.82,
+          format: ImageManipulator.SaveFormat.JPEG,
+          base64: false,
+        });
+        const fileResponse = await fetch(normalized.uri);
+        const imageBlob = await fileResponse.blob();
+        const filename = `${(name || salon.name || "salon").replace(/\s+/g, "-")}-${Date.now()}-${uploadedImages.length}.jpg`;
+        const form = new FormData();
+        form.append("file", imageBlob as any, filename);
+        form.append("consentGiven", "true");
+        const uploaded = await api<any>("/media/upload", { method: "POST", body: form });
+        uploadedImages.push({ url: `${API_URL}${uploaded.url}`, preview: normalized.uri });
+      }
+      const imageUrls = uploadedImages.map((item) => item.url);
+      const imageUrl = imageUrls[0];
+      const nextServiceDetails = services.map((item: any) => item.name === name ? { ...item, imageUrl, imageUrls } : item);
       const nextProfiles = {
         ...profiles,
-        [name]: { ...(profiles[name] || {}), imageUrl },
+        [name]: { ...(profiles[name] || {}), imageUrl, imageUrls },
       };
       await api("/salon", {
         method: "PUT",
@@ -1148,7 +1188,7 @@ function AdminMediaView({ salon }: { salon: any }) {
           branches: salon.branches || [],
         }),
       });
-      setMessage("Image uploaded and linked.");
+      setMessage(`${uploadedImages.length} image${uploadedImages.length === 1 ? "" : "s"} uploaded and linked.`);
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Could not upload image.");
     } finally {
@@ -1204,7 +1244,7 @@ function AdminMediaView({ salon }: { salon: any }) {
   return (
     <View>
       <SectionBanner icon="images-outline" eyebrow="STUDIO ASSETS" title="Private media" description="Keep protected service and stylist images ready for the guest experience." />
-      <View style={styles.actionRow}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mediaChipRow}>
         <Pressable style={[styles.choice, kind === "service" && styles.choiceActive]} onPress={() => changeKind("service")}>
           <Text style={styles.cardTextDark}>Service image</Text>
         </Pressable>
@@ -1214,7 +1254,7 @@ function AdminMediaView({ salon }: { salon: any }) {
         <Pressable style={[styles.choice, kind === "salon" && styles.choiceActive]} onPress={() => changeKind("salon")}>
           <Text style={styles.cardTextDark}>Salon gallery</Text>
         </Pressable>
-      </View>
+      </ScrollView>
       {kind === "salon" ? <View style={styles.galleryAdminCard}><Text style={styles.cardTextDark}>Salon gallery</Text><Text style={styles.muted}>Add multiple photos of the interior, exterior, chairs, and experience.</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.galleryAdminRow}>{galleryImages.map((imageUrl, index) => <View style={styles.galleryAdminItem} key={`${imageUrl}-${index}`}><Image source={{ uri: galleryPreviews[imageUrl] || imageUrl, ...(accessToken && !galleryPreviews[imageUrl] ? { headers: { authorization: `Bearer ${accessToken}` } } : {}) }} style={styles.galleryAdminImage} /><Pressable style={styles.galleryRemoveButton} onPress={() => void removeGalleryImage(imageUrl)}><Ionicons name="close" size={14} color="#fff" /></Pressable></View>)}</ScrollView></View> : <><TextInput value={name} onChangeText={setName} placeholder={kind === "service" ? "Enter service name" : "Enter stylist name"} style={styles.input} placeholderTextColor="#9aa19c" /><Text style={styles.muted}>Available: {names.join(", ") || "None configured"}</Text></>}
       <Pressable style={[styles.secondary, busy && styles.disabled]} disabled={busy} onPress={() => void chooseAndUpload()}>
         <Text style={styles.actionText}>{busy ? "Working..." : kind === "salon" ? "Add salon image" : "Choose and upload image"}</Text>
@@ -1225,8 +1265,8 @@ function AdminMediaView({ salon }: { salon: any }) {
       </Pressable>
       {kind !== "salon" && currentImage ? (
         <View style={styles.cardLight}>
-          <Text style={styles.cardTextDark}>Current image linked</Text>
-          <Text style={styles.muted}>{currentImage}</Text>
+          <Text style={styles.cardTextDark}>{currentImages.length} image{currentImages.length === 1 ? "" : "s"} linked</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.galleryAdminRow}>{currentImages.map((imageUrl: string, index: number) => <Image key={`${imageUrl}-${index}`} source={{ uri: imageUrl, ...(accessToken ? { headers: { authorization: `Bearer ${accessToken}` } } : {}) }} style={styles.galleryAdminImage} />)}</ScrollView>
           <Pressable style={styles.secondary} disabled={busy} onPress={() => void remove()}>
             <Text style={styles.actionText}>Remove image</Text>
           </Pressable>
@@ -1301,43 +1341,23 @@ function AdminBannerView({ initial }: { initial: any[] }) {
   return (
     <View>
       <SectionBanner icon="megaphone-outline" eyebrow="GUEST COMMUNICATION" title="Offers and banners" description="Create polished promotions that help guests choose their next visit." />
-      <TextInput
-        value={title}
-        onChangeText={setTitle}
-        placeholder="Enter banner title"
-        style={styles.input}
-        placeholderTextColor="#9aa19c"
-      />
-      <View style={styles.bannerImageCard}>
-        {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.bannerImagePreview} /> : <View style={styles.bannerImageEmpty}><Ionicons name="image-outline" size={25} color="#c55239" /><Text style={styles.muted}>Add a visual to make this offer stand out.</Text></View>}
-        <Pressable style={styles.secondary} onPress={() => void chooseBannerImage()}>
-          <Ionicons name="cloud-upload-outline" size={17} color="#26735a" />
-          <Text style={styles.actionText}>{imageUrl ? "Change image" : "Upload image"}</Text>
-        </Pressable>
+      <View style={styles.bannerEditorCard}>
+        <View style={styles.bannerEditorHeader}><View><Text style={styles.formSectionLabel}>CREATE PROMOTION</Text><Text style={styles.bannerEditorTitle}>Build a salon banner</Text></View><View style={styles.bannerEditorIcon}><Ionicons name="megaphone-outline" size={20} color="#dfca73" /></View></View>
+        <Text style={styles.bannerFieldLabel}>TITLE</Text>
+        <TextInput value={title} onChangeText={setTitle} placeholder="e.g. New customer offer" style={styles.input} placeholderTextColor="#9aa19c" />
+        <Text style={styles.bannerFieldLabel}>BANNER IMAGE</Text>
+        <View style={styles.bannerImageCard}>
+          {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.bannerImagePreview} resizeMode="cover" /> : <View style={styles.bannerImageEmpty}><Ionicons name="image-outline" size={25} color="#4c947d" /><Text style={styles.bannerEmptyTitle}>Add a landscape image</Text><Text style={styles.muted}>Recommended: 1200 × 600</Text></View>}
+          <Pressable style={styles.imageUploadButton} onPress={() => void chooseBannerImage()}><Ionicons name="cloud-upload-outline" size={17} color="#fffdfa" /><Text style={styles.imageUploadText}>{imageUrl ? "Change image" : "Upload image"}</Text></Pressable>
+        </View>
+        <Text style={styles.bannerFieldLabel}>MESSAGE</Text>
+        <TextInput value={message} onChangeText={setMessage} placeholder="e.g. Enjoy 15% off your first visit" style={[styles.input, styles.bannerMessageInput]} placeholderTextColor="#9aa19c" multiline />
+        <Pressable style={styles.primary} onPress={() => void create()}><Text style={styles.primaryText}>Create banner</Text></Pressable>
       </View>
-      <TextInput
-        value={message}
-        onChangeText={setMessage}
-        placeholder="Enter banner message"
-        style={styles.input}
-        placeholderTextColor="#9aa19c"
-      />
-      <Pressable style={styles.primary} onPress={() => void create()}>
-        <Text style={styles.primaryText}>Create banner</Text>
-      </Pressable>
       {items.map((item) => (
-        <View style={styles.row} key={item.id}>
-          {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={styles.bannerListImage} /> : null}
-          <Text style={styles.cardTextDark}>{item.title}</Text>
-          <Text style={styles.muted}>{item.message}</Text>
-          <View style={styles.actionRow}>
-            <Pressable onPress={() => void toggle(item)}>
-              <Text style={styles.actionText}>{item.active === false ? "Publish" : "Pause"}</Text>
-            </Pressable>
-            <Pressable onPress={() => void remove(item.id)}>
-              <Text style={styles.actionText}>Delete</Text>
-            </Pressable>
-          </View>
+        <View style={styles.bannerListCard} key={item.id}>
+          {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={styles.bannerListImage} resizeMode="cover" /> : <View style={styles.bannerListPlaceholder}><Text style={styles.bannerListPlaceholderText}>No image</Text></View>}
+          <View style={styles.bannerListBody}><View style={styles.bannerListTitleRow}><Text style={styles.bannerListTitle} numberOfLines={1}>{item.title}</Text><View style={[styles.bannerStatus, item.active === false && styles.bannerStatusPaused]}><Text style={styles.bannerStatusText}>{item.active === false ? "Paused" : "Live"}</Text></View></View><Text style={styles.bannerListMessage} numberOfLines={2}>{item.message}</Text><View style={styles.bannerActions}><Pressable style={styles.bannerActionButton} onPress={() => void toggle(item)}><Text style={styles.bannerActionText}>{item.active === false ? "Publish" : "Pause"}</Text></Pressable><Pressable style={styles.bannerDeleteButton} onPress={() => void remove(item.id)}><Text style={styles.bannerDeleteText}>Delete</Text></Pressable></View></View>
         </View>
       ))}
     </View>
@@ -2019,12 +2039,12 @@ function PreferencesView({ initial, role }: { initial: any; role: "user" | "admi
   }
   return (
     <View>
-      <SectionBanner icon="notifications-outline" eyebrow="YOUR PREFERENCES" title="Notifications" description="Choose how Halo keeps you updated about your salon experience." />
-      <Pressable style={styles.preference} onPress={() => setEmail(!email)}>
+      <SectionBanner icon="notifications-outline" eyebrow="NOTIFICATIONS" title="Stay in the loop" description="Choose the updates that matter to you." />
+      <View style={styles.notificationPreferencesCard}><Text style={styles.notificationCardTitle}>Your notification choices</Text><Text style={styles.preferenceHint}>Turn updates on or off anytime.</Text><Pressable style={styles.preference} onPress={() => setEmail(!email)}>
         <Text style={styles.checkbox}>{email ? "✓" : ""}</Text>
         <View>
           <Text style={styles.cardTextDark}>Email reminders</Text>
-          <Text style={styles.preferenceHint}>Salon updates and offers</Text>
+          <Text style={styles.preferenceHint}>Offers and salon news</Text>
         </View>
       </Pressable>
       <Pressable
@@ -2034,32 +2054,32 @@ function PreferencesView({ initial, role }: { initial: any; role: "user" | "admi
         <Text style={styles.checkbox}>{appointmentReminders ? "✓" : ""}</Text>
         <View>
           <Text style={styles.cardTextDark}>Appointment reminders</Text>
-          <Text style={styles.preferenceHint}>Never miss your next visit</Text>
+          <Text style={styles.preferenceHint}>Reminders for upcoming visits</Text>
         </View>
       </Pressable>
       <Pressable style={styles.preference} onPress={() => setWhatsapp(!whatsapp)}>
         <Text style={styles.checkbox}>{whatsapp ? "✓" : ""}</Text>
         <View>
           <Text style={styles.cardTextDark}>WhatsApp updates</Text>
-          <Text style={styles.preferenceHint}>Appointment messages and salon updates</Text>
+          <Text style={styles.preferenceHint}>Booking and salon messages</Text>
         </View>
       </Pressable>
       <Pressable style={styles.preference} onPress={() => setPush(!push)}>
         <Text style={styles.checkbox}>{push ? "✓" : ""}</Text>
         <View>
           <Text style={styles.cardTextDark}>Push notifications</Text>
-          <Text style={styles.preferenceHint}>Updates on this device and browser</Text>
+          <Text style={styles.preferenceHint}>Alerts on this device</Text>
         </View>
       </Pressable>
       <Pressable style={styles.primary} onPress={() => void save()}>
         <Text style={styles.primaryText}>Save preferences</Text>
       </Pressable>
+      </View>
       <MessageToast message={message} />
-      <Text style={styles.subheading}>Recent notifications</Text>
       {role === "admin" ? (
         <View style={styles.manualNotificationCard}>
-          <Text style={styles.subheading}>Send WhatsApp message</Text>
-          <Text style={styles.preferenceHint}>Use international format, for example +919876543210.</Text>
+          <Text style={styles.notificationCardEyebrow}>DIRECT MESSAGE</Text><Text style={styles.notificationCardTitleDark}>Send WhatsApp message</Text>
+          <Text style={styles.manualHint}></Text>
           <TextInput
             value={recipientPhone}
             onChangeText={setRecipientPhone}
@@ -2078,28 +2098,25 @@ function PreferencesView({ initial, role }: { initial: any; role: "user" | "admi
           <Pressable style={styles.primary} onPress={() => void sendManualWhatsApp()} disabled={sending}>
             {sending ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Send on WhatsApp</Text>}
           </Pressable>
-          <Text style={styles.preferenceHint}>WhatsApp may only allow free-form messages during the customer-service window. Use an approved template for outbound reminders outside that window.</Text>
         </View>
       ) : null}
+      <View style={styles.notificationActivityHeader}><View><Text style={styles.notificationCardEyebrow}>ACTIVITY</Text><Text style={styles.notificationActivityTitle}>Recent activity</Text></View><Text style={styles.notificationActivityHint}>{history.length ? `${history.length} update${history.length === 1 ? "" : "s"}` : "All clear"}</Text></View>
       {history.length ? (
         history.map((item: any, index: number) => (
           <Pressable
-            style={styles.infoRow}
+            style={[styles.notificationHistoryCard, !item.isRead && styles.notificationUnreadCard]}
             key={`${item.id || item.createdAt || index}`}
             onPress={() => item.id && void markNotificationRead(item.id)}
           >
             <View style={styles.infoRowCopy}>
-              <Text style={styles.cardTextDark}>
+              <Text style={styles.notificationHistoryTitle} numberOfLines={1}>
                 {item.title || item.notificationType || item.type || "Notification"}
               </Text>
-              <Text style={styles.muted}>
+              <Text style={styles.notificationHistoryMessage} numberOfLines={2}>
                 {item.message || item.status || "Sent"}
-                {item.createdAt
-                  ? ` · ${new Date(item.createdAt).toLocaleDateString()}`
-                  : ""}
               </Text>
             </View>
-            <Ionicons name={item.isRead ? "notifications-outline" : "ellipse"} size={18} color="#91b3a3" />
+            <View style={[styles.notificationStatusDot, item.isRead && styles.notificationReadDot]} />
           </Pressable>
         ))
       ) : (
@@ -2845,6 +2862,7 @@ const styles = StyleSheet.create({
   membershipStatus: { color: "#dfca73", fontWeight: "800", textTransform: "capitalize" },
   membershipBalance: { color: "#fffdfa", fontSize: 22, fontWeight: "800", marginTop: 16, marginBottom: 8 },
   actionRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 12 },
+  mediaChipRow: { flexDirection: "row", alignItems: "center", marginTop: 12, paddingRight: 8 },
   actionButton: { flexDirection: "row", alignItems: "center", backgroundColor: "#e5f1eb", borderRadius: 10, paddingHorizontal: 11, paddingVertical: 9, marginRight: 8 },
   actionButtonMuted: { flexDirection: "row", alignItems: "center", backgroundColor: "#f8e5df", borderRadius: 10, paddingHorizontal: 11, paddingVertical: 9, marginRight: 8 },
   appointmentCard: { backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 18, padding: 15, marginTop: 12, shadowColor: "#20352d", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
@@ -2991,13 +3009,27 @@ const styles = StyleSheet.create({
   sessionInput: { width: 78, height: 42, marginRight: 8, marginBottom: 0 },
   multilineInput: { height: 108, paddingTop: 13, textAlignVertical: "top" },
   manualNotificationCard: {
-    backgroundColor: "#f4f8f5",
+    backgroundColor: "#20352d",
     borderWidth: 1,
-    borderColor: "#d9e8df",
-    borderRadius: 16,
+    borderColor: "#20352d",
+    borderRadius: 20,
     padding: 15,
     marginBottom: 18,
+    marginTop: 12,
   },
+  notificationPreferencesCard: { backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#dfe9e3", borderRadius: 20, padding: 16, marginTop: 16 },
+  notificationCardEyebrow: { color: "#dfca73", fontSize: 9, fontWeight: "900", letterSpacing: 1.1, marginBottom: 5 },
+  notificationCardTitle: { color: "#20352d", fontSize: 17, fontWeight: "900" },
+  notificationCardTitleDark: { color: "#fffdfa", fontSize: 17, fontWeight: "900" },
+  notificationActivityHeader: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", marginTop: 22, marginBottom: 10 },
+  notificationActivityTitle: { color: "#20352d", fontSize: 19, fontWeight: "900", marginTop: 3 },
+  notificationActivityHint: { color: "#26735a", fontSize: 11, fontWeight: "800", paddingBottom: 2 },
+  notificationHistoryTitle: { flex: 1, color: "#20352d", fontSize: 13, fontWeight: "900" },
+  notificationHistoryMessage: { flex: 1, color: "#77817c", fontSize: 11, lineHeight: 16, marginTop: 4 },
+  notificationHistoryCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#e1e8e3", borderRadius: 16, padding: 14, marginBottom: 9 },
+  notificationUnreadCard: { borderColor: "#cfe3d8", backgroundColor: "#f4f9f6" },
+  notificationStatusDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: "#c55239", marginLeft: 10 },
+  notificationReadDot: { backgroundColor: "#b8c8c0" },
   twoInputs: { flexDirection: "row", gap: 10 },
   halfInput: { flex: 1 },
   branchCard: {
@@ -3068,6 +3100,23 @@ const styles = StyleSheet.create({
   activePill: { flexDirection: "row", alignItems: "center", backgroundColor: "#e5f1eb", borderRadius: 14, paddingHorizontal: 8, paddingVertical: 6, marginLeft: 7 },
   activeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#4c947d", marginRight: 5 },
   activePillText: { color: "#26735a", fontSize: 10, fontWeight: "800" },
+  stylistSectionHeader: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", marginTop: 10, marginBottom: 10 },
+  stylistSectionTitle: { color: "#20352d", fontSize: 19, fontWeight: "900", marginTop: 3 },
+  stylistSectionCount: { color: "#26735a", fontSize: 11, fontWeight: "800", paddingBottom: 2 },
+  stylistProfileCard: { backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#dce9e3", borderRadius: 20, padding: 15, marginBottom: 12 },
+  stylistProfileHeader: { flexDirection: "row", alignItems: "center", paddingBottom: 13, borderBottomWidth: 1, borderBottomColor: "#edf0eb" },
+  stylistAvatar: { width: 44, height: 44, borderRadius: 15, backgroundColor: "#dceee8", alignItems: "center", justifyContent: "center", marginRight: 10 },
+  stylistAvatarText: { color: "#26735a", fontSize: 18, fontWeight: "900" },
+  stylistProfileCopy: { flex: 1, minWidth: 0 },
+  stylistName: { color: "#20352d", fontSize: 15, fontWeight: "900" },
+  stylistMeta: { color: "#77817c", fontSize: 11, marginTop: 3 },
+  stylistStatusPill: { flexDirection: "row", alignItems: "center", backgroundColor: "#e7f1ed", borderRadius: 12, paddingHorizontal: 8, paddingVertical: 6, marginLeft: 6 },
+  stylistStatusText: { color: "#26735a", fontSize: 10, fontWeight: "900" },
+  stylistFieldLabel: { color: "#91b3a3", fontSize: 9, fontWeight: "900", letterSpacing: 1.2, marginTop: 13, marginBottom: 6 },
+  stylistInput: { height: 46, borderWidth: 1, borderColor: "#e1e8e3", borderRadius: 12, backgroundColor: "#f8faf7", paddingHorizontal: 12, color: "#20352d", marginBottom: 9 },
+  scheduleDivider: { height: 1, backgroundColor: "#edf0eb", marginTop: 3 },
+  scheduleHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  scheduleHint: { color: "#a0aaa5", fontSize: 10, marginTop: 13, marginBottom: 6 },
   formSectionTitle: { color: "#20352d", fontSize: 17, fontWeight: "800", marginBottom: 8 },
   formSectionLabel: { color: "#91b3a3", fontSize: 10, fontWeight: "800", letterSpacing: 1.3, marginTop: 6, marginBottom: 7 },
   formCard: { backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 18, padding: 15, marginBottom: 2 },
@@ -3094,10 +3143,53 @@ const styles = StyleSheet.create({
   consultationHistoryFooter: { flexDirection: "row", alignItems: "center", borderTopWidth: 1, borderTopColor: "#eeeae3", marginTop: 11, paddingTop: 9 },
   consultationStartButton: { marginBottom: 8 },
   consultationChipRow: { marginTop: 10 },
-  bannerImageCard: { backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 17, padding: 12, marginBottom: 10 },
+  rewardCard: { backgroundColor: "#20352d", borderRadius: 20, padding: 16, marginTop: 16, marginBottom: 14 },
+  rewardCardTop: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
+  rewardEyebrow: { color: "#dfca73", fontSize: 9, fontWeight: "900", letterSpacing: 1.1 },
+  rewardTitle: { color: "#fffdfa", fontSize: 19, fontWeight: "900", marginTop: 5 },
+  rewardHint: { color: "#c8d2cb", fontSize: 11, lineHeight: 16, marginTop: 5, maxWidth: 250 },
+  rewardCurrency: { color: "#dfca73", fontSize: 30, fontWeight: "900" },
+  rewardInputRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 16 },
+  rewardInputWrap: { flex: 1, minHeight: 46, flexDirection: "row", alignItems: "center", backgroundColor: "#fffdfa", borderRadius: 12, paddingHorizontal: 12 },
+  rewardInputPrefix: { color: "#c55239", fontSize: 16, fontWeight: "900", marginRight: 5 },
+  rewardInput: { flex: 1, color: "#20352d", fontSize: 15, fontWeight: "800", paddingVertical: 0 },
+  rewardSaveButton: { minHeight: 46, justifyContent: "center", backgroundColor: "#c55239", borderRadius: 12, paddingHorizontal: 13 },
+  rewardSaveText: { color: "#fffdfa", fontSize: 11, fontWeight: "900" },
+  couponEditorCard: { backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#dce9e3", borderRadius: 20, padding: 16, marginBottom: 18 },
+  couponEditorHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 5 },
+  couponEditorTitle: { color: "#20352d", fontSize: 19, fontWeight: "900", marginTop: 4 },
+  couponHint: { color: "#26735a", backgroundColor: "#e7f1ed", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 5, fontSize: 10, fontWeight: "900" },
+  couponFieldLabel: { color: "#77817c", fontSize: 9, fontWeight: "900", letterSpacing: 1, marginTop: 13, marginBottom: 5 },
+  couponDiscountInput: { flex: 1 },
+  couponTypeButton: { justifyContent: "center" },
+  bannerEditorCard: { backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#dce9e3", borderRadius: 20, padding: 16, marginTop: 16, marginBottom: 16 },
+  bannerEditorHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
+  bannerEditorTitle: { color: "#20352d", fontSize: 18, fontWeight: "900", marginTop: 4 },
+  bannerEditorIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: "#20352d", alignItems: "center", justifyContent: "center" },
+  bannerFieldLabel: { color: "#77817c", fontSize: 10, fontWeight: "900", letterSpacing: 1, marginTop: 14, marginBottom: 6 },
+  bannerMessageInput: { minHeight: 72, textAlignVertical: "top", paddingTop: 13 },
+  bannerImageCard: { backgroundColor: "#f4f8f5", borderWidth: 1, borderColor: "#dce9e3", borderRadius: 16, padding: 10, marginBottom: 2 },
   bannerImagePreview: { width: "100%", height: 150, borderRadius: 12, backgroundColor: "#e7f1ed" },
-  bannerImageEmpty: { height: 100, borderRadius: 12, backgroundColor: "#f7f5f0", alignItems: "center", justifyContent: "center" },
-  bannerListImage: { width: "100%", height: 120, borderRadius: 11, marginBottom: 10, backgroundColor: "#e7f1ed" },
+  bannerImageEmpty: { height: 150, borderRadius: 12, backgroundColor: "#e7f1ed", alignItems: "center", justifyContent: "center" },
+  bannerEmptyTitle: { color: "#20352d", fontSize: 12, fontWeight: "800", marginTop: 8 },
+  imageUploadButton: { alignItems: "center", justifyContent: "center", backgroundColor: "#26735a", borderRadius: 12, minHeight: 44, marginTop: 10 },
+  imageUploadText: { color: "#fffdfa", fontSize: 12, fontWeight: "900" },
+  bannerListCard: { backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 18, padding: 10, marginBottom: 12 },
+  bannerListPlaceholder: { width: "100%", height: 130, borderRadius: 12, backgroundColor: "#e7f1ed", alignItems: "center", justifyContent: "center" },
+  bannerListPlaceholderText: { color: "#4c947d", fontSize: 11, fontWeight: "800" },
+  bannerListImage: { width: "100%", height: 130, borderRadius: 12, backgroundColor: "#e7f1ed" },
+  bannerListBody: { paddingHorizontal: 3, paddingTop: 12 },
+  bannerListTitleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
+  bannerListTitle: { flex: 1, color: "#20352d", fontSize: 14, fontWeight: "900" },
+  bannerStatus: { backgroundColor: "#e5f5ec", borderRadius: 9, paddingHorizontal: 7, paddingVertical: 4 },
+  bannerStatusPaused: { backgroundColor: "#fbe9e4" },
+  bannerStatusText: { color: "#287b5c", fontSize: 9, fontWeight: "900" },
+  bannerListMessage: { color: "#77817c", fontSize: 11, lineHeight: 16, marginTop: 6 },
+  bannerActions: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10 },
+  bannerActionButton: { backgroundColor: "#e7f1ed", borderRadius: 10, paddingHorizontal: 13, paddingVertical: 8 },
+  bannerActionText: { color: "#26735a", fontSize: 10, fontWeight: "900" },
+  bannerDeleteButton: { backgroundColor: "#fff1ed", borderRadius: 10, paddingHorizontal: 13, paddingVertical: 8 },
+  bannerDeleteText: { color: "#b24e3c", fontSize: 10, fontWeight: "900" },
   customerSummary: { flexDirection: "row", alignItems: "center", backgroundColor: "#20352d", borderRadius: 18, padding: 15, marginTop: 4, marginBottom: 14 },
   customerSummaryIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: "rgba(223,202,115,0.16)", alignItems: "center", justifyContent: "center", marginRight: 11 },
   customerSummaryCopy: { flex: 1 },

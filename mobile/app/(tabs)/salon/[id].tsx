@@ -4,12 +4,14 @@ import {
   ActivityIndicator,
   Image,
   Linking,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -89,6 +91,9 @@ export default function SalonDetails() {
   const [serviceQuery, setServiceQuery] = useState("");
   const [serviceCategoryFilter, setServiceCategoryFilter] = useState("All");
   const [serviceSort, setServiceSort] = useState<ServiceSort>("recommended");
+  const [galleryViewerVisible, setGalleryViewerVisible] = useState(false);
+  const [galleryViewerIndex, setGalleryViewerIndex] = useState(0);
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const details = useMemo(() => (salon ? activeDetails(salon) : []), [salon]);
   const categories = useMemo(() => serviceCategories(details), [details]);
   const filteredDetails = useMemo(() => {
@@ -182,6 +187,10 @@ export default function SalonDetails() {
       showToast({ type: "error", message: `Could not open ${action === "directions" ? "maps" : action}.` });
     }
   };
+  const openGallery = (index: number) => {
+    setGalleryViewerIndex(index);
+    setGalleryViewerVisible(true);
+  };
 
   if (loading) {
     return <SafeAreaView style={s.safeArea}><View style={s.center}><ActivityIndicator color="#c55239" /><Text style={s.muted}>Loading salon...</Text></View></SafeAreaView>;
@@ -194,14 +203,24 @@ export default function SalonDetails() {
     <SafeAreaView style={s.safeArea}>
       <ScrollView style={s.screen} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
         <View style={s.hero}>
-          {heroSource ? <Image source={heroSource} style={s.heroImage} /> : <View style={s.heroPlaceholder}><Ionicons name="sparkles-outline" size={42} color="#dfca73" /><Text style={s.heroPlaceholderText}>Halo salon</Text></View>}
+          {galleryImages.length ? <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} nestedScrollEnabled>{galleryImages.map((uri, index) => <Pressable key={`${uri}-hero-${index}`} style={[s.galleryHeroSlide, { width: screenWidth }]} onPress={() => openGallery(index)}><Image source={{ uri, ...(uri.startsWith(API_URL) && accessToken ? { headers: { authorization: `Bearer ${accessToken}` } } : {}) }} style={s.heroImage} resizeMode="cover" /></Pressable>)}</ScrollView> : heroSource ? <Image source={heroSource} style={s.heroImage} resizeMode="cover" /> : <View style={s.heroPlaceholder}><Ionicons name="sparkles-outline" size={42} color="#dfca73" /><Text style={s.heroPlaceholderText}>Halo salon</Text></View>}
           <View style={s.heroShade} />
           <View style={s.heroTopBar}>
             <Pressable style={s.roundButton} onPress={() => router.back()} accessibilityLabel="Back to salons"><Ionicons name="arrow-back" size={20} color="#20352d" /></Pressable>
             <View style={s.heroActions}><Pressable style={s.roundButton} onPress={() => void toggleWishlist()} accessibilityRole="button" accessibilityLabel={wishlisted ? "Remove salon from wishlist" : "Save salon to wishlist"}><Ionicons name={wishlisted ? "heart" : "heart-outline"} size={20} color={wishlisted ? "#c55239" : "#20352d"} /></Pressable><Pressable style={s.roundButton} accessibilityLabel="Share salon"><Ionicons name="share-outline" size={19} color="#20352d" /></Pressable></View>
           </View>
         </View>
-        {galleryImages.length > 0 ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.galleryRow}>{galleryImages.map((uri, index) => <Image key={`${uri}-${index}`} source={{ uri, ...(uri.startsWith(API_URL) && accessToken ? { headers: { authorization: `Bearer ${accessToken}` } } : {}) }} style={s.galleryImage} />)}</ScrollView> : null}
+
+        {galleryImages.length > 0 ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.galleryRow}>{galleryImages.map((uri, index) => <Pressable key={`${uri}-${index}`} onPress={() => openGallery(index)} accessibilityLabel={`Open salon image ${index + 1}`}><Image source={{ uri, ...(uri.startsWith(API_URL) && accessToken ? { headers: { authorization: `Bearer ${accessToken}` } } : {}) }} style={s.galleryImage} /></Pressable>)}</ScrollView> : null}
+
+        <Modal visible={galleryViewerVisible} animationType="fade" presentationStyle="fullScreen" onRequestClose={() => setGalleryViewerVisible(false)}>
+          <View style={s.galleryViewer}>
+            <View style={s.galleryViewerTop}><Text style={s.galleryViewerCount}>{galleryViewerIndex + 1} / {galleryImages.length}</Text><Pressable style={s.galleryClose} onPress={() => setGalleryViewerVisible(false)} accessibilityLabel="Close image viewer"><Ionicons name="close" size={24} color="#fffdfa" /></Pressable></View>
+            <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} contentOffset={{ x: galleryViewerIndex * screenWidth, y: 0 }} onMomentumScrollEnd={(event) => setGalleryViewerIndex(Math.round(event.nativeEvent.contentOffset.x / screenWidth))}>
+              {galleryImages.map((uri, index) => <View style={[s.galleryViewerSlide, { width: screenWidth, height: screenHeight - 120 }]} key={`${uri}-full-${index}`}><Image source={{ uri, ...(uri.startsWith(API_URL) && accessToken ? { headers: { authorization: `Bearer ${accessToken}` } } : {}) }} style={s.galleryViewerImage} resizeMode="contain" /></View>)}
+            </ScrollView>
+          </View>
+        </Modal>
 
         <View style={s.profileCard}>
           <View style={s.profileTitleRow}><View style={s.salonMark}><Text style={s.salonMarkText}>{salon.name.charAt(0).toUpperCase()}</Text></View><View style={s.profileCopy}><Text style={s.title} numberOfLines={2}>{salon.name}</Text><Text style={s.location}><Ionicons name="location-outline" size={14} color="#4c947d" /> {salon.location || "Location not set"}</Text></View></View>
@@ -258,12 +277,19 @@ const s = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#f7f5f0", padding: 24 },
   hero: { height: 245, position: "relative", backgroundColor: "#20352d" },
   heroImage: { width: "100%", height: "100%" },
+  galleryHeroSlide: { height: "100%" },
   heroPlaceholder: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#20352d" },
   heroPlaceholderText: { color: "#fffdfa", fontSize: 12, fontWeight: "800", marginTop: 8, letterSpacing: 1 },
   heroShade: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(32,53,45,0.24)" },
   heroTopBar: { position: "absolute", top: 14, left: 16, right: 16, flexDirection: "row", justifyContent: "space-between" },
   galleryRow: { gap: 10, paddingHorizontal: 14, paddingTop: 10 },
   galleryImage: { width: 112, height: 82, borderRadius: 14, backgroundColor: "#e7f1ed" },
+  galleryViewer: { flex: 1, backgroundColor: "#15231e" },
+  galleryViewerTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 52, paddingHorizontal: 18, paddingBottom: 10 },
+  galleryViewerCount: { color: "#fffdfa", fontSize: 13, fontWeight: "800" },
+  galleryClose: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,253,250,0.18)" },
+  galleryViewerSlide: { alignItems: "center", justifyContent: "center" },
+  galleryViewerImage: { width: "100%", height: "100%" },
   heroActions: { flexDirection: "row", gap: 8 },
   roundButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,253,250,0.94)", alignItems: "center", justifyContent: "center" },
   profileCard: { marginTop: -24, marginHorizontal: 14, padding: 16, backgroundColor: "#fffdfa", borderRadius: 20, borderWidth: 1, borderColor: "#e1ddd4", shadowColor: "#20352d", shadowOpacity: 0.1, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
