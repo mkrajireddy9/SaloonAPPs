@@ -23,7 +23,10 @@ type Analytics = {
   totalBookings?: number;
   confirmedBookings?: number;
   requestedBookings?: number;
+  cancelledBookings?: number;
   revenue?: number;
+  cancellationRate?: number;
+  averageVisitValue?: number;
 };
 type Summary = { analytics?: Analytics; customers?: unknown[] };
 type PlatformSalon = {
@@ -160,22 +163,31 @@ function StudioWorkspace({
 }) {
   return (
     <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
-      <Text style={s.copy}>Keep the salon experience thoughtful and in sync.</Text>
+      <View style={s.dashboardGreeting}>
+        <View>
+          <Text style={s.greetingEyebrow}>STUDIO OVERVIEW</Text>
+          <Text style={s.greetingTitle}>Good morning, admin</Text>
+          <Text style={s.copy}>Keep today’s salon work moving smoothly.</Text>
+        </View>
+        <View style={s.greetingMark}><Ionicons name="sparkles" size={20} color="#dfca73" /></View>
+      </View>
       <View style={s.welcomeCard}>
-        <View style={s.welcomeIcon}><Ionicons name="sparkles-outline" size={22} color="#fffdfa" /></View>
-        <View style={s.welcomeCopy}><Text style={s.welcomeTitle}>Your studio at a glance</Text><Text style={s.welcomeText}>Manage today’s work and keep every guest detail in one place.</Text></View>
+        <View style={s.balanceHeader}><Text style={s.balanceLabel}>TODAY’S STUDIO PULSE</Text><Ionicons name="ellipsis-horizontal" size={20} color="#b8c9c0" /></View>
+        <Text style={s.balanceTitle}>Your salon, in sync</Text>
+        <Text style={s.balanceText}>Appointments, guests, and follow-ups in one workspace.</Text>
+        <View style={s.balanceFooter}><Text style={s.balanceFooterText}>Live workspace</Text><Ionicons name="arrow-up-outline" size={16} color="#dfca73" /></View>
       </View>
-      <View style={s.metrics}>
-        <Metric label="Bookings" value={summary?.analytics?.totalBookings || 0} icon="calendar-outline" />
-        <Metric label="Confirmed" value={summary?.analytics?.confirmedBookings || 0} icon="checkmark-circle-outline" />
-        <Metric label="Requests" value={summary?.analytics?.requestedBookings || 0} icon="notifications-outline" />
-        <Metric label="Customers" value={summary?.customers?.length || 0} icon="people-outline" />
+      <Text style={s.sectionTitle}>Quick actions</Text>
+      <View style={s.quickGrid}>
+        <Action label="Appointments" compact onPress={() => onSelect("appointments")} />
+        <Action label="Customers" compact onPress={() => onSelect("customers")} />
+        <Action label="Payments and invoices" compact onPress={() => onSelect("payments")} />
+        <Action label="Reports and analytics" compact onPress={() => onSelect("reports")} />
       </View>
+      <StudioAnalytics analytics={summary?.analytics} />
       <Text style={s.sectionTitle}>Studio tools</Text>
       <Text style={s.muted}>Choose a workspace area to manage your salon.</Text>
       <ToolGroup title="Daily work" items={[
-        ["Appointments", "appointments"],
-        ["Customers", "customers"],
         ["Consultations", "consultations"],
         ["Review moderation", "reviews"],
       ]} onSelect={onSelect} />
@@ -188,13 +200,39 @@ function StudioWorkspace({
         ["Private media", "media"],
       ]} onSelect={onSelect} />
       <ToolGroup title="Insights and account" items={[
-        ["Reports and analytics", "reports"],
-        ["Payments and invoices", "payments"],
         ["Memberships", "memberships"],
         ["Hair passport", "passport"],
         ["Notification preferences", "notifications"],
       ]} onSelect={onSelect} />
     </ScrollView>
+  );
+}
+
+function StudioAnalytics({ analytics }: { analytics?: Analytics }) {
+  const total = Math.max(analytics?.totalBookings || 0, 1);
+  const bars = [
+    { label: "Requested", value: analytics?.requestedBookings || 0, color: "#dfca73" },
+    { label: "Confirmed", value: analytics?.confirmedBookings || 0, color: "#4c947d" },
+    { label: "Cancelled", value: analytics?.cancelledBookings || 0, color: "#c55239" },
+  ];
+  return (
+    <View style={s.analyticsCard}>
+      <View style={s.analyticsHeader}>
+        <View><Text style={s.analyticsEyebrow}>SALON ANALYTICS</Text><Text style={s.analyticsTitle}>Booking performance</Text></View>
+        <Ionicons name="bar-chart-outline" size={22} color="#20352d" />
+      </View>
+      <View style={s.analyticsStats}>
+        <View><Text style={s.analyticsStatValue}>₹{(analytics?.revenue || 0).toLocaleString("en-IN")}</Text><Text style={s.analyticsStatLabel}>Confirmed revenue</Text></View>
+        <View><Text style={s.analyticsStatValue}>{analytics?.cancellationRate || 0}%</Text><Text style={s.analyticsStatLabel}>Cancellation rate</Text></View>
+      </View>
+      <View style={s.analyticsDivider} />
+      {bars.map((bar) => (
+        <View key={bar.label} style={s.analyticsRow}>
+          <View style={s.analyticsRowTop}><Text style={s.analyticsLabel}>{bar.label}</Text><Text style={s.analyticsCount}>{bar.value}</Text></View>
+          <View style={s.analyticsTrack}><View style={[s.analyticsBar, { backgroundColor: bar.color, width: `${Math.max((bar.value / total) * 100, bar.value ? 7 : 0)}%` }]} /></View>
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -513,7 +551,11 @@ const s = StyleSheet.create({
   signOutButton: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 9, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.08)", flexShrink: 0 },
   signOut: { color: "#dfca73", fontWeight: "700", fontSize: 12 },
   content: { paddingHorizontal: 18, paddingTop: 20, paddingBottom: 42 },
-  copy: { color: "#68756e", lineHeight: 20, marginBottom: 16, fontSize: 13 },
+  copy: { color: "#68756e", lineHeight: 20, marginBottom: 0, fontSize: 13 },
+  dashboardGreeting: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 },
+  greetingEyebrow: { color: "#8a958e", fontSize: 10, fontWeight: "800", letterSpacing: 1.4, marginBottom: 5 },
+  greetingTitle: { color: "#20352d", fontSize: 24, fontWeight: "800", marginBottom: 4 },
+  greetingMark: { width: 44, height: 44, borderRadius: 15, backgroundColor: "#20352d", alignItems: "center", justifyContent: "center" },
   metrics: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
   metric: { width: "48.5%", marginBottom: 10, backgroundColor: "#fffefa", borderRadius: 18, padding: 14, borderWidth: 1, borderColor: "#e5e1d9", shadowColor: "#20352d", shadowOpacity: 0.07, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
   metricIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: "#f8e5df", alignItems: "center", justifyContent: "center", marginBottom: 9 },
@@ -522,8 +564,29 @@ const s = StyleSheet.create({
   sectionTitle: { color: "#20352d", fontSize: 20, fontWeight: "800", marginTop: 26, marginBottom: 8 },
   groupTitle: { color: "#718078", fontSize: 11, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase", marginTop: 22, marginBottom: 5 },
   toolGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
+  quickGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 4 },
   card: { backgroundColor: "#fffdfa", borderRadius: 16, padding: 16, marginTop: 10, borderWidth: 1, borderColor: "#ebe7df", shadowColor: "#20352d", shadowOpacity: 0.04, shadowRadius: 7, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
-  welcomeCard: { backgroundColor: "#20352d", borderRadius: 18, padding: 16, flexDirection: "row", alignItems: "center", marginBottom: 16 },
+  welcomeCard: { backgroundColor: "#20352d", borderRadius: 21, padding: 18, marginBottom: 16, shadowColor: "#20352d", shadowOpacity: 0.16, shadowRadius: 14, shadowOffset: { width: 0, height: 7 }, elevation: 4 },
+  balanceHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  balanceLabel: { color: "#b8c9c0", fontSize: 10, fontWeight: "800", letterSpacing: 1.4 },
+  balanceTitle: { color: "#fffdfa", fontSize: 25, fontWeight: "800", marginTop: 17 },
+  balanceText: { color: "#c8d2cb", fontSize: 12, lineHeight: 18, marginTop: 5, maxWidth: 260 },
+  balanceFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 18, paddingTop: 12, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.14)" },
+  balanceFooterText: { color: "#dfca73", fontSize: 12, fontWeight: "800" },
+  analyticsCard: { backgroundColor: "#fffefa", borderRadius: 21, padding: 17, marginTop: 18, borderWidth: 1, borderColor: "#e5e1d9", shadowColor: "#20352d", shadowOpacity: 0.07, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
+  analyticsHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  analyticsEyebrow: { color: "#8a958e", fontSize: 10, fontWeight: "800", letterSpacing: 1.2 },
+  analyticsTitle: { color: "#20352d", fontSize: 18, fontWeight: "800", marginTop: 5 },
+  analyticsStats: { flexDirection: "row", justifyContent: "space-between", marginTop: 19, paddingRight: 42 },
+  analyticsStatValue: { color: "#20352d", fontSize: 20, fontWeight: "800" },
+  analyticsStatLabel: { color: "#77817c", fontSize: 11, marginTop: 3 },
+  analyticsDivider: { height: 1, backgroundColor: "#ebe7df", marginVertical: 15 },
+  analyticsRow: { marginTop: 8 },
+  analyticsRowTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  analyticsLabel: { color: "#53645b", fontSize: 12, fontWeight: "700" },
+  analyticsCount: { color: "#20352d", fontSize: 12, fontWeight: "800" },
+  analyticsTrack: { height: 9, backgroundColor: "#edf1ed", borderRadius: 6, overflow: "hidden", marginTop: 6 },
+  analyticsBar: { height: 9, borderRadius: 6 },
   welcomeIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: "#c55239", alignItems: "center", justifyContent: "center", marginRight: 12 },
   welcomeCopy: { flex: 1 },
   welcomeTitle: { color: "#fffdfa", fontSize: 15, fontWeight: "800" },

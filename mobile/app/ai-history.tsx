@@ -40,10 +40,10 @@ export default function AiHistoryScreen() {
         <Pressable onPress={() => router.back()}>
           <Text style={s.back}>‹ Back</Text>
         </Pressable>
-        <Text style={s.eyebrow}>HALO AI STUDIO</Text>
+        <Text style={s.eyebrow}>HALO STYLE STUDIO</Text>
         <Text style={s.title}>Your look history</Text>
         <Text style={s.copy}>
-          Your private hairstyle sessions and generation status.
+          Your private hairstyle sessions and preview history.
         </Text>
         {loading ? <ActivityIndicator color="#c55239" /> : null}
         {error ? <Text style={s.error}>{error}</Text> : null}
@@ -64,7 +64,7 @@ export default function AiHistoryScreen() {
         {items.map((item) => (
           <View key={item.id} style={s.card}>
             <Text style={s.cardTitle}>
-              {item.profile?.currentStyle || "Hairstyle consultation"}
+              {item.profile?.currentStyle || "Hairstyle preview"}
             </Text>
             <Text style={s.muted}>
               {new Date(item.createdAt).toLocaleDateString()} · {item.status}

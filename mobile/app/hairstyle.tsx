@@ -281,7 +281,7 @@ export default function HairstyleScreen({ showBack = true }: { showBack?: boolea
           afterImage: image,
           styles: [
             ...(passport.styles || []),
-            { name: selected.name, meta: "AI preview", tone: "blush", image },
+            { name: selected.name, meta: "Style preview", tone: "blush", image },
           ],
         }),
       });
@@ -301,7 +301,7 @@ export default function HairstyleScreen({ showBack = true }: { showBack?: boolea
             <Text style={s.back}>‹ Back</Text>
           </Pressable>
         ) : null}
-        <Text style={s.eyebrow}>HALO AI STUDIO</Text>
+        <Text style={s.eyebrow}>HALO STYLE STUDIO</Text>
         <Text style={s.title}>Find your next look.</Text>
         <Text style={s.copy}>
           Get five salon-ready hairstyle ideas from one private photo, then see
@@ -452,7 +452,7 @@ export default function HairstyleScreen({ showBack = true }: { showBack?: boolea
               style={s.secondary}
               onPress={() =>
                 void Share.share({
-                  message: `I tried ${selected?.name || "a new hairstyle"} with Halo AI.`,
+                  message: `I tried ${selected?.name || "a new hairstyle"} with Halo Style Studio.`,
                 })
               }
             >

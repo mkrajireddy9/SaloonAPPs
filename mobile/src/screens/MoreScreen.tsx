@@ -1641,21 +1641,26 @@ function AdminReportsView({ initial }: { initial: any }) {
   const statusBreakdown = Array.isArray(analytics.statusBreakdown)
     ? analytics.statusBreakdown
     : [];
+  const totalBookings = Number(analytics.totalBookings || 0);
   return (
     <View>
-      <View style={styles.metricsGrid}>
-        <MetricCard label="Bookings" value={analytics.totalBookings || 0} />
-        <MetricCard label="Confirmed" value={analytics.confirmedBookings || 0} />
-        <MetricCard label="Requested" value={analytics.requestedBookings || 0} />
-        <MetricCard label="Revenue" value={`₹${analytics.revenue || 0}`} />
+      <SectionBanner icon="bar-chart-outline" eyebrow="MANAGEMENT AREA" title="Reports and analytics" description="Track bookings, revenue, and salon performance in one place." />
+      <View style={styles.reportHero}>
+        <View style={styles.reportHeroTop}><Text style={styles.reportHeroEyebrow}>SALON PERFORMANCE</Text><Ionicons name="trending-up-outline" size={22} color="#dfca73" /></View>
+        <Text style={styles.reportHeroValue}>₹{Number(analytics.revenue || 0).toLocaleString("en-IN")}</Text>
+        <Text style={styles.reportHeroLabel}>Confirmed revenue</Text>
+        <View style={styles.reportHeroFooter}><Text style={styles.reportHeroMeta}>{totalBookings} total booking{totalBookings === 1 ? "" : "s"}</Text><Text style={styles.reportHeroMeta}>{analytics.cancellationRate || 0}% cancelled</Text></View>
       </View>
-      <Text style={styles.subheading}>Booking status</Text>
+      <View style={styles.reportMetricGrid}>
+        <MetricCard label="Average visit value" value={`₹${Number(initial.averageVisitValue || 0).toLocaleString("en-IN")}`} />
+        <MetricCard label="Consultations" value={initial.consultations || 0} />
+      </View>
+      <Text style={styles.subheading}>Booking flow</Text>
       {statusBreakdown.length ? (
         statusBreakdown.map((item: any) => (
-          <View style={styles.statusCard} key={item.status}>
-            <View style={styles.statusCardIcon}><Ionicons name="stats-chart-outline" size={17} color="#c55239" /></View>
-            <Text style={styles.statusCardLabel}>{item.status}</Text>
-            <View style={styles.statusCount}><Text style={styles.statusCountText}>{item.count || 0}</Text></View>
+          <View style={styles.reportStatusRow} key={item.status}>
+            <View style={styles.reportStatusHeader}><View style={styles.reportStatusName}><View style={[styles.reportStatusDot, item.status === "Cancelled" ? styles.reportStatusDotRed : item.status === "Confirmed" ? styles.reportStatusDotGreen : styles.reportStatusDotGold]} /><Text style={styles.statusCardLabel}>{item.status}</Text></View><Text style={styles.statusCountText}>{item.count || 0}</Text></View>
+            <View style={styles.reportTrack}><View style={[styles.reportProgress, item.status === "Cancelled" ? styles.reportProgressRed : item.status === "Confirmed" ? styles.reportProgressGreen : styles.reportProgressGold, { width: `${Math.max(totalBookings ? ((item.count || 0) / totalBookings) * 100 : 0, item.count ? 7 : 0)}%` }]} /></View>
           </View>
         ))
       ) : (
@@ -2743,6 +2748,26 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 8,
   },
+  reportHero: { backgroundColor: "#20352d", borderRadius: 20, padding: 18, marginTop: 18, shadowColor: "#20352d", shadowOpacity: 0.16, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
+  reportHeroTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  reportHeroEyebrow: { color: "#b8c9c0", fontSize: 10, fontWeight: "800", letterSpacing: 1.3 },
+  reportHeroValue: { color: "#fffdfa", fontSize: 30, fontWeight: "800", marginTop: 16 },
+  reportHeroLabel: { color: "#c8d2cb", fontSize: 12, marginTop: 2 },
+  reportHeroFooter: { flexDirection: "row", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.15)", marginTop: 16, paddingTop: 12 },
+  reportHeroMeta: { color: "#dfca73", fontSize: 11, fontWeight: "700" },
+  reportMetricGrid: { flexDirection: "row", justifyContent: "space-between", marginTop: 14 },
+  reportStatusRow: { backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 15, padding: 13, marginBottom: 9 },
+  reportStatusHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  reportStatusName: { flexDirection: "row", alignItems: "center", flex: 1 },
+  reportStatusDot: { width: 9, height: 9, borderRadius: 5, marginRight: 9 },
+  reportStatusDotGold: { backgroundColor: "#dfca73" },
+  reportStatusDotGreen: { backgroundColor: "#4c947d" },
+  reportStatusDotRed: { backgroundColor: "#c55239" },
+  reportTrack: { height: 8, backgroundColor: "#edf1ed", borderRadius: 5, overflow: "hidden", marginTop: 10 },
+  reportProgress: { height: 8, borderRadius: 5 },
+  reportProgressGold: { backgroundColor: "#dfca73" },
+  reportProgressGreen: { backgroundColor: "#4c947d" },
+  reportProgressRed: { backgroundColor: "#c55239" },
   metricLabel: { color: "#77817c", fontSize: 10, fontWeight: "800", marginTop: 5, textTransform: "uppercase" },
   statusCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 14, padding: 12, marginBottom: 9 },
   statusCardIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: "#f8e5df", alignItems: "center", justifyContent: "center", marginRight: 9 },

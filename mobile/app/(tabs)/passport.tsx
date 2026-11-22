@@ -137,13 +137,13 @@ export default function Passport() {
                 </View>
                 <View style={s.lookCopy}>
                   <Text style={s.lookName}>{style.name || "Saved hairstyle"}</Text>
-                  <Text style={s.muted}>{style.meta || "AI hairstyle look"}</Text>
+                  <Text style={s.muted}>{style.meta || "Saved hairstyle look"}</Text>
                 </View>
               </View>
             ))
           ) : (
             <Text style={s.muted}>
-              Your saved AI looks will appear here after you choose a favorite.
+              Your saved looks will appear here after you choose a favorite.
             </Text>
           )}
         </View>
