@@ -37,6 +37,7 @@ export class Salon {
     imageUrl?: string;
     active?: boolean;
   }[];
+  @Column({ type: "jsonb", default: "[]" }) galleryImages!: string[];
   @Column({ type: "jsonb", default: "{}" }) stylistSchedules!: Record<
     string,
     { workingDays: string[]; leaveDates: string[] }

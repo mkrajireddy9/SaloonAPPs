@@ -246,8 +246,11 @@ function ToolGroup({
   onSelect: (section: string) => void;
 }) {
   return (
-    <View>
-      <Text style={s.groupTitle}>{title}</Text>
+    <View style={s.toolSection}>
+      <View style={s.groupHeading}>
+        <Text style={s.groupTitle}>{title}</Text>
+        <View style={s.groupRule} />
+      </View>
       <View style={s.toolGrid}>
         {items.map(([label, section]) => (
           <Action key={section} label={label} compact onPress={() => onSelect(section)} />
@@ -507,7 +510,7 @@ function Action({ label, onPress, disabled = false, compact = false }: { label: 
   const icon = actionIcon(label);
   return (
     <Pressable disabled={disabled} style={[s.action, compact && s.actionCompact, disabled && s.disabled]} onPress={onPress}>
-      <View style={s.actionContent}><View style={s.actionIcon}><Ionicons name={icon} size={16} color="#c55239" /></View><Text style={s.actionText}>{label}</Text></View>
+      <View style={s.actionContent}><View style={s.actionIcon}><Ionicons name={icon} size={16} color="#c55239" /></View><Text numberOfLines={2} style={s.actionText}>{label}</Text></View>
       <View style={s.actionChevron}><Ionicons name="arrow-forward" size={14} color="#c55239" /></View>
     </Pressable>
   );
@@ -562,8 +565,11 @@ const s = StyleSheet.create({
   metricValue: { color: "#20352d", fontSize: 24, fontWeight: "800" },
   muted: { color: "#77817c", marginTop: 4 },
   sectionTitle: { color: "#20352d", fontSize: 20, fontWeight: "800", marginTop: 26, marginBottom: 8 },
-  groupTitle: { color: "#718078", fontSize: 11, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase", marginTop: 22, marginBottom: 5 },
+  groupTitle: { color: "#718078", fontSize: 11, fontWeight: "800", letterSpacing: 1.2, textTransform: "uppercase", marginTop: 3, marginBottom: 5 },
   toolGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
+  toolSection: { backgroundColor: "#fffefa", borderRadius: 22, padding: 10, marginTop: 14, borderWidth: 1, borderColor: "#e5e1d9", shadowColor: "#20352d", shadowOpacity: 0.055, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
+  groupHeading: { flexDirection: "row", alignItems: "center", paddingHorizontal: 3, marginBottom: 2 },
+  groupRule: { height: 1, backgroundColor: "#ebe7df", flex: 1, marginLeft: 10 },
   quickGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 4 },
   card: { backgroundColor: "#fffdfa", borderRadius: 16, padding: 16, marginTop: 10, borderWidth: 1, borderColor: "#ebe7df", shadowColor: "#20352d", shadowOpacity: 0.04, shadowRadius: 7, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
   welcomeCard: { backgroundColor: "#20352d", borderRadius: 21, padding: 18, marginBottom: 16, shadowColor: "#20352d", shadowOpacity: 0.16, shadowRadius: 14, shadowOffset: { width: 0, height: 7 }, elevation: 4 },
@@ -607,11 +613,11 @@ const s = StyleSheet.create({
   cardTitle: { color: "#20352d", fontSize: 16, fontWeight: "700" },
   input: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#d9d8d1", borderRadius: 9, padding: 13, marginTop: 10, color: "#20352d" },
   action: { backgroundColor: "#fffefa", borderRadius: 16, padding: 13, marginTop: 10, flexDirection: "row", justifyContent: "space-between", alignItems: "center", flexGrow: 1, flexShrink: 1, minWidth: 0, borderWidth: 1, borderColor: "#e6e2da", shadowColor: "#20352d", shadowOpacity: 0.045, shadowRadius: 7, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
-  actionCompact: { width: "48.5%", flexGrow: 0, marginTop: 8, padding: 13, minHeight: 62 },
+  actionCompact: { width: "48.5%", flexGrow: 0, marginTop: 8, padding: 11, minHeight: 62 },
   actionContent: { flexDirection: "row", alignItems: "center", flex: 1, minWidth: 0 },
-  actionIcon: { width: 32, height: 32, borderRadius: 11, backgroundColor: "#f8e5df", alignItems: "center", justifyContent: "center" },
-  actionText: { color: "#20352d", fontWeight: "700", fontSize: 12, flexShrink: 1, marginLeft: 8 },
-  actionChevron: { width: 25, height: 25, borderRadius: 9, backgroundColor: "#fff3ef", alignItems: "center", justifyContent: "center", marginLeft: 5 },
+  actionIcon: { width: 29, height: 29, borderRadius: 10, backgroundColor: "#f8e5df", alignItems: "center", justifyContent: "center" },
+  actionText: { color: "#20352d", fontWeight: "700", fontSize: 11, lineHeight: 15, flexShrink: 1, minWidth: 0, marginLeft: 6 },
+  actionChevron: { width: 22, height: 22, borderRadius: 8, backgroundColor: "#fff3ef", alignItems: "center", justifyContent: "center", marginLeft: 4 },
   request: { borderTopWidth: 1, borderTopColor: "#e5e1d9", paddingTop: 12, marginTop: 12 },
   chartRow: { marginTop: 12 },
   chartTrack: { height: 9, borderRadius: 5, backgroundColor: "#e7eee9", overflow: "hidden", marginTop: 6 },

@@ -91,6 +91,7 @@ import { UserNotification } from "./notifications/user-notification.entity";
 import { WishlistModule } from "./wishlist/wishlist.module";
 import { SalonWishlist } from "./wishlist/wishlist.entity";
 import { SalonWishlists2170000000000 } from "./database/migrations/2170000000000-SalonWishlists";
+import { SalonGallery2180000000000 } from "./database/migrations/2180000000000-SalonGallery";
 
 @Module({
   imports: [
@@ -220,6 +221,7 @@ import { SalonWishlists2170000000000 } from "./database/migrations/2170000000000
         AppointmentCoupon2150000000000,
         MobilePushNotifications2160000000000,
         SalonWishlists2170000000000,
+        SalonGallery2180000000000,
       ],
       migrationsRun: true,
       synchronize: false,

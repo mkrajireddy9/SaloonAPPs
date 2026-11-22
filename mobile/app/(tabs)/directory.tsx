@@ -4,11 +4,14 @@ import { ActivityIndicator, AppState, Image, Linking, Pressable, RefreshControl,
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
+// Google Maps remains available for a future billing-enabled build:
+// import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
+import { FreeMap } from "../../src/components/FreeMap";
 import { AccountDrawer } from "../../src/components/AccountDrawer";
 import { API_URL, api, getAccessToken, getUserLocation, setUserLocation } from "../../src/api";
 
 type ServiceDetail = { category?: string; name: string; price?: number; discountPercent?: number; discountPrice?: number; offerText?: string; active?: boolean; imageUrl?: string };
-type Salon = { id: string; name: string; location?: string; services: string[]; stylists: string[]; branches?: { location?: string; latitude?: number; longitude?: number; distanceKm?: number | null; active?: boolean }[]; serviceDetails?: ServiceDetail[]; distanceKm?: number | null; openingHours?: { open: string; close: string }; closedDays?: string[]; ratingAverage?: number | null; ratingCount?: number };
+type Salon = { id: string; name: string; location?: string; services: string[]; stylists: string[]; branches?: { id?: string; name?: string; location?: string; contact?: string; latitude?: number; longitude?: number; distanceKm?: number | null; active?: boolean }[]; serviceDetails?: ServiceDetail[]; distanceKm?: number | null; openingHours?: { open: string; close: string }; closedDays?: string[]; ratingAverage?: number | null; ratingCount?: number };
 type WishlistEntry = { id: string; salonId: string; createdAt: string; salon: Salon };
 type Banner = { id: string; title: string; message: string; imageUrl?: string | null; actionLabel?: string | null; actionUrl?: string | null };
 type QuickFilter = "all" | "nearby" | "top-rated" | "offers" | "open-now";
@@ -69,6 +72,8 @@ const carryDistance = (salon: Salon, location: { latitude: number; longitude: nu
   const distances = salonBranches(salon).map((branch) => branch.distanceKm ?? distanceBetween(location, branch)).filter((value): value is number => typeof value === "number" && Number.isFinite(value));
   return { ...salon, distanceKm: distances.length ? Math.min(...distances) : null };
 };
+const validCoordinate = (latitude?: number, longitude?: number): latitude is number => Number.isFinite(latitude) && Number.isFinite(longitude);
+const salonCoordinates = (salon: Salon) => salonBranches(salon).find((branch) => validCoordinate(branch.latitude, branch.longitude));
 function isOpenNow(salon: Salon) {
   const today = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(new Date());
   if (Array.isArray(salon.closedDays) && salon.closedDays.includes(today)) return false;
@@ -100,6 +105,11 @@ export default function Directory() {
   const [pricedOnly, setPricedOnly] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
+  const [selectedSalonId, setSelectedSalonId] = useState<string | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  // Kept for the Google Maps implementation; the free map does not need a native map ref.
+  // const mapRef = useRef<MapView>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const load = async () => {
@@ -121,6 +131,7 @@ export default function Directory() {
         api<WishlistEntry[]>(`/wishlist${wishlistQuery}`).catch(() => [] as WishlistEntry[]),
       ]);
       setSalons(uniqueSalons(directory.map((salon) => carryDistance(salon, location))));
+      if (location) setCurrentLocation(location);
       setWishlistIds(wishlist.filter((item) => item && typeof item.salonId === "string").map((item) => item.salonId));
       setWishlistSalons(uniqueSalons(wishlist.map((item) => item?.salon).filter(isSalon).map((salon) => carryDistance(salon, location))));
       setError("");
@@ -220,6 +231,23 @@ export default function Directory() {
     }
   };
   const clearFilters = () => { setSearch(""); setCategory("All"); setQuickFilter("all"); setRadius(null); setRating(null); setPrice("any"); setPricedOnly(false); setFiltersOpen(false); };
+  const recenterOnUser = async () => {
+    try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (permission.status !== Location.PermissionStatus.GRANTED) {
+        setError("Location permission is needed to center the map near you.");
+        return;
+      }
+      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const next = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+      setCurrentLocation(next);
+      await setUserLocation(next);
+      // Google Maps recentering, retained for a future provider:
+      // mapRef.current?.animateToRegion({ ...next, latitudeDelta: 0.06, longitudeDelta: 0.06 }, 500);
+    } catch {
+      setError("We could not determine your current location.");
+    }
+  };
   return <SafeAreaView style={s.safeArea}><ScrollView style={s.screen} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#c55239" />}>
     <View style={s.header}>
       <View>
@@ -230,6 +258,11 @@ export default function Directory() {
     </View>
     <View style={s.searchBox}><Ionicons name="search-outline" size={21} color="#77817c" /><TextInput value={search} onChangeText={setSearch} placeholder="Search salons or services..." placeholderTextColor="#9ba39e" style={s.searchInput} returnKeyType="search" />{search ? <Pressable onPress={() => setSearch("")}><Ionicons name="close-circle" size={19} color="#77817c" /></Pressable> : null}<Pressable style={[s.filterButton, hasRefinements && s.filterButtonActive]} onPress={() => setFiltersOpen((value) => !value)} accessibilityLabel="Open salon filters"><Ionicons name="options-outline" size={21} color={hasRefinements ? "#20352d" : "#77817c"} />{hasRefinements ? <View style={s.filterDot} /> : null}</Pressable></View>
     {filtersOpen ? <FilterPanel radius={radius} setRadius={setRadius} rating={rating} setRating={setRating} price={price} setPrice={setPrice} onClear={clearFilters} onCancel={() => setFiltersOpen(false)} onApply={() => setFiltersOpen(false)} /> : <>
+    <View style={s.viewToggle}>
+      <Pressable style={[s.viewToggleButton, viewMode === "list" && s.viewToggleButtonActive]} onPress={() => setViewMode("list")}><Ionicons name="list-outline" size={17} color={viewMode === "list" ? "#fffdfa" : "#20352d"} /><Text style={[s.viewToggleText, viewMode === "list" && s.viewToggleTextActive]}>List</Text></Pressable>
+      <Pressable style={[s.viewToggleButton, viewMode === "map" && s.viewToggleButtonActive]} onPress={() => setViewMode("map")}><Ionicons name="map-outline" size={17} color={viewMode === "map" ? "#fffdfa" : "#20352d"} /><Text style={[s.viewToggleText, viewMode === "map" && s.viewToggleTextActive]}>Map</Text></Pressable>
+    </View>
+    {viewMode === "map" ? <SalonMapView salons={filteredSalons} currentLocation={currentLocation} selectedSalonId={selectedSalonId} setSelectedSalonId={setSelectedSalonId} onRecenter={recenterOnUser} onOpenSalon={openSalon} /> : <>
     {!hasRefinements ? <>
       <ScrollView
         ref={bannerCarouselRef}
@@ -271,10 +304,26 @@ export default function Directory() {
     {hasRefinements ? <Section title={quickFilter === "top-rated" ? "Top rated salons" : "Filtered salons"} action="Back to home" onAction={clearFilters}><Text style={s.filteredCount}>{filteredSalons.length} {filteredSalons.length === 1 ? "salon" : "salons"} found</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.cardRow}>{nearby.map((salon) => <SalonCard key={salon.id} salon={salon} accessToken={accessToken} variant="featured" isWishlisted={wishlistIds.includes(salon.id)} onToggleWishlist={() => void toggleWishlist(salon)} onPress={() => openSalon(salon)} />)}</ScrollView></Section> : null}
     {!loading && !filteredSalons.length ? <View style={s.empty}><Ionicons name="search-outline" size={28} color="#4c947d" /><Text style={s.emptyTitle}>No salons match your search</Text><Text style={s.emptyText}>Try another service, category, or filter.</Text><Pressable style={s.clearButton} onPress={clearFilters}><Text style={s.clearText}>Clear filters</Text></Pressable></View> : null}{loading && !salons.length ? <View style={s.loader}><ActivityIndicator color="#c55239" /><Text style={s.emptyText}>Finding salons near you...</Text></View> : null}
     </>}
+    </>}
   </ScrollView></SafeAreaView>;
 }
 
 function Section({ title, action, onAction, children }: { title: string; action: string; onAction?: () => void; children: any }) { const isBackAction = action === "Back to home"; const isViewAll = action === "View all"; return <View style={s.section}><View style={s.sectionHeader}><Text style={s.sectionTitle}>{title}</Text>{onAction ? <Pressable style={isBackAction ? s.backHomeButton : isViewAll ? s.viewAllButton : undefined} onPress={onAction}><Ionicons name={isBackAction ? "arrow-back" : "arrow-forward"} size={isBackAction || isViewAll ? 14 : 12} color={isBackAction ? "#20352d" : "#c55239"} /><Text style={isBackAction ? s.backHomeText : isViewAll ? s.viewAllText : s.sectionAction}>{action}</Text></Pressable> : <Text style={s.resultCount}>{action}</Text>}</View>{children}</View>; }
+function SalonMapView({ salons, currentLocation, selectedSalonId, setSelectedSalonId, onRecenter, onOpenSalon }: { salons: Salon[]; currentLocation: { latitude: number; longitude: number } | null; selectedSalonId: string | null; setSelectedSalonId: (value: string | null) => void; onRecenter: () => void; onOpenSalon: (salon: Salon) => void }) {
+  const points = salons.flatMap((salon) => salonBranches(salon).filter((branch) => validCoordinate(branch.latitude, branch.longitude)).map((branch) => ({ salon, branch, latitude: branch.latitude as number, longitude: branch.longitude as number })));
+  const selectedSalon = salons.find((salon) => salon.id === selectedSalonId) || null;
+  const center = currentLocation || (points[0] ? { latitude: points[0].latitude, longitude: points[0].longitude } : null);
+  if (!points.length && !center) return <View style={s.mapEmpty}><Ionicons name="map-outline" size={32} color="#4c947d" /><Text style={s.mapEmptyTitle}>Map locations are not available yet</Text><Text style={s.mapEmptyText}>Salon owners need to add branch coordinates before they can appear on the map.</Text></View>;
+  return <View style={s.mapPanel}>
+    <View style={s.mapHeader}><View><Text style={s.mapTitle}>Salons near you</Text><Text style={s.mapSubtitle}>{points.length} location{points.length === 1 ? "" : "s"} on map</Text></View><Pressable style={s.recenterButton} onPress={onRecenter}><Ionicons name="locate-outline" size={18} color="#20352d" /><Text style={s.recenterText}>Near me</Text></Pressable></View>
+    <View style={s.mapWrap}><FreeMap points={points.map(({ salon, branch, latitude, longitude }) => ({ id: salon.id, title: salon.name, description: branch.location || salon.location, latitude, longitude }))} center={center} selectedId={selectedSalonId} onMarkerPress={setSelectedSalonId} onMapPress={() => setSelectedSalonId(null)} /><Pressable style={s.mapLocationButton} onPress={onRecenter}><Ionicons name="locate" size={20} color="#20352d" /></Pressable></View>
+    {/* Google Maps version retained for reference:
+    <View style={s.mapWrap}><MapView ref={mapRef} provider={PROVIDER_GOOGLE} style={s.map} initialRegion={center ? { ...center, latitudeDelta: 0.06, longitudeDelta: 0.06 } : undefined} showsUserLocation={Boolean(currentLocation)} showsMyLocationButton={false} onPress={() => setSelectedSalonId(null)}>
+      {points.map(({ salon, branch, latitude, longitude }) => <Marker key={`${salon.id}-${branch.id || branch.location || `${latitude}-${longitude}`}`} coordinate={{ latitude, longitude }} title={salon.name} description={branch.location || salon.location} onPress={() => setSelectedSalonId(salon.id)} pinColor={selectedSalonId === salon.id ? "#c55239" : "#4c947d"} />)}
+    </MapView></View> */}
+    {selectedSalon ? <View style={s.mapPreview}><View style={s.mapPreviewCopy}><Text style={s.mapPreviewTitle} numberOfLines={1}>{selectedSalon.name}</Text><Text style={s.mapPreviewAddress} numberOfLines={1}>{selectedSalon.location || "Location available"}</Text><View style={s.mapPreviewMeta}><Ionicons name="star" size={14} color="#dfca73" /><Text style={s.mapPreviewRating}>{selectedSalon.ratingAverage != null ? Number(selectedSalon.ratingAverage).toFixed(1) : "—"}</Text>{selectedSalon.distanceKm != null ? <Text style={s.mapPreviewDistance}>{Number(selectedSalon.distanceKm).toFixed(1)} km away</Text> : null}</View></View><View style={s.mapPreviewActions}><Pressable style={s.mapPreviewButton} onPress={() => onOpenSalon(selectedSalon)}><Text style={s.mapPreviewButtonText}>View details</Text></Pressable><Pressable style={s.mapDirectionButton} onPress={() => void Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${salonCoordinates(selectedSalon)?.latitude},${salonCoordinates(selectedSalon)?.longitude}`)}&travelmode=driving`)}><Ionicons name="navigate-outline" size={16} color="#fffdfa" /></Pressable></View></View> : <View style={s.mapHint}><Ionicons name="hand-left-outline" size={16} color="#4c947d" /><Text style={s.mapHintText}>Tap a marker to preview a salon</Text></View>}
+  </View>;
+}
 function TrustStrip({ onTopRated, onPrices, pricedOnly, onBooking, onNearby }: { onTopRated: () => void; onPrices: () => void; pricedOnly: boolean; onBooking: () => void; onNearby: () => void }) {
   const items = [
     { icon: "shield-checkmark-outline", label: "Top rated", onPress: onTopRated, active: false },
@@ -333,6 +382,36 @@ const s = {
   filterButton: { ...baseStyles.filterButton, borderLeftColor: "#e1ddd4" },
   filterButtonActive: { position: "relative" as const, backgroundColor: "#e7f1ed", borderRadius: 12, paddingVertical: 7, paddingRight: 8 },
   filterDot: { position: "absolute" as const, top: 2, right: 3, width: 7, height: 7, borderRadius: 4, backgroundColor: "#d94841", borderWidth: 1, borderColor: "#fffdfa" },
+  viewToggle: { flexDirection: "row" as const, alignSelf: "flex-start" as const, backgroundColor: "#e7f1ed", borderRadius: 15, padding: 3, marginTop: 16 },
+  viewToggleButton: { flexDirection: "row" as const, alignItems: "center" as const, gap: 5, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8 },
+  viewToggleButtonActive: { backgroundColor: "#20352d" },
+  viewToggleText: { color: "#20352d", fontSize: 11, fontWeight: "900" as const },
+  viewToggleTextActive: { color: "#fffdfa" },
+  mapPanel: { backgroundColor: "#fffdfa", borderRadius: 20, borderWidth: 1, borderColor: "#e1ddd4", padding: 10, marginTop: 14, overflow: "hidden" as const },
+  mapHeader: { flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "space-between" as const, paddingHorizontal: 4, paddingBottom: 10 },
+  mapTitle: { color: "#20352d", fontSize: 17, fontWeight: "900" as const },
+  mapSubtitle: { color: "#77817c", fontSize: 11, marginTop: 3 },
+  recenterButton: { flexDirection: "row" as const, alignItems: "center" as const, gap: 4, backgroundColor: "#e7f1ed", borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8 },
+  recenterText: { color: "#20352d", fontSize: 10, fontWeight: "900" as const },
+  mapWrap: { height: 360, borderRadius: 16, overflow: "hidden" as const, position: "relative" as const },
+  map: { flex: 1 },
+  mapLocationButton: { position: "absolute" as const, right: 12, top: 12, width: 40, height: 40, borderRadius: 13, backgroundColor: "#fffdfa", alignItems: "center" as const, justifyContent: "center" as const, shadowColor: "#20352d", shadowOpacity: 0.16, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 3 },
+  mapPreview: { flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "space-between" as const, gap: 10, paddingTop: 12 },
+  mapPreviewCopy: { flex: 1, minWidth: 0 },
+  mapPreviewTitle: { color: "#20352d", fontSize: 14, fontWeight: "900" as const },
+  mapPreviewAddress: { color: "#77817c", fontSize: 11, marginTop: 3 },
+  mapPreviewMeta: { flexDirection: "row" as const, alignItems: "center" as const, gap: 4, marginTop: 6 },
+  mapPreviewRating: { color: "#20352d", fontSize: 11, fontWeight: "800" as const },
+  mapPreviewDistance: { color: "#77817c", fontSize: 10, marginLeft: 5 },
+  mapPreviewActions: { flexDirection: "row" as const, alignItems: "center" as const, gap: 6 },
+  mapPreviewButton: { backgroundColor: "#e7f1ed", borderRadius: 11, paddingHorizontal: 10, paddingVertical: 9 },
+  mapPreviewButtonText: { color: "#20352d", fontSize: 10, fontWeight: "900" as const },
+  mapDirectionButton: { width: 36, height: 36, borderRadius: 11, backgroundColor: "#c55239", alignItems: "center" as const, justifyContent: "center" as const },
+  mapHint: { flexDirection: "row" as const, alignItems: "center" as const, gap: 6, paddingTop: 12, paddingHorizontal: 3 },
+  mapHintText: { color: "#77817c", fontSize: 11 },
+  mapEmpty: { alignItems: "center" as const, backgroundColor: "#fffdfa", borderRadius: 18, borderWidth: 1, borderColor: "#e1ddd4", padding: 28, marginTop: 14 },
+  mapEmptyTitle: { color: "#20352d", fontSize: 15, fontWeight: "900" as const, marginTop: 10 },
+  mapEmptyText: { color: "#77817c", fontSize: 11, lineHeight: 17, textAlign: "center" as const, marginTop: 5 },
   promoBanner: { height: 190, borderRadius: 18, overflow: "hidden" as const, backgroundColor: "#20352d", marginTop: 16, position: "relative" as const },
   promoImage: { position: "absolute" as const, right: 0, top: 0, bottom: 0, width: "55%" as const, opacity: 0.72 },
   promoOverlay: { position: "absolute" as const, top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(32,53,45,0.56)" },

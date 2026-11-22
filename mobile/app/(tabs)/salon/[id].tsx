@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,11 +14,13 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { API_URL, api, getAccessToken } from "../../../src/api";
+import { useToast } from "../../../src/components/ToastProvider";
 
 type Branch = {
   id: string;
   name: string;
   location: string;
+  contact?: string;
   closedDays?: string[];
   openingHours?: { open: string; close: string };
 };
@@ -41,6 +44,7 @@ type Salon = {
   branches?: Branch[];
   serviceDetails?: ServiceDetail[];
   products?: { name: string; description?: string; imageUrl?: string; active?: boolean }[];
+  galleryImages?: string[];
   openingHours?: { open: string; close: string };
   closedDays?: string[];
   stylistProfiles?: Record<string, { bio?: string; imageUrl?: string }>;
@@ -73,6 +77,7 @@ const currentOpeningStatus = (salon: Salon) => {
 };
 
 export default function SalonDetails() {
+  const { showToast } = useToast();
   const { id, hairstyle, distanceKm } = useLocalSearchParams<{ id: string; hairstyle?: string; distanceKm?: string | string[] }>();
   const [salon, setSalon] = useState<Salon | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -103,7 +108,8 @@ export default function SalonDetails() {
     if (!reviews.length) return null;
     return reviews.reduce((sum, item) => sum + Number(item.rating || 0), 0) / reviews.length;
   }, [reviews]);
-  const heroImage = useMemo(() => details.find((item) => item.imageUrl)?.imageUrl || products.find((item) => item.imageUrl)?.imageUrl, [details, products]);
+  const galleryImages = useMemo(() => (salon?.galleryImages || []).map(toMediaUrl).filter((item): item is string => Boolean(item)), [salon]);
+  const heroImage = useMemo(() => galleryImages[0] || details.find((item) => item.imageUrl)?.imageUrl || products.find((item) => item.imageUrl)?.imageUrl, [details, galleryImages, products]);
   const heroUri = toMediaUrl(heroImage);
   const heroSource = heroUri ? { uri: heroUri, ...(heroUri.startsWith(API_URL) && accessToken ? { headers: { authorization: `Bearer ${accessToken}` } } : {}) } : undefined;
   const openStatus = salon ? currentOpeningStatus(salon) : null;
@@ -158,6 +164,24 @@ export default function SalonDetails() {
       setMessage(e instanceof Error ? e.message : "Unable to update your wishlist.");
     }
   };
+  const salonContact = salon?.branches?.find((branch) => branch.contact)?.contact?.trim();
+  const openSalonAction = async (action: "call" | "message" | "directions") => {
+    if (!salon) return;
+    const url = action === "directions"
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(salon.location || salon.name)}`
+      : salonContact
+        ? `${action === "call" ? "tel" : "sms"}:${salonContact}`
+        : "";
+    if (!url) {
+      showToast({ type: "warning", message: `No ${action === "directions" ? "location" : "contact number"} is available for this salon.` });
+      return;
+    }
+    try {
+      await Linking.openURL(url);
+    } catch {
+      showToast({ type: "error", message: `Could not open ${action === "directions" ? "maps" : action}.` });
+    }
+  };
 
   if (loading) {
     return <SafeAreaView style={s.safeArea}><View style={s.center}><ActivityIndicator color="#c55239" /><Text style={s.muted}>Loading salon...</Text></View></SafeAreaView>;
@@ -177,12 +201,18 @@ export default function SalonDetails() {
             <View style={s.heroActions}><Pressable style={s.roundButton} onPress={() => void toggleWishlist()} accessibilityRole="button" accessibilityLabel={wishlisted ? "Remove salon from wishlist" : "Save salon to wishlist"}><Ionicons name={wishlisted ? "heart" : "heart-outline"} size={20} color={wishlisted ? "#c55239" : "#20352d"} /></Pressable><Pressable style={s.roundButton} accessibilityLabel="Share salon"><Ionicons name="share-outline" size={19} color="#20352d" /></Pressable></View>
           </View>
         </View>
+        {galleryImages.length > 0 ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.galleryRow}>{galleryImages.map((uri, index) => <Image key={`${uri}-${index}`} source={{ uri, ...(uri.startsWith(API_URL) && accessToken ? { headers: { authorization: `Bearer ${accessToken}` } } : {}) }} style={s.galleryImage} />)}</ScrollView> : null}
 
         <View style={s.profileCard}>
           <View style={s.profileTitleRow}><View style={s.salonMark}><Text style={s.salonMarkText}>{salon.name.charAt(0).toUpperCase()}</Text></View><View style={s.profileCopy}><Text style={s.title} numberOfLines={2}>{salon.name}</Text><Text style={s.location}><Ionicons name="location-outline" size={14} color="#4c947d" /> {salon.location || "Location not set"}</Text></View></View>
           <View style={s.profileMeta}><View style={s.metaItem}><Ionicons name="star" size={16} color="#dfca73" /><Text style={s.metaStrong}>{averageRating != null ? averageRating.toFixed(1) : "—"}</Text><Text style={s.metaMuted}>{reviews.length ? `(${reviews.length})` : "No reviews"}</Text></View>{parsedDistance != null ? <View style={s.metaItem}><Ionicons name="location-outline" size={15} color="#4c947d" /><Text style={s.metaMuted}>{parsedDistance.toFixed(1)} km away</Text></View> : null}{openStatus !== null ? <View style={[s.openPill, openStatus ? s.open : s.closed]}><Text style={[s.openText, openStatus ? s.openText : s.closedText]}>{openStatus ? "Open now" : "Closed now"}</Text></View> : null}</View>
           {currentOffer ? <View style={s.offerPill}><Ionicons name="pricetag-outline" size={15} color="#c55239" /><Text style={s.offerPillText}>{currentOffer}</Text></View> : null}
           <Pressable style={s.bookTopButton} onPress={() => openBooking()}><Text style={s.bookTopText}>Book appointment</Text><Ionicons name="arrow-forward" size={18} color="#fff" /></Pressable>
+          <View style={s.contactActions}>
+            <Pressable style={s.contactAction} onPress={() => void openSalonAction("call")}><Ionicons name="call-outline" size={18} color="#26735a" /><Text style={s.contactActionText}>Call</Text></Pressable>
+            <Pressable style={s.contactAction} onPress={() => void openSalonAction("message")}><Ionicons name="chatbubble-ellipses-outline" size={18} color="#26735a" /><Text style={s.contactActionText}>Message</Text></Pressable>
+            <Pressable style={s.contactAction} onPress={() => void openSalonAction("directions")}><Ionicons name="navigate-outline" size={18} color="#26735a" /><Text style={s.contactActionText}>Directions</Text></Pressable>
+          </View>
         </View>
 
         <View style={s.tabs}>{([['services', 'Services'], ['reviews', `Reviews${reviews.length ? ` (${reviews.length})` : ''}`], ['about', 'About']] as [Tab, string][]).map(([value, label]) => <Pressable key={value} style={[s.tab, activeTab === value && s.tabActive]} onPress={() => setActiveTab(value)}><Text style={[s.tabText, activeTab === value && s.tabTextActive]}>{label}</Text></Pressable>)}</View>
@@ -232,6 +262,8 @@ const s = StyleSheet.create({
   heroPlaceholderText: { color: "#fffdfa", fontSize: 12, fontWeight: "800", marginTop: 8, letterSpacing: 1 },
   heroShade: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(32,53,45,0.24)" },
   heroTopBar: { position: "absolute", top: 14, left: 16, right: 16, flexDirection: "row", justifyContent: "space-between" },
+  galleryRow: { gap: 10, paddingHorizontal: 14, paddingTop: 10 },
+  galleryImage: { width: 112, height: 82, borderRadius: 14, backgroundColor: "#e7f1ed" },
   heroActions: { flexDirection: "row", gap: 8 },
   roundButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,253,250,0.94)", alignItems: "center", justifyContent: "center" },
   profileCard: { marginTop: -24, marginHorizontal: 14, padding: 16, backgroundColor: "#fffdfa", borderRadius: 20, borderWidth: 1, borderColor: "#e1ddd4", shadowColor: "#20352d", shadowOpacity: 0.1, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
@@ -254,6 +286,9 @@ const s = StyleSheet.create({
   closedText: { color: "#a74e3d", fontSize: 10, fontWeight: "800" },
   bookTopButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#c55239", borderRadius: 14, minHeight: 48, marginTop: 15 },
   bookTopText: { color: "#fff", fontSize: 14, fontWeight: "800" },
+  contactActions: { flexDirection: "row", gap: 8, marginTop: 10 },
+  contactAction: { flex: 1, minHeight: 42, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, backgroundColor: "#e7f1ed", borderRadius: 12, borderWidth: 1, borderColor: "#cfe0d7" },
+  contactActionText: { color: "#26735a", fontSize: 11, fontWeight: "800" },
   tabs: { flexDirection: "row", marginTop: 18, marginHorizontal: 14, borderBottomWidth: 1, borderBottomColor: "#e1ddd4" },
   tab: { flex: 1, alignItems: "center", paddingVertical: 13, borderBottomWidth: 2, borderBottomColor: "transparent" },
   tabActive: { borderBottomColor: "#c55239" },

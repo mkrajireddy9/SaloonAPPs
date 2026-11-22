@@ -1,5 +1,6 @@
 // @ts-nocheck
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { router } from "expo-router";
 import {
@@ -15,7 +16,10 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { API_URL, api } from "../api";
+// Google Maps remains available for a future billing-enabled build:
+// import MapView, { Marker } from "react-native-maps";
+import { FreeMap } from "../components/FreeMap";
+import { API_URL, api, getAccessToken } from "../api";
 import { useToast } from "../components/ToastProvider";
 import { registerForPushNotifications } from "../push";
 
@@ -33,7 +37,7 @@ type Price = {
   durationMinutes?: number;
   offerText?: string;
 };
-type Product = { id: string; name: string; description?: string };
+type Product = { id: string; name: string; description?: string; imageUrl?: string };
 type Profile = {
   name?: string;
   email?: string;
@@ -795,6 +799,32 @@ function AdminSalonView({ salon }: { salon: any }) {
           <TextInput value={branch.latitude == null ? "" : String(branch.latitude)} onChangeText={(value) => updateBranch(branch.id, { latitude: value })} placeholder="Enter latitude" keyboardType="numeric" style={[styles.input, styles.halfInput]} placeholderTextColor="#9aa19c" />
           <TextInput value={branch.longitude == null ? "" : String(branch.longitude)} onChangeText={(value) => updateBranch(branch.id, { longitude: value })} placeholder="Enter longitude" keyboardType="numeric" style={[styles.input, styles.halfInput]} placeholderTextColor="#9aa19c" />
           </View>
+          {Number.isFinite(Number(branch.latitude)) && Number.isFinite(Number(branch.longitude)) ? (
+            <View style={styles.branchMapCard}>
+              <View style={styles.branchMapHeader}>
+                <View>
+                  <Text style={styles.branchMapTitle}>Branch location</Text>
+                  <Text style={styles.branchMapHint}>Drag the pin to adjust the map location.</Text>
+                </View>
+                <Ionicons name="map-outline" size={18} color="#c55239" />
+              </View>
+              <FreeMap
+                height={150}
+                points={[{ id: branch.id, title: branch.name || "Branch", latitude: Number(branch.latitude), longitude: Number(branch.longitude), draggable: true }]}
+                center={{ latitude: Number(branch.latitude), longitude: Number(branch.longitude) }}
+                onMapPress={(coordinate) => updateBranch(branch.id, coordinate)}
+                onMarkerDragEnd={(coordinate) => updateBranch(branch.id, coordinate)}
+              />
+              {/* Google Maps version retained for reference:
+              <MapView ...><Marker ... /></MapView>
+              */}
+            </View>
+          ) : (
+            <View style={styles.branchMapEmpty}>
+              <Ionicons name="location-outline" size={18} color="#4c947d" />
+              <Text style={styles.branchMapEmptyText}>Add latitude and longitude to place this branch on the map.</Text>
+            </View>
+          )}
         </View>
       ))}
       <Pressable style={styles.secondary} onPress={addBranch}>
@@ -878,28 +908,71 @@ function AdminPriceView({ initial }: { initial: Price[] }) {
   );
 }
 function AdminProductView({ initial }: { initial: Product[] }) {
+  const { showToast } = useToast();
   const [items, setItems] = useState<any[]>(initial.map((item) => ({ ...item })));
   const [editing, setEditing] = useState<number | null>(null);
-  const [message, setMessage] = useState("");
+  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
+  const [imageConsent, setImageConsent] = useState(false);
   const updateItem = (index: number, values: any) =>
     setItems((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...values } : item));
   const addItem = () => {
     setItems((current) => [...current, { id: `product-${Date.now()}`, name: "", description: "", active: true }]);
     setEditing(items.length);
-    setMessage("");
+    setImageConsent(false);
+  };
+  const chooseProductImage = async (index: number) => {
+    if (!imageConsent) {
+      showToast({ type: "warning", message: "Confirm that this product image may be stored for salon use." });
+      return;
+    }
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      showToast({ type: "warning", message: "Photo permission is required to upload a product image." });
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.85,
+      allowsEditing: true,
+      aspect: [1, 1],
+    });
+    if (result.canceled || !result.assets[0]) return;
+    setUploadingIndex(index);
+    try {
+      const asset = result.assets[0];
+      const normalized = await ImageManipulator.manipulateAsync(
+        asset.uri,
+        [],
+        { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
+      );
+      const form = new FormData();
+      form.append("file", {
+        uri: normalized.uri,
+        name: `${items[index]?.id || "product"}.jpg`,
+        type: "image/jpeg",
+      } as any);
+      form.append("consentGiven", "true");
+      const uploaded = await api<any>("/media/upload", { method: "POST", body: form });
+      updateItem(index, { imageUrl: `${API_URL}${uploaded.url}`, previewUri: normalized.uri });
+      showToast({ type: "success", message: "Product image selected. Save products to publish it." });
+    } catch (e) {
+      showToast({ type: "error", message: e instanceof Error ? e.message : "Could not upload product image." });
+    } finally {
+      setUploadingIndex(null);
+    }
   };
   async function save() {
-    const products = items.map((item) => ({ ...item, id: String(item.id || "").trim(), name: String(item.name || "").trim(), description: String(item.description || "").trim(), active: item.active !== false }));
-    if (products.some((item) => !item.id || item.name.length < 2)) { setMessage("Complete the product ID and name before saving."); return; }
+    const products = items.map((item) => ({ id: String(item.id || "").trim(), name: String(item.name || "").trim(), description: String(item.description || "").trim(), imageUrl: String(item.imageUrl || "").trim(), active: item.active !== false }));
+    if (products.some((item) => !item.id || item.name.length < 2)) { showToast({ type: "warning", message: "Complete the product ID and name before saving." }); return; }
     try {
       await api("/salon/products", {
         method: "PUT",
         body: JSON.stringify({ products }),
       });
       setEditing(null);
-      setMessage("Products saved.");
+      showToast({ type: "success", message: "Products saved." });
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Could not save products.");
+      showToast({ type: "error", message: e instanceof Error ? e.message : "Could not save products." });
     }
   }
   return (
@@ -915,6 +988,15 @@ function AdminProductView({ initial }: { initial: Product[] }) {
             </View>
             {editing === index ? (
               <View style={styles.catalogEditor}>
+                {item.imageUrl ? <Image source={{ uri: item.previewUri || (String(item.imageUrl).startsWith("http") ? item.imageUrl : `${API_URL}${item.imageUrl}`) }} style={styles.productImagePreview} /> : <View style={styles.productImageEmpty}><Ionicons name="image-outline" size={22} color="#26735a" /><Text style={styles.muted}>No product image added</Text></View>}
+                <Pressable style={[styles.secondary, uploadingIndex === index && styles.disabled]} disabled={uploadingIndex === index} onPress={() => void chooseProductImage(index)}>
+                  <Ionicons name="cloud-upload-outline" size={17} color="#26735a" />
+                  <Text style={styles.actionText}>{uploadingIndex === index ? "Uploading..." : item.imageUrl ? "Change product image" : "Upload product image"}</Text>
+                </Pressable>
+                <Pressable style={styles.preference} onPress={() => setImageConsent((value) => !value)}>
+                  <Text style={styles.checkbox}>{imageConsent ? "✓" : ""}</Text>
+                  <Text style={styles.cardTextDark}>I confirm this image may be stored for salon use.</Text>
+                </Pressable>
                 <Text style={styles.fieldLabel}>PRODUCT NAME</Text>
                 <TextInput value={item.name} onChangeText={(value) => updateItem(index, { name: value })} placeholder="Enter product name, e.g. L'Oreal shampoo" style={styles.input} placeholderTextColor="#9aa19c" />
                 <Text style={styles.fieldLabel}>DESCRIPTION</Text>
@@ -929,7 +1011,6 @@ function AdminProductView({ initial }: { initial: Product[] }) {
       <Pressable style={styles.primary} onPress={() => void save()}>
         <Text style={styles.primaryText}>Save products</Text>
       </Pressable>
-      <Text style={styles.message}>{message}</Text>
     </View>
   );
 }
@@ -988,11 +1069,15 @@ function AdminThemeView({ initial }: { initial: any }) {
   );
 }
 function AdminMediaView({ salon }: { salon: any }) {
-  const [kind, setKind] = useState<"service" | "stylist">("service");
+  const [kind, setKind] = useState<"service" | "stylist" | "salon">("service");
   const [name, setName] = useState((salon.services || [])[0] || "");
+  const [galleryImages, setGalleryImages] = useState<string[]>(Array.isArray(salon.galleryImages) ? salon.galleryImages : []);
+  const [galleryPreviews, setGalleryPreviews] = useState<Record<string, string>>({});
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  useEffect(() => { void getAccessToken().then(setAccessToken); }, []);
   const services = Array.isArray(salon.serviceDetails)
     ? salon.serviceDetails
     : (salon.services || []).map((item: string) => ({ name: item, imageUrl: "" }));
@@ -1001,13 +1086,17 @@ function AdminMediaView({ salon }: { salon: any }) {
   const currentImage = kind === "service"
     ? services.find((item: any) => item.name === name)?.imageUrl
     : profiles[name]?.imageUrl;
-  const changeKind = (next: "service" | "stylist") => {
+  const changeKind = (next: "service" | "stylist" | "salon") => {
     setKind(next);
-    setName(next === "service" ? (salon.services || [])[0] || "" : (salon.stylists || [])[0] || "");
+    if (next !== "salon") setName(next === "service" ? (salon.services || [])[0] || "" : (salon.stylists || [])[0] || "");
   };
   const chooseAndUpload = async () => {
-    if (!name || !consent) {
+    if (kind !== "salon" && !name) {
       setMessage("Select a service or stylist and confirm image storage consent.");
+      return;
+    }
+    if (!consent) {
+      setMessage(kind === "salon" ? "Confirm that these salon images may be stored for salon use." : "Confirm that this image may be stored for salon use.");
       return;
     }
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -1025,15 +1114,24 @@ function AdminMediaView({ salon }: { salon: any }) {
     setMessage("");
     try {
       const asset = result.assets[0];
+      const normalized = await ImageManipulator.manipulateAsync(asset.uri, [], { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG });
       const form = new FormData();
       form.append("file", {
-        uri: asset.uri,
-        name: asset.fileName || `${name.replace(/\s+/g, "-")}.jpg`,
-        type: asset.mimeType || "image/jpeg",
+        uri: normalized.uri,
+        name: `${(name || salon.name || "salon").replace(/\s+/g, "-")}.jpg`,
+        type: "image/jpeg",
       } as any);
       form.append("consentGiven", "true");
       const uploaded = await api<any>("/media/upload", { method: "POST", body: form });
       const imageUrl = `${API_URL}${uploaded.url}`;
+      if (kind === "salon") {
+        const nextGallery = [...galleryImages, imageUrl];
+        await api("/salon/gallery", { method: "PUT", body: JSON.stringify({ galleryImages: nextGallery }) });
+        setGalleryImages(nextGallery);
+        setGalleryPreviews((current) => ({ ...current, [imageUrl]: normalized.uri }));
+        setMessage("Salon image added.");
+        return;
+      }
       const nextServiceDetails = services.map((item: any) => item.name === name ? { ...item, imageUrl } : item);
       const nextProfiles = {
         ...profiles,
@@ -1087,6 +1185,22 @@ function AdminMediaView({ salon }: { salon: any }) {
       setBusy(false);
     }
   };
+  const removeGalleryImage = async (imageUrl: string) => {
+    setBusy(true);
+    try {
+      const id = String(imageUrl).split("/media/")[1]?.split("?")[0];
+      if (id) await api(`/media/${id}`, { method: "DELETE" });
+      const nextGallery = galleryImages.filter((item) => item !== imageUrl);
+      await api("/salon/gallery", { method: "PUT", body: JSON.stringify({ galleryImages: nextGallery }) });
+      setGalleryImages(nextGallery);
+      setGalleryPreviews((current) => { const next = { ...current }; delete next[imageUrl]; return next; });
+      setMessage("Salon image removed.");
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Could not remove salon image.");
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <View>
       <SectionBanner icon="images-outline" eyebrow="STUDIO ASSETS" title="Private media" description="Keep protected service and stylist images ready for the guest experience." />
@@ -1097,17 +1211,19 @@ function AdminMediaView({ salon }: { salon: any }) {
         <Pressable style={[styles.choice, kind === "stylist" && styles.choiceActive]} onPress={() => changeKind("stylist")}>
           <Text style={styles.cardTextDark}>Stylist image</Text>
         </Pressable>
+        <Pressable style={[styles.choice, kind === "salon" && styles.choiceActive]} onPress={() => changeKind("salon")}>
+          <Text style={styles.cardTextDark}>Salon gallery</Text>
+        </Pressable>
       </View>
-      <TextInput value={name} onChangeText={setName} placeholder={kind === "service" ? "Enter service name" : "Enter stylist name"} style={styles.input} placeholderTextColor="#9aa19c" />
-      <Text style={styles.muted}>Available: {names.join(", ") || "None configured"}</Text>
+      {kind === "salon" ? <View style={styles.galleryAdminCard}><Text style={styles.cardTextDark}>Salon gallery</Text><Text style={styles.muted}>Add multiple photos of the interior, exterior, chairs, and experience.</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.galleryAdminRow}>{galleryImages.map((imageUrl, index) => <View style={styles.galleryAdminItem} key={`${imageUrl}-${index}`}><Image source={{ uri: galleryPreviews[imageUrl] || imageUrl, ...(accessToken && !galleryPreviews[imageUrl] ? { headers: { authorization: `Bearer ${accessToken}` } } : {}) }} style={styles.galleryAdminImage} /><Pressable style={styles.galleryRemoveButton} onPress={() => void removeGalleryImage(imageUrl)}><Ionicons name="close" size={14} color="#fff" /></Pressable></View>)}</ScrollView></View> : <><TextInput value={name} onChangeText={setName} placeholder={kind === "service" ? "Enter service name" : "Enter stylist name"} style={styles.input} placeholderTextColor="#9aa19c" /><Text style={styles.muted}>Available: {names.join(", ") || "None configured"}</Text></>}
       <Pressable style={[styles.secondary, busy && styles.disabled]} disabled={busy} onPress={() => void chooseAndUpload()}>
-        <Text style={styles.actionText}>{busy ? "Working..." : "Choose and upload image"}</Text>
+        <Text style={styles.actionText}>{busy ? "Working..." : kind === "salon" ? "Add salon image" : "Choose and upload image"}</Text>
       </Pressable>
       <Pressable style={[styles.preference, { marginTop: 8 }]} onPress={() => setConsent((value) => !value)}>
         <Text style={styles.checkbox}>{consent ? "✓" : ""}</Text>
-        <Text style={styles.cardTextDark}>I confirm this image may be stored for salon use.</Text>
+        <Text style={styles.cardTextDark}>I confirm this {kind === "salon" ? "image" : "image"} may be stored for salon use.</Text>
       </Pressable>
-      {currentImage ? (
+      {kind !== "salon" && currentImage ? (
         <View style={styles.cardLight}>
           <Text style={styles.cardTextDark}>Current image linked</Text>
           <Text style={styles.muted}>{currentImage}</Text>
@@ -1121,22 +1237,22 @@ function AdminMediaView({ salon }: { salon: any }) {
   );
 }
 function AdminBannerView({ initial }: { initial: any[] }) {
+  const { showToast } = useToast();
   const [items, setItems] = useState(initial);
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [imageUrl, setImageUrl] = useState("");
-  const [status, setStatus] = useState("");
   const chooseBannerImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      setStatus("Photo permission is required to choose a banner image.");
+      showToast({ type: "warning", message: "Photo permission is required to choose a banner image." });
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8, base64: true, allowsEditing: true, aspect: [16, 9] });
     if (!result.canceled) {
       const asset = result.assets[0];
       setImageUrl(asset.base64 ? `data:${asset.mimeType || "image/jpeg"};base64,${asset.base64}` : asset.uri);
-      setStatus("Banner image selected.");
+      showToast({ type: "success", message: "Banner image selected." });
     }
   };
   async function create() {
@@ -1156,18 +1272,18 @@ function AdminBannerView({ initial }: { initial: any[] }) {
       setTitle("");
       setMessage("");
       setImageUrl("");
-      setStatus("Banner created.");
+      showToast({ type: "success", message: "Banner created." });
     } catch (e) {
-      setStatus(e instanceof Error ? e.message : "Could not create banner.");
+      showToast({ type: "error", message: e instanceof Error ? e.message : "Could not create banner." });
     }
   }
   async function remove(id: string) {
     try {
       await api(`/banners/${id}`, { method: "DELETE" });
       setItems(items.filter((item) => item.id !== id));
-      setStatus("Banner deleted.");
+      showToast({ type: "success", message: "Banner deleted." });
     } catch (e) {
-      setStatus(e instanceof Error ? e.message : "Could not delete banner.");
+      showToast({ type: "error", message: e instanceof Error ? e.message : "Could not delete banner." });
     }
   }
   async function toggle(item: any) {
@@ -1177,9 +1293,9 @@ function AdminBannerView({ initial }: { initial: any[] }) {
         body: JSON.stringify({ active: item.active === false }),
       });
       setItems(items.map((current) => (current.id === item.id ? { ...current, ...updated } : current)));
-      setStatus(item.active === false ? "Banner published." : "Banner paused.");
+      showToast({ type: "success", message: item.active === false ? "Banner published." : "Banner paused." });
     } catch (e) {
-      setStatus(e instanceof Error ? e.message : "Could not update banner.");
+      showToast({ type: "error", message: e instanceof Error ? e.message : "Could not update banner." });
     }
   }
   return (
@@ -1224,7 +1340,6 @@ function AdminBannerView({ initial }: { initial: any[] }) {
           </View>
         </View>
       ))}
-      <Text style={styles.message}>{status}</Text>
     </View>
   );
 }
@@ -2169,8 +2284,8 @@ function PaymentView({ payments }: { payments: Payment[] }) {
   );
 }
 function AdminReviewsView({ initial }: { initial: any[] }) {
+  const { showToast } = useToast();
   const [items, setItems] = useState(initial);
-  const [message, setMessage] = useState("");
   const update = async (id: string, status: "Published" | "Rejected") => {
     try {
       const saved = await api<any>(`/reviews/${id}/status`, {
@@ -2178,28 +2293,36 @@ function AdminReviewsView({ initial }: { initial: any[] }) {
         body: JSON.stringify({ status }),
       });
       setItems((current) => current.map((item) => item.id === id ? { ...item, ...saved } : item));
-      setMessage(`Review ${status.toLowerCase()}.`);
+      showToast({ type: "success", message: `Review ${status.toLowerCase()}.` });
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Could not update review.");
+      showToast({ type: "error", message: e instanceof Error ? e.message : "Could not update review." });
     }
   };
   return (
     <View>
-      <SectionBanner icon="heart-outline" eyebrow="GUEST FEEDBACK" title="Review moderation" description="Protect the quality of your public guest experience." />
+      <SectionBanner icon="heart-outline" eyebrow="GUEST FEEDBACK" title="Share feedback" description="Review guest experiences and keep your salon reputation trusted." />
+      <View style={styles.feedbackSummary}>
+        <View style={styles.feedbackSummaryIcon}><Ionicons name="star" size={22} color="#dfca73" /></View>
+        <View style={styles.feedbackSummaryCopy}><Text style={styles.feedbackSummaryTitle}>{items.length} guest {items.length === 1 ? "review" : "reviews"}</Text><Text style={styles.feedbackSummaryText}>Approve thoughtful feedback before it appears publicly.</Text></View>
+        <View style={styles.feedbackCount}><Text style={styles.feedbackCountValue}>{items.filter((item) => item.status === "Pending").length}</Text><Text style={styles.feedbackCountLabel}>pending</Text></View>
+      </View>
       {items.length ? items.map((item) => (
-        <View style={styles.row} key={item.id}>
-          <Text style={styles.cardTextDark}>{item.guestName || "Guest"} · {"★".repeat(Number(item.rating || 0))}</Text>
-          <Text style={styles.muted}>{item.comment}</Text>
-          <View style={styles.reviewPendingBadge}><Text style={styles.reviewPendingText}>{item.status === "Pending" ? "Review pending" : item.status}</Text></View>
+        <View style={styles.feedbackCard} key={item.id}>
+          <View style={styles.feedbackHeader}>
+            <View style={styles.feedbackAvatar}><Text style={styles.feedbackAvatarText}>{String(item.guestName || "G").trim().charAt(0).toUpperCase()}</Text></View>
+            <View style={styles.feedbackIdentity}><Text style={styles.feedbackName}>{item.guestName || "Guest"}</Text><Text style={styles.feedbackMeta}>Guest experience</Text></View>
+            <View style={[styles.feedbackStatus, item.status === "Published" && styles.feedbackStatusPublished, item.status === "Rejected" && styles.feedbackStatusRejected]}><Text style={[styles.feedbackStatusText, item.status === "Published" && styles.feedbackStatusTextPublished, item.status === "Rejected" && styles.feedbackStatusTextRejected]}>{item.status === "Pending" ? "Pending" : item.status}</Text></View>
+          </View>
+          <View style={styles.feedbackRating}><Text style={styles.feedbackStars}>{"★".repeat(Number(item.rating || 0))}</Text><Text style={styles.feedbackRatingText}>{Number(item.rating || 0)} / 5</Text></View>
+          <Text style={styles.feedbackComment}>{item.comment || "No written comment provided."}</Text>
           {item.status === "Pending" ? (
-            <View style={styles.actionRow}>
-              <Pressable onPress={() => void update(item.id, "Published")}><Text style={styles.actionText}>Publish</Text></Pressable>
-              <Pressable onPress={() => void update(item.id, "Rejected")}><Text style={styles.actionText}>Reject</Text></Pressable>
+            <View style={styles.feedbackActions}>
+              <Pressable style={styles.feedbackPublishButton} onPress={() => void update(item.id, "Published")}><Ionicons name="checkmark-circle-outline" size={17} color="#26735a" /><Text style={styles.feedbackPublishText}>Publish review</Text></Pressable>
+              <Pressable style={styles.feedbackRejectButton} onPress={() => void update(item.id, "Rejected")}><Ionicons name="close-circle-outline" size={17} color="#b34d38" /><Text style={styles.feedbackRejectText}>Reject</Text></Pressable>
             </View>
           ) : null}
         </View>
-      )) : <Text style={styles.muted}>No reviews yet.</Text>}
-      <MessageToast message={message} />
+      )) : <View style={styles.emptyCard}><View style={styles.emptyIcon}><Ionicons name="heart-outline" size={24} color="#c55239" /></View><Text style={styles.cardTextDark}>No reviews yet</Text><Text style={styles.muted}>Guest feedback will appear here after salon visits.</Text></View>}
     </View>
   );
 }
@@ -2825,6 +2948,36 @@ const styles = StyleSheet.create({
   reviewEmptyText: { flex: 1, color: "#60736a", fontSize: 12, lineHeight: 17 },
   reviewPendingBadge: { alignSelf: "flex-start", backgroundColor: "#fff1d6", borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5, marginTop: 7 },
   reviewPendingText: { color: "#93631d", fontSize: 10, fontWeight: "800" },
+  feedbackSummary: { flexDirection: "row", alignItems: "center", backgroundColor: "#20352d", borderRadius: 18, padding: 15, marginBottom: 14 },
+  feedbackSummaryIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: "rgba(223,202,115,0.16)", borderWidth: 1, borderColor: "rgba(223,202,115,0.35)", alignItems: "center", justifyContent: "center", marginRight: 11 },
+  feedbackSummaryCopy: { flex: 1, minWidth: 0 },
+  feedbackSummaryTitle: { color: "#fffdfa", fontSize: 16, fontWeight: "800" },
+  feedbackSummaryText: { color: "#c8d2cb", fontSize: 11, lineHeight: 16, marginTop: 3 },
+  feedbackCount: { alignItems: "center", minWidth: 46, borderLeftWidth: 1, borderLeftColor: "rgba(255,255,255,0.16)", paddingLeft: 10 },
+  feedbackCountValue: { color: "#dfca73", fontSize: 20, fontWeight: "800" },
+  feedbackCountLabel: { color: "#b8c9c0", fontSize: 9, fontWeight: "800", textTransform: "uppercase", marginTop: 2 },
+  feedbackCard: { backgroundColor: "#fffdfa", borderWidth: 1, borderColor: "#e1ddd4", borderRadius: 18, padding: 15, marginBottom: 11, shadowColor: "#20352d", shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
+  feedbackHeader: { flexDirection: "row", alignItems: "center" },
+  feedbackAvatar: { width: 42, height: 42, borderRadius: 14, backgroundColor: "#dceee8", alignItems: "center", justifyContent: "center", marginRight: 10 },
+  feedbackAvatarText: { color: "#20352d", fontSize: 17, fontWeight: "800" },
+  feedbackIdentity: { flex: 1, minWidth: 0 },
+  feedbackName: { color: "#20352d", fontSize: 14, fontWeight: "800" },
+  feedbackMeta: { color: "#77817c", fontSize: 11, marginTop: 3 },
+  feedbackStatus: { backgroundColor: "#fff1d6", borderRadius: 13, paddingHorizontal: 9, paddingVertical: 6, marginLeft: 7 },
+  feedbackStatusPublished: { backgroundColor: "#e5f1eb" },
+  feedbackStatusRejected: { backgroundColor: "#f8e5df" },
+  feedbackStatusText: { color: "#93631d", fontSize: 10, fontWeight: "800" },
+  feedbackStatusTextPublished: { color: "#26735a" },
+  feedbackStatusTextRejected: { color: "#b34d38" },
+  feedbackRating: { flexDirection: "row", alignItems: "center", marginTop: 14 },
+  feedbackStars: { color: "#dfb83f", fontSize: 16, letterSpacing: 1 },
+  feedbackRatingText: { color: "#77817c", fontSize: 11, fontWeight: "700", marginLeft: 8 },
+  feedbackComment: { color: "#53645b", fontSize: 13, lineHeight: 19, marginTop: 10 },
+  feedbackActions: { flexDirection: "row", alignItems: "center", borderTopWidth: 1, borderTopColor: "#eeeae3", marginTop: 14, paddingTop: 12, gap: 8 },
+  feedbackPublishButton: { flex: 1, minHeight: 42, flexDirection: "row", alignItems: "center", justifyContent: "center", borderRadius: 11, backgroundColor: "#e5f1eb", borderWidth: 1, borderColor: "#cfe0d7" },
+  feedbackPublishText: { color: "#26735a", fontSize: 12, fontWeight: "800", marginLeft: 5 },
+  feedbackRejectButton: { minHeight: 42, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "center", borderRadius: 11, backgroundColor: "#fff4f1", borderWidth: 1, borderColor: "#efd1c8" },
+  feedbackRejectText: { color: "#b34d38", fontSize: 12, fontWeight: "800", marginLeft: 5 },
   input: {
     height: 48,
     borderWidth: 1,
@@ -2888,6 +3041,13 @@ const styles = StyleSheet.create({
   catalogItemCopy: { flex: 1, minWidth: 0, paddingRight: 8 },
   catalogItemTitle: { color: "#20352d", fontSize: 14, fontWeight: "800" },
   catalogItemMeta: { color: "#77817c", fontSize: 12, marginTop: 4 },
+  productImagePreview: { width: "100%", height: 150, borderRadius: 14, backgroundColor: "#e7f1ed", marginBottom: 9 },
+  productImageEmpty: { height: 86, borderRadius: 14, backgroundColor: "#f1f6f2", alignItems: "center", justifyContent: "center", marginBottom: 9 },
+  galleryAdminCard: { backgroundColor: "#f8faf7", borderWidth: 1, borderColor: "#e1e8e2", borderRadius: 15, padding: 12, marginBottom: 10 },
+  galleryAdminRow: { gap: 9, paddingTop: 11, paddingRight: 2 },
+  galleryAdminItem: { width: 112, height: 92, borderRadius: 13, overflow: "hidden", backgroundColor: "#e7f1ed", position: "relative" },
+  galleryAdminImage: { width: "100%", height: "100%" },
+  galleryRemoveButton: { position: "absolute", top: 6, right: 6, width: 24, height: 24, borderRadius: 12, backgroundColor: "rgba(32,53,45,0.8)", alignItems: "center", justifyContent: "center" },
   editButton: { flexDirection: "row", alignItems: "center", backgroundColor: "#e5f1eb", borderRadius: 9, paddingHorizontal: 10, paddingVertical: 8 },
   editButtonText: { color: "#26735a", fontSize: 12, fontWeight: "800", marginLeft: 4 },
   catalogEditor: { borderTopWidth: 1, borderTopColor: "#e1e8e2", marginTop: 12, paddingTop: 4 },
@@ -3056,4 +3216,33 @@ const styles = StyleSheet.create({
     borderTopColor: "#e5e1d9",
     gap: 4,
   },
+  branchMapCard: {
+    marginTop: 4,
+    borderRadius: 14,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#dce9e3",
+    backgroundColor: "#f4f8f5",
+  },
+  branchMapHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  branchMapTitle: { color: "#20352d", fontSize: 12, fontWeight: "900" },
+  branchMapHint: { color: "#77817c", fontSize: 10, marginTop: 2 },
+  branchMap: { width: "100%", height: 150 },
+  branchMapEmpty: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#dce9e3",
+    backgroundColor: "#f4f8f5",
+    padding: 12,
+  },
+  branchMapEmptyText: { flex: 1, color: "#60736a", fontSize: 11, lineHeight: 16 },
 });

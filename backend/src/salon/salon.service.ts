@@ -185,6 +185,7 @@ export class SalonService {
           services: salon.services,
           stylists: salon.stylists,
           serviceDetails: salon.serviceDetails,
+          galleryImages: salon.galleryImages,
           openingHours: salon.openingHours,
           closedDays: salon.closedDays,
           ratingAverage: ratings.ratingAverage,
@@ -330,6 +331,14 @@ export class SalonService {
       active: product.active !== false,
     }));
     return this.repo.save(salon);
+  }
+
+  async updateGallery(galleryImages: string[], salonId?: string) {
+    const salon = await this.get(salonId);
+    salon.galleryImages = Array.from(
+      new Set(galleryImages.map((image) => image.trim()).filter(Boolean)),
+    );
+    return this.repo.save(salon).then((saved) => saved.galleryImages);
   }
 
   async updateTheme(dto: UpdateSalonThemeDto, salonId?: string) {

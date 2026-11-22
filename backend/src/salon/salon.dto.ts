@@ -147,6 +147,13 @@ export class UpdateProductsDto {
   products!: ProductItemDto[];
 }
 
+export class UpdateSalonGalleryDto {
+  @ApiProperty({ example: ["https://example.com/salon-front.jpg"] })
+  @IsArray()
+  @IsString({ each: true })
+  galleryImages!: string[];
+}
+
 export class SalonBranchDto {
   @ApiProperty({ example: "main" }) @IsString() @MinLength(1) id!: string;
   @ApiProperty({ example: "Indiranagar" })

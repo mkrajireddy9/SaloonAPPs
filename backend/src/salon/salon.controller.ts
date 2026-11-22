@@ -21,6 +21,7 @@ import {
   UpdateSalonThemeDto,
   CreatePlatformSalonDto,
   UpdateProductsDto,
+  UpdateSalonGalleryDto,
 } from "./salon.dto";
 import { SalonService } from "./salon.service";
 
@@ -113,6 +114,16 @@ export class SalonController {
     @Req() request: { user: { salonId?: string } },
   ) {
     return this.service.updateProducts(dto.products, request.user.salonId);
+  }
+  @Put("gallery")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "Update salon gallery images (admin only)" })
+  updateGallery(
+    @Body() dto: UpdateSalonGalleryDto,
+    @Req() request: { user: { salonId?: string } },
+  ) {
+    return this.service.updateGallery(dto.galleryImages, request.user.salonId);
   }
   @Put("theme")
   @UseGuards(JwtAuthGuard, RolesGuard)
