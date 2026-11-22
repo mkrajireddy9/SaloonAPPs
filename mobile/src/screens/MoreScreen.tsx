@@ -2533,18 +2533,18 @@ function MembershipAdminView({ initial }: { initial: any[] }) {
     <View>
       <SectionBanner icon="ribbon-outline" eyebrow="STUDIO MEMBERSHIPS" title="Memberships" description="Create plans, assign members, and keep session balances current." />
       <Text style={styles.subheading}>Create a plan</Text>
-      <TextInput value={planName} onChangeText={setPlanName} placeholder="Enter membership plan name" style={styles.input} />
+      <TextInput value={planName} onChangeText={setPlanName} placeholder="Enter membership plan name" placeholderTextColor="#77817c" style={styles.input} />
       <View style={styles.twoInputs}>
-        <TextInput value={price} onChangeText={setPrice} placeholder="Enter price" keyboardType="numeric" style={[styles.input, styles.halfInput]} />
-        <TextInput value={sessions} onChangeText={setSessions} placeholder="Enter session count" keyboardType="numeric" style={[styles.input, styles.halfInput]} />
+        <TextInput value={price} onChangeText={setPrice} placeholder="Enter price" placeholderTextColor="#77817c" keyboardType="numeric" style={[styles.input, styles.halfInput]} />
+        <TextInput value={sessions} onChangeText={setSessions} placeholder="Enter session count" placeholderTextColor="#77817c" keyboardType="numeric" style={[styles.input, styles.halfInput]} />
       </View>
-      <TextInput value={eligibleServices} onChangeText={setEligibleServices} placeholder="Eligible services, comma separated (optional)" style={styles.input} />
+      <TextInput value={eligibleServices} onChangeText={setEligibleServices} placeholder="Eligible services, comma separated (optional)" placeholderTextColor="#77817c" style={styles.input} />
       <Pressable style={styles.primary} onPress={() => void createPlan()}><Text style={styles.primaryText}>Create membership plan</Text></Pressable>
       <MessageToast message={message} />
       <Text style={styles.subheading}>Add membership after payment</Text>
       <Text style={styles.muted}>Use the email from the user account. The membership will appear in that user’s More screen.</Text>
-      <TextInput value={memberEmail} onChangeText={setMemberEmail} placeholder="Enter member email address" keyboardType="email-address" autoCapitalize="none" style={styles.input} />
-      <TextInput value={amountPaid} onChangeText={setAmountPaid} placeholder="Amount paid (₹)" keyboardType="numeric" style={styles.input} />
+      <TextInput value={memberEmail} onChangeText={setMemberEmail} placeholder="Enter member email address" placeholderTextColor="#77817c" keyboardType="email-address" autoCapitalize="none" style={styles.input} />
+      <TextInput value={amountPaid} onChangeText={setAmountPaid} placeholder="Amount paid (₹)" placeholderTextColor="#77817c" keyboardType="numeric" style={styles.input} />
       <View style={styles.choiceRow}>
         {plans.map((plan) => (
           <Pressable key={plan.id} style={[styles.choice, selectedPlan === plan.id && styles.choiceActive]} onPress={() => setSelectedPlan(plan.id)}>
@@ -2571,8 +2571,8 @@ function MembershipAdminView({ initial }: { initial: any[] }) {
             </Pressable> : null}
           </View>
           {editingId === item.id ? <View style={styles.twoInputs}>
-            <TextInput value={editAmount} onChangeText={setEditAmount} placeholder="Amount paid" keyboardType="numeric" style={[styles.input, styles.halfInput]} />
-            <TextInput value={editSessions} onChangeText={setEditSessions} placeholder="Sessions left" keyboardType="numeric" style={[styles.input, styles.halfInput]} />
+            <TextInput value={editAmount} onChangeText={setEditAmount} placeholder="Amount paid" placeholderTextColor="#77817c" keyboardType="numeric" style={[styles.input, styles.halfInput]} />
+            <TextInput value={editSessions} onChangeText={setEditSessions} placeholder="Sessions left" placeholderTextColor="#77817c" keyboardType="numeric" style={[styles.input, styles.halfInput]} />
             <Pressable style={styles.primary} onPress={() => void saveMembership(item.id, {})}><Text style={styles.primaryText}>Save changes</Text></Pressable>
           </View> : null}
         </View>
