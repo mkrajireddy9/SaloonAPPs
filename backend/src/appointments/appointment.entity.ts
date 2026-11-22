@@ -26,6 +26,7 @@ export class Appointment {
   @Column({ default: "Requested" }) status!:
     | "Requested"
     | "Confirmed"
+    | "Completed"
     | "Cancelled";
   @CreateDateColumn() createdAt!: Date;
   @UpdateDateColumn() updatedAt!: Date;

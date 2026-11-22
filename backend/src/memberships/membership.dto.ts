@@ -6,6 +6,13 @@ export class CreateMembershipPlanDto {
   eligibleServices?: string[];
 }
 
+export class UpdateMembershipDto {
+  amountPaid?: number;
+  remainingSessions?: number;
+  expiresAt?: string;
+  status?: "active" | "cancelled";
+}
+
 export class CreateMembershipDto {
   planId!: string;
   guestEmail!: string;
@@ -17,4 +24,5 @@ export class UseMembershipDto {
   service!: string;
   serviceCost?: number;
   appointmentId?: string;
+  sessionsUsed?: number;
 }

@@ -13,5 +13,6 @@ import { MembershipService } from "./membership.service";
   ],
   controllers: [MembershipController],
   providers: [MembershipService],
+  exports: [MembershipService],
 })
 export class MembershipModule {}

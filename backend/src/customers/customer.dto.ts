@@ -57,10 +57,10 @@ export class CustomerHistoryQueryDto {
   @ApiPropertyOptional() @IsOptional() @IsString() service?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() stylist?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() branchId?: string;
-  @ApiPropertyOptional({ enum: ["Requested", "Confirmed", "Cancelled"] })
+  @ApiPropertyOptional({ enum: ["Requested", "Confirmed", "Completed", "Cancelled"] })
   @IsOptional()
-  @IsIn(["Requested", "Confirmed", "Cancelled"])
-  status?: "Requested" | "Confirmed" | "Cancelled";
+  @IsIn(["Requested", "Confirmed", "Completed", "Cancelled"])
+  status?: "Requested" | "Confirmed" | "Completed" | "Cancelled";
   @ApiPropertyOptional({ default: 1 }) @IsOptional() page?: number;
   @ApiPropertyOptional({ default: 10 }) @IsOptional() pageSize?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() search?: string;

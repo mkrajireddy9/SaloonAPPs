@@ -1230,15 +1230,16 @@ function AdminBannerView({ initial }: { initial: any[] }) {
 }
 function AdminAppointmentsView({ initial }: { initial: any[] }) {
   const [items, setItems] = useState(initial);
+  const [sessionsByAppointment, setSessionsByAppointment] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
   const updateStatus = async (
     id: string,
-    status: "Requested" | "Confirmed" | "Cancelled",
+    status: "Requested" | "Confirmed" | "Completed" | "Cancelled",
   ) => {
     try {
       await api(`/appointments/${id}/status`, {
         method: "PATCH",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, ...(status === "Completed" ? { sessionsUsed: Number(sessionsByAppointment[id]) || 1 } : {}) }),
       });
       setItems((current) =>
         current.map((item) => (item.id === id ? { ...item, status } : item)),
@@ -1257,6 +1258,7 @@ function AdminAppointmentsView({ initial }: { initial: any[] }) {
         <View style={styles.metricCard}><Text style={styles.metricValue}>{items.length}</Text><Text style={styles.metricLabel}>Total</Text></View>
         <View style={styles.metricCard}><Text style={styles.metricValue}>{items.filter((item) => item.status === "Requested").length}</Text><Text style={styles.metricLabel}>Requests</Text></View>
         <View style={styles.metricCard}><Text style={styles.metricValue}>{items.filter((item) => item.status === "Confirmed").length}</Text><Text style={styles.metricLabel}>Confirmed</Text></View>
+        <View style={styles.metricCard}><Text style={styles.metricValue}>{items.filter((item) => item.status === "Completed").length}</Text><Text style={styles.metricLabel}>Completed</Text></View>
       </View>
       {items.length ? (
         items.map((item) => (
@@ -1267,8 +1269,8 @@ function AdminAppointmentsView({ initial }: { initial: any[] }) {
                 <Text style={styles.appointmentTitle}>{item.service || "Salon appointment"}</Text>
                 <Text style={styles.muted}>{item.guestName || item.guestEmail || "Guest"}</Text>
               </View>
-              <View style={[styles.statusBadge, item.status === "Confirmed" && styles.statusConfirmed, item.status === "Cancelled" && styles.statusCancelled]}>
-                <Text style={[styles.statusText, item.status === "Confirmed" && styles.statusTextConfirmed, item.status === "Cancelled" && styles.statusTextCancelled]}>{item.status || "Requested"}</Text>
+              <View style={[styles.statusBadge, item.status === "Confirmed" && styles.statusConfirmed, item.status === "Completed" && styles.statusConfirmed, item.status === "Cancelled" && styles.statusCancelled]}>
+                <Text style={[styles.statusText, item.status === "Confirmed" && styles.statusTextConfirmed, item.status === "Completed" && styles.statusTextConfirmed, item.status === "Cancelled" && styles.statusTextCancelled]}>{item.status || "Requested"}</Text>
               </View>
             </View>
             <View style={styles.appointmentDetails}>
@@ -1281,6 +1283,15 @@ function AdminAppointmentsView({ initial }: { initial: any[] }) {
                   <Ionicons name="checkmark-circle-outline" size={16} color="#26735a" />
                   <Text style={styles.actionText}>Confirm</Text>
                 </Pressable>
+              ) : null}
+              {item.status === "Confirmed" ? (
+                <View style={styles.actionRow}>
+                  <TextInput value={sessionsByAppointment[item.id] || "1"} onChangeText={(value) => setSessionsByAppointment((current) => ({ ...current, [item.id]: value.replace(/[^0-9]/g, "") }))} placeholder="Sessions" keyboardType="numeric" style={[styles.input, styles.sessionInput]} />
+                  <Pressable style={styles.actionButton} onPress={() => void updateStatus(item.id, "Completed")}>
+                    <Ionicons name="checkmark-done-outline" size={16} color="#26735a" />
+                    <Text style={styles.actionText}>Complete</Text>
+                  </Pressable>
+                </View>
               ) : null}
               {item.status !== "Cancelled" ? (
                 <Pressable style={styles.actionButtonMuted} onPress={() => void updateStatus(item.id, "Cancelled")}>
@@ -2296,6 +2307,7 @@ function MembershipView({ initial }: { initial: any[] }) {
           </View>
           <Text style={styles.membershipBalance}>{item.remainingSessions} sessions remaining</Text>
           <Text style={styles.cardTextDark}>Used {Math.max(0, item.totalSessions - item.remainingSessions)} of {item.totalSessions} sessions</Text>
+          <Text style={styles.muted}>Amount paid: ₹{Number(item.amountPaid || 0).toLocaleString("en-IN")}</Text>
           <Text style={styles.muted}>Valid until {item.expiresAt}</Text>
           {item.plan?.eligibleServices?.length ? <Text style={styles.muted}>Services: {item.plan.eligibleServices.join(", ")}</Text> : null}
           {item.usage?.length ? <Text style={styles.muted}>Last used: {item.usage[0].service} · ₹{item.usage[0].serviceCost || 0}</Text> : null}
@@ -2315,8 +2327,13 @@ function MembershipAdminView({ initial }: { initial: any[] }) {
   const [planName, setPlanName] = useState("");
   const [price, setPrice] = useState("");
   const [sessions, setSessions] = useState("5");
+  const [eligibleServices, setEligibleServices] = useState("");
   const [memberEmail, setMemberEmail] = useState("");
+  const [amountPaid, setAmountPaid] = useState("");
   const [selectedPlan, setSelectedPlan] = useState("");
+  const [editingId, setEditingId] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editSessions, setEditSessions] = useState("");
   const [message, setMessage] = useState("");
   useEffect(() => {
     api<any[]>("/memberships/plans")
@@ -2330,11 +2347,11 @@ function MembershipAdminView({ initial }: { initial: any[] }) {
   const createPlan = async () => {
     if (!planName.trim()) return setMessage("Enter a membership plan name.");
     try {
-      await api("/memberships/plans", { method: "POST", body: JSON.stringify({ name: planName, price: Number(price) || 0, sessionCount: Number(sessions) || 1 }) });
+      await api("/memberships/plans", { method: "POST", body: JSON.stringify({ name: planName, price: Number(price) || 0, sessionCount: Number(sessions) || 1, eligibleServices: eligibleServices.split(",").map((item) => item.trim()).filter(Boolean) }) });
       const available = await api<any[]>("/memberships/plans");
       setPlans(Array.isArray(available) ? available : []);
       setSelectedPlan(available?.[0]?.id || "");
-      setPlanName(""); setPrice(""); setMessage("Membership plan created.");
+      setPlanName(""); setPrice(""); setEligibleServices(""); setMessage("Membership plan created.");
     } catch (e) { setMessage(e instanceof Error ? e.message : "Could not create membership plan."); }
   };
   const assignMembership = async () => {
@@ -2345,12 +2362,27 @@ function MembershipAdminView({ initial }: { initial: any[] }) {
     try {
       const member = await api<any>("/memberships", {
         method: "POST",
-        body: JSON.stringify({ planId: selectedPlan, guestEmail: memberEmail.trim(), amountPaid: Number(price) || undefined }),
+        body: JSON.stringify({ planId: selectedPlan, guestEmail: memberEmail.trim(), amountPaid: Number(amountPaid) || undefined }),
       });
       setMembers((current) => [member, ...current.filter((item) => item.id !== member.id)]);
       setMemberEmail("");
+      setAmountPaid("");
       setMessage("Membership assigned. The user can see it now.");
     } catch (e) { setMessage(e instanceof Error ? e.message : "Could not assign membership."); }
+  };
+  const saveMembership = async (id: string, values: { status?: "active" | "cancelled" }) => {
+    try {
+      const updated = await api<any>(`/memberships/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          ...values,
+          ...(editAmount.trim() ? { amountPaid: Number(editAmount) } : {}),
+          ...(editSessions.trim() ? { remainingSessions: Number(editSessions) } : {}),
+        }),
+      });
+      setMembers((current) => current.map((item) => item.id === id ? updated : item));
+      setEditingId(""); setMessage(values.status === "cancelled" ? "Membership cancelled." : "Membership updated.");
+    } catch (e) { setMessage(e instanceof Error ? e.message : "Could not update membership."); }
   };
   return (
     <View>
@@ -2361,11 +2393,13 @@ function MembershipAdminView({ initial }: { initial: any[] }) {
         <TextInput value={price} onChangeText={setPrice} placeholder="Enter price" keyboardType="numeric" style={[styles.input, styles.halfInput]} />
         <TextInput value={sessions} onChangeText={setSessions} placeholder="Enter session count" keyboardType="numeric" style={[styles.input, styles.halfInput]} />
       </View>
+      <TextInput value={eligibleServices} onChangeText={setEligibleServices} placeholder="Eligible services, comma separated (optional)" style={styles.input} />
       <Pressable style={styles.primary} onPress={() => void createPlan()}><Text style={styles.primaryText}>Create membership plan</Text></Pressable>
       <MessageToast message={message} />
       <Text style={styles.subheading}>Add membership after payment</Text>
       <Text style={styles.muted}>Use the email from the user account. The membership will appear in that user’s More screen.</Text>
       <TextInput value={memberEmail} onChangeText={setMemberEmail} placeholder="Enter member email address" keyboardType="email-address" autoCapitalize="none" style={styles.input} />
+      <TextInput value={amountPaid} onChangeText={setAmountPaid} placeholder="Amount paid (₹)" keyboardType="numeric" style={styles.input} />
       <View style={styles.choiceRow}>
         {plans.map((plan) => (
           <Pressable key={plan.id} style={[styles.choice, selectedPlan === plan.id && styles.choiceActive]} onPress={() => setSelectedPlan(plan.id)}>
@@ -2380,9 +2414,22 @@ function MembershipAdminView({ initial }: { initial: any[] }) {
         <View style={styles.infoRow} key={item.id}>
           <View style={styles.infoRowCopy}>
             <Text style={styles.cardTextDark}>{item.guestEmail}</Text>
-            <Text style={styles.muted}>{item.plan?.name || "Membership"} · {item.remainingSessions}/{item.totalSessions} sessions</Text>
+            <Text style={styles.muted}>{item.plan?.name || "Membership"} · {item.remainingSessions}/{item.totalSessions} sessions · ₹{Number(item.amountPaid || 0).toLocaleString("en-IN")}</Text>
           </View>
           <Text style={styles.priceText}>{item.status}</Text>
+          <View style={styles.actionRow}>
+            <Pressable style={styles.actionButton} onPress={() => { setEditingId(item.id); setEditAmount(String(item.amountPaid || "")); setEditSessions(String(item.remainingSessions || "")); }}>
+              <Text style={styles.actionText}>Edit</Text>
+            </Pressable>
+            {item.status !== "cancelled" ? <Pressable style={styles.actionButtonMuted} onPress={() => void saveMembership(item.id, { status: "cancelled" })}>
+              <Text style={styles.actionText}>Cancel</Text>
+            </Pressable> : null}
+          </View>
+          {editingId === item.id ? <View style={styles.twoInputs}>
+            <TextInput value={editAmount} onChangeText={setEditAmount} placeholder="Amount paid" keyboardType="numeric" style={[styles.input, styles.halfInput]} />
+            <TextInput value={editSessions} onChangeText={setEditSessions} placeholder="Sessions left" keyboardType="numeric" style={[styles.input, styles.halfInput]} />
+            <Pressable style={styles.primary} onPress={() => void saveMembership(item.id, {})}><Text style={styles.primaryText}>Save changes</Text></Pressable>
+          </View> : null}
         </View>
       )) : <Text style={styles.muted}>No members added yet.</Text>}
     </View>
@@ -2763,6 +2810,7 @@ const styles = StyleSheet.create({
     color: "#20352d",
     marginBottom: 10,
   },
+  sessionInput: { width: 78, height: 42, marginRight: 8, marginBottom: 0 },
   multilineInput: { height: 108, paddingTop: 13, textAlignVertical: "top" },
   manualNotificationCard: {
     backgroundColor: "#f4f8f5",

@@ -20,7 +20,7 @@ export type Appointment = {
   date: string;
   time: string;
   stylist: string;
-  status: "Requested" | "Confirmed" | "Cancelled";
+  status: "Requested" | "Confirmed" | "Completed" | "Cancelled";
   price?: number;
 };
 export type DashboardSummary = {

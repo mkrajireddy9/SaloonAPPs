@@ -190,6 +190,7 @@ function StudioWorkspace({
       <ToolGroup title="Insights and account" items={[
         ["Reports and analytics", "reports"],
         ["Payments and invoices", "payments"],
+        ["Memberships", "memberships"],
         ["Hair passport", "passport"],
         ["Notification preferences", "notifications"],
       ]} onSelect={onSelect} />
@@ -487,6 +488,7 @@ function actionIcon(label: string): any {
   if (value.includes("media")) return "images-outline";
   if (value.includes("report") || value.includes("analytic")) return "bar-chart-outline";
   if (value.includes("payment") || value.includes("invoice")) return "card-outline";
+  if (value.includes("membership")) return "ribbon-outline";
   if (value.includes("notification")) return "notifications-outline";
   if (value.includes("passport")) return "sparkles-outline";
   if (value.includes("salon") || value.includes("tenant")) return "business-outline";

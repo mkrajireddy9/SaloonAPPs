@@ -2,7 +2,7 @@ import { ConflictException, ForbiddenException, Injectable, NotFoundException } 
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { isAdminRole, User, UserRole } from "../auth/user.entity";
-import { CreateMembershipDto, CreateMembershipPlanDto, UseMembershipDto } from "./membership.dto";
+import { CreateMembershipDto, CreateMembershipPlanDto, UpdateMembershipDto, UseMembershipDto } from "./membership.dto";
 import { Membership, MembershipPlan, MembershipUsage } from "./membership.entity";
 
 type RequestUser = { id: string; email: string; role: UserRole; salonId?: string };
@@ -82,6 +82,22 @@ export class MembershipService {
     return (await this.withDetails([membership]))[0];
   }
 
+  async update(id: string, dto: UpdateMembershipDto, user: RequestUser) {
+    const salonId = this.requireSalon(user);
+    const membership = await this.memberships.findOne({ where: { id, salonId } });
+    if (!membership) throw new NotFoundException("Membership not found");
+    if (dto.amountPaid !== undefined) membership.amountPaid = Math.max(0, Number(dto.amountPaid) || 0);
+    if (dto.remainingSessions !== undefined) {
+      membership.remainingSessions = Math.max(0, Math.floor(Number(dto.remainingSessions) || 0));
+      if (membership.remainingSessions === 0) membership.status = "exhausted";
+      else if (membership.status === "exhausted") membership.status = "active";
+    }
+    if (dto.expiresAt) membership.expiresAt = dto.expiresAt;
+    if (dto.status === "cancelled") membership.status = "cancelled";
+    if (dto.status === "active" && membership.remainingSessions > 0) membership.status = "active";
+    return (await this.withDetails([await this.memberships.save(membership)]))[0];
+  }
+
   async listSalonMembers(user: RequestUser) {
     const salonId = this.requireSalon(user);
     return this.withDetails(await this.memberships.find({ where: { salonId }, order: { createdAt: "DESC" } }));
@@ -96,10 +112,53 @@ export class MembershipService {
     const plan = await this.plans.findOne({ where: { id: membership.planId } });
     if (plan?.eligibleServices?.length && !plan.eligibleServices.some((item) => item.toLowerCase() === dto.service.trim().toLowerCase()))
       throw new ConflictException("This service is not included in the membership");
-    membership.remainingSessions -= 1;
+    const sessionsUsed = Math.max(1, Math.floor(Number(dto.sessionsUsed) || 1));
+    if (membership.remainingSessions < sessionsUsed)
+      throw new ConflictException("This membership does not have enough remaining sessions");
+    membership.remainingSessions -= sessionsUsed;
     if (!membership.remainingSessions) membership.status = "exhausted";
     await this.memberships.save(membership);
-    await this.usages.save(this.usages.create({ membershipId: id, salonId, appointmentId: dto.appointmentId || null, service: dto.service.trim(), serviceCost: Math.max(0, Number(dto.serviceCost) || 0), usedByEmail: user.email }));
+    await this.usages.save(this.usages.create({ membershipId: id, salonId, appointmentId: dto.appointmentId || null, service: dto.service.trim(), sessionsUsed, serviceCost: Math.max(0, Number(dto.serviceCost) || 0), usedByEmail: user.email }));
     return (await this.withDetails([membership]))[0];
+  }
+
+  async useForCompletedAppointment(appointment: {
+    id: string;
+    salonId: string;
+    guestEmail: string;
+    service: string;
+    price: number;
+  }, requestedSessions = 1) {
+    const alreadyUsed = await this.usages.findOne({ where: { appointmentId: appointment.id } });
+    if (alreadyUsed) return null;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const memberships = await this.memberships.find({
+      where: { salonId: appointment.salonId, guestEmail: appointment.guestEmail.toLowerCase(), status: "active" },
+      order: { createdAt: "ASC" },
+    });
+    for (const membership of memberships) {
+      if (membership.expiresAt < today || membership.remainingSessions < 1) continue;
+      const plan = await this.plans.findOne({ where: { id: membership.planId, salonId: appointment.salonId, active: true } });
+      const eligible = plan?.eligibleServices || [];
+      if (eligible.length && !eligible.some((item) => item.toLowerCase() === appointment.service.trim().toLowerCase())) continue;
+
+      const sessionsUsed = Math.max(1, Math.floor(Number(requestedSessions) || 1));
+      if (membership.remainingSessions < sessionsUsed) continue;
+      membership.remainingSessions -= sessionsUsed;
+      if (!membership.remainingSessions) membership.status = "exhausted";
+      await this.memberships.save(membership);
+      await this.usages.save(this.usages.create({
+        membershipId: membership.id,
+        salonId: appointment.salonId,
+        appointmentId: appointment.id,
+        service: appointment.service.trim(),
+        sessionsUsed,
+        serviceCost: Math.max(0, Number(appointment.price) || 0),
+        usedByEmail: appointment.guestEmail,
+      }));
+      return (await this.withDetails([membership]))[0];
+    }
+    return null;
   }
 }

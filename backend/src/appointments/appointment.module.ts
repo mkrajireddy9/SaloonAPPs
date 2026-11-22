@@ -7,12 +7,14 @@ import { AppointmentService } from "./appointment.service";
 import { AuthModule } from "../auth/auth.module";
 import { NotificationModule } from "../notifications/notification.module";
 import { User } from "../auth/user.entity";
+import { MembershipModule } from "../memberships/membership.module";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Appointment, Salon, User]),
     AuthModule,
     NotificationModule,
+    MembershipModule,
   ],
   controllers: [AppointmentController],
   providers: [AppointmentService],

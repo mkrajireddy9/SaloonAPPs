@@ -62,9 +62,10 @@ export class CreateAppointmentDto {
 }
 
 export class UpdateAppointmentStatusDto {
-  @ApiProperty({ enum: ["Requested", "Confirmed", "Cancelled"] })
-  @IsIn(["Requested", "Confirmed", "Cancelled"])
-  status!: "Requested" | "Confirmed" | "Cancelled";
+  @ApiProperty({ enum: ["Requested", "Confirmed", "Completed", "Cancelled"] })
+  @IsIn(["Requested", "Confirmed", "Completed", "Cancelled"])
+  status!: "Requested" | "Confirmed" | "Completed" | "Cancelled";
+  sessionsUsed?: number;
 }
 
 export class RescheduleAppointmentDto {

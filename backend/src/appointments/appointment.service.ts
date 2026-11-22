@@ -16,6 +16,7 @@ import { isAdminRole, UserRole } from "../auth/user.entity";
 import { User } from "../auth/user.entity";
 import { Salon } from "../salon/salon.entity";
 import { NotificationService } from "../notifications/notification.service";
+import { MembershipService } from "../memberships/membership.service";
 
 @Injectable()
 export class AppointmentService {
@@ -25,6 +26,7 @@ export class AppointmentService {
     @InjectRepository(Salon) private readonly salons: Repository<Salon>,
     @InjectRepository(User) private readonly users: Repository<User>,
     private readonly notifications: NotificationService,
+    private readonly memberships: MembershipService,
   ) {}
 
   private getBranch(salon: Salon, branchId?: string) {
@@ -261,6 +263,9 @@ export class AppointmentService {
     if (!appointment) throw new NotFoundException("Appointment not found");
     appointment.status = dto.status;
     const saved = await this.repo.save(appointment);
+    if (dto.status === "Completed" && saved.guestEmail) {
+      await this.memberships.useForCompletedAppointment(saved, dto.sessionsUsed);
+    }
     await this.notifications.queueForAppointment(
       saved,
       `appointment.${dto.status.toLowerCase()}`,
